@@ -3,6 +3,7 @@ from __future__ import annotations
 import tempfile
 from collections.abc import Awaitable, Callable
 from pathlib import Path
+from string import Template
 from typing import TYPE_CHECKING
 
 from kaos.path import KaosPath
@@ -45,11 +46,7 @@ async def init(soul: KimiSoul, args: str):
         await tmp_soul.run(prompts.INIT)
 
     agents_md = await load_agents_md(soul.runtime.builtin_args.KIMI_WORK_DIR)
-    system_message = system(
-        "The user just ran `/init` slash command. "
-        "The system has analyzed the codebase and generated an `AGENTS.md` file. "
-        f"Latest AGENTS.md file content:\n{agents_md}"
-    )
+    system_message = system(Template(prompts.INIT_COMPLETE).substitute(agents_md=agents_md or ""))
     await soul.context.append_message(Message(role="user", content=[system_message]))
     from kimi_cli.telemetry import track
 
@@ -261,10 +258,7 @@ async def add_dir(soul: KimiSoul, args: str):
 
     # Inject a system message to inform the LLM about the new directory
     system_message = system(
-        f"The user has added an additional directory to the workspace: `{path}`\n\n"
-        f"Directory listing:\n```\n{ls_output}\n```\n\n"
-        "You can now read, write, search, and glob files in this directory "
-        "as if it were part of the working directory."
+        Template(prompts.ADD_DIR).substitute(path=str(path), ls_output=ls_output)
     )
     await soul.context.append_message(Message(role="user", content=[system_message]))
 

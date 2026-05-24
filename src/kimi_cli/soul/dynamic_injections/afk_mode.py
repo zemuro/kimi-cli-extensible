@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 from kosong.message import Message
 
+import kimi_cli.prompts as prompts
 from kimi_cli.soul.dynamic_injection import DynamicInjection, DynamicInjectionProvider
 
 if TYPE_CHECKING:
@@ -12,29 +13,9 @@ if TYPE_CHECKING:
 
 _AFK_INJECTION_TYPE = "afk_mode"
 
-_AFK_PROMPT_ROOT = (
-    "You are running in afk mode. No user is present to answer "
-    "questions or approve actions. All tool calls are auto-approved by "
-    "the harness.\n"
-    "- Do NOT call AskUserQuestion — it will be auto-dismissed with no "
-    "answer, wasting a turn. Make your best judgment and proceed.\n"
-    "- You CAN use EnterPlanMode / ExitPlanMode normally. They will be "
-    "auto-approved. Planning still helps you think before acting; use "
-    "it for non-trivial tasks, then exit and execute.\n"
-    "- Finish the user's request end-to-end in this run. Do not defer "
-    "decisions to a human."
-)
+_AFK_PROMPT_ROOT = prompts.AFK_MODE
 
-AFK_DISABLED_REMINDER = (
-    "Afk mode is now disabled. The user is back at the terminal and CAN answer "
-    "AskUserQuestion.\n"
-    "- Ignore any earlier afk mode reminders that said no user is present or "
-    "that you must not call AskUserQuestion.\n"
-    "- AskUserQuestion is available again when a decision genuinely changes "
-    "your next action. Do not ask routine confirmations or progress check-ins.\n"
-    "- Tool calls are no longer auto-approved by afk. They may still be "
-    "auto-approved if yolo mode remains active."
-)
+AFK_DISABLED_REMINDER = prompts.AFK_DISABLED
 
 
 class AfkModeInjectionProvider(DynamicInjectionProvider):

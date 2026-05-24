@@ -116,7 +116,7 @@ class SimpleCompaction:
         logger.debug("Compacting context...")
         result = await kosong.step(
             chat_provider=llm.chat_provider,
-            system_prompt="You are a helpful assistant that compacts conversation context.",
+            system_prompt=prompts.COMPACTION_SYSTEM,
             toolset=EmptyToolset(),
             history=[compact_message],
         )
@@ -128,7 +128,7 @@ class SimpleCompaction:
             )
 
         content: list[ContentPart] = [
-            system("Previous context has been compacted. Here is the compaction output:")
+            system(prompts.COMPACTION_OUTPUT)
         ]
         compacted_msg = result.message
 

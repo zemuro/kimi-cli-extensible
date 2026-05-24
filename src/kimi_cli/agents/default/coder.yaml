@@ -1,11 +1,9 @@
 version: 1
 agent:
   extend: ./agent.yaml
-  system_prompt_args:
-    ROLE_ADDITIONAL: |
-      You are now running as a subagent. All the `user` messages are sent by the main agent. The main agent cannot see your context, it can only see your last message when you finish the task. You must treat the parent agent as your caller. Do not directly ask the end user questions. If something is unclear, explain the ambiguity in your final summary to the parent agent.
-  when_to_use: |
-    Use this agent for non-trivial software engineering work that may require reading files, editing code, running commands, and returning a compact but technically complete summary to the parent agent.
+  system_prompt_args_files:
+    ROLE_ADDITIONAL: ./coder_role.md
+  when_to_use_file: ./coder_when_to_use.md
   allowed_tools:
     - "kimi_cli.tools.shell:Shell"
     - "kimi_cli.tools.file:ReadFile"

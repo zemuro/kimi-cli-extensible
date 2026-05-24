@@ -258,6 +258,14 @@ class Config(BaseModel):
             "Missing paths are silently skipped."
         ),
     )
+    system_prompt_overrides: dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "Override individual system prompt sections by name. "
+            "Keys are section names (e.g. 'identity', 'coding_guidelines') and "
+            "values are absolute or ~-prefixed paths to replacement .md files."
+        ),
+    )
     telemetry: bool = Field(
         default=True,
         description="Enable anonymous telemetry to help improve kimi-cli. Set to false to disable.",

@@ -40,6 +40,13 @@ shell UI, ACP server mode for IDE integrations, and MCP tool loading.
   directory and can be resumed by `agent_id`. System prompts live alongside specs; builtin args
   include `KIMI_NOW`, `KIMI_WORK_DIR`, `KIMI_WORK_DIR_LS`, `KIMI_AGENTS_MD`, `KIMI_SKILLS`, `KIMI_OS`, `KIMI_SHELL`
   (this file is injected via `KIMI_AGENTS_MD`).
+- **Prompt system**: The main system prompt is decomposed into sections under
+  `src/kimi_cli/prompts/system/`. The default `system.md` contains an assembly marker
+  (`<!-- assembled-from-sections -->`) that causes `_load_system_prompt()` to load and join
+  the sections. Users can override individual sections via `system_prompt_overrides` in config.
+  Secondary prompts (compaction, plan mode, AFK, side questions, slash commands) also live as
+  `.md` files under `src/kimi_cli/prompts/`. Subagent `ROLE_ADDITIONAL` and `when_to_use` prompts
+  are loaded from external `.md` files via `system_prompt_args_files` and `when_to_use_file`.
 - **Tooling**: `src/kimi_cli/soul/toolset.py` loads tools by import path, injects dependencies,
   and runs tool calls. Built-in tools live in `src/kimi_cli/tools/` (agent, shell, file, web,
   todo, background, dmail, think, plan). MCP tools are loaded via `fastmcp`; CLI management is
@@ -82,7 +89,9 @@ shell UI, ACP server mode for IDE integrations, and MCP tool loading.
 ## Repo map
 
 - `src/kimi_cli/agents/`: built-in agent YAML specs and prompts
-- `src/kimi_cli/prompts/`: shared prompt templates
+- `src/kimi_cli/prompts/`: shared prompt templates (secondary prompts, compaction, etc.)
+- `src/kimi_cli/prompts/system/`: decomposed main system prompt sections (identity, coding,
+  research, working environment, project info, skills, ultimate reminders)
 - `src/kimi_cli/soul/`: core runtime/loop, context, compaction, approvals
 - `src/kimi_cli/tools/`: built-in tools
 - `src/kimi_cli/ui/`: UI frontends (shell/print/acp/wire)
@@ -96,6 +105,23 @@ shell UI, ACP server mode for IDE integrations, and MCP tool loading.
     can be easily switched between local environment and remote systems over SSH.
 - `tests/`, `tests_ai/`: test suites
 - `klips`: Kimi Code CLI Improvement Proposals
+
+## Prompt extensibility (fork-specific)
+
+This fork extracts all hardcoded prompts into `.md` files:
+
+- **Main system prompt**: `src/kimi_cli/prompts/system/*.md` — 8 sections assembled by
+  `src/kimi_cli/prompts/system/__init__.py::assemble_system_prompt()`.
+- **Secondary prompts**: `src/kimi_cli/prompts/*.md` — compaction, plan mode, AFK, side questions,
+  slash command messages.
+- **Subagent prompts**: `src/kimi_cli/agents/default/*_role.md` and `*_when_to_use.md` — loaded
+  via `AgentSpec.system_prompt_args_files` and `AgentSpec.when_to_use_file`.
+
+When modifying prompt content, edit the `.md` files directly — no Python changes needed for
+wording adjustments. When adding new dynamic injection points or prompt hooks, you may need to
+update the loader code in `src/kimi_cli/soul/agent.py` or `src/kimi_cli/soul/dynamic_injections/`.
+
+See `PROMPT_EXTENSIBILITY.md` for the full user-facing customization guide.
 
 ## Conventions and quality
 

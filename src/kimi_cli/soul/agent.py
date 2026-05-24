@@ -406,6 +406,7 @@ async def load_agent(
         agent_spec.system_prompt_path,
         agent_spec.system_prompt_args,
         runtime.builtin_args,
+        config=runtime.config,
     )
 
     # Register built-in subagent types before loading tools because some tools render
@@ -492,10 +493,21 @@ async def load_agent(
 
 
 def _load_system_prompt(
-    path: Path, args: dict[str, str], builtin_args: BuiltinSystemPromptArgs
+    path: Path,
+    args: dict[str, str],
+    builtin_args: BuiltinSystemPromptArgs,
+    config: Config | None = None,
 ) -> str:
     logger.info("Loading system prompt: {path}", path=path)
     system_prompt = path.read_text(encoding="utf-8").strip()
+
+    from kimi_cli.prompts.system import assemble_system_prompt, is_assembled_prompt
+
+    if is_assembled_prompt(system_prompt):
+        logger.debug("Assembling system prompt from sections")
+        overrides = config.system_prompt_overrides if config else {}
+        system_prompt = assemble_system_prompt(overrides=overrides or None)
+
     logger.debug(
         "Substituting system prompt with builtin args: {builtin_args}, spec args: {spec_args}",
         builtin_args=builtin_args,

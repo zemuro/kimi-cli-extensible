@@ -39,8 +39,12 @@ class AgentSpec(BaseModel):
     system_prompt_args: dict[str, str] = Field(
         default_factory=dict, description="System prompt arguments"
     )
+    system_prompt_args_files: dict[str, Path] = Field(
+        default_factory=dict, description="System prompt arguments loaded from files"
+    )
     model: str | None = Field(default=None, description="Default model alias")
     when_to_use: str | None = Field(default=None, description="Usage guidance")
+    when_to_use_file: Path | None = Field(default=None, description="Path to usage guidance file")
     tools: list[str] | None | Inherit = Field(default=inherit, description="Tools")  # required
     allowed_tools: list[str] | None | Inherit = Field(default=inherit, description="Allowed tools")
     exclude_tools: list[str] | None | Inherit = Field(
@@ -131,6 +135,19 @@ def _load_agent_spec(agent_file: Path) -> AgentSpec:
     if isinstance(agent_spec.subagents, dict):
         for v in agent_spec.subagents.values():
             v.path = (agent_file.parent / v.path).absolute()
+    # Load when_to_use from file if specified (file wins over inline)
+    if agent_spec.when_to_use_file is not None:
+        when_to_use_path = (agent_file.parent / agent_spec.when_to_use_file).absolute()
+        if not when_to_use_path.is_file():
+            raise AgentSpecError(f"when_to_use file not found: {when_to_use_path}")
+        agent_spec.when_to_use = when_to_use_path.read_text(encoding="utf-8")
+    # Load system_prompt_args from files if specified (files win over inline)
+    if agent_spec.system_prompt_args_files:
+        for key, file_path in agent_spec.system_prompt_args_files.items():
+            resolved_path = (agent_file.parent / file_path).absolute()
+            if not resolved_path.is_file():
+                raise AgentSpecError(f"system_prompt_args file not found: {resolved_path}")
+            agent_spec.system_prompt_args[key] = resolved_path.read_text(encoding="utf-8")
     if agent_spec.extend:
         if agent_spec.extend == "default":
             base_agent_file = DEFAULT_AGENT_FILE
@@ -144,6 +161,8 @@ def _load_agent_spec(agent_file: Path) -> AgentSpec:
         for k, v in agent_spec.system_prompt_args.items():
             # system prompt args should be merged instead of overwritten
             base_agent_spec.system_prompt_args[k] = v
+        for k, v in agent_spec.system_prompt_args_files.items():
+            base_agent_spec.system_prompt_args_files[k] = v
         if agent_spec.model is not None:
             base_agent_spec.model = agent_spec.model
         if agent_spec.when_to_use is not None:
