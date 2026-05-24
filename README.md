@@ -1,20 +1,108 @@
-# Kimi Code CLI
+# Kimi Code CLI — Prompt-Extensible Fork
 
-[![Commit Activity](https://img.shields.io/github/commit-activity/w/MoonshotAI/kimi-cli)](https://github.com/MoonshotAI/kimi-cli/graphs/commit-activity)
-[![Checks](https://img.shields.io/github/check-runs/MoonshotAI/kimi-cli/main)](https://github.com/MoonshotAI/kimi-cli/actions)
+> This is a community fork of [MoonshotAI/kimi-cli](https://github.com/MoonshotAI/kimi-cli) focused on **making every system prompt editable without code changes**.
+>
+> All upstream features are preserved. The additions are: decomposed system prompts, config-driven overrides, and file-based subagent prompt loading.
+
+[![Commit Activity](https://img.shields.io/github/commit-activity/w/zemuro/kimi-cli-extensible)](https://github.com/zemuro/kimi-cli-extensible/graphs/commit-activity)
 [![Version](https://img.shields.io/pypi/v/kimi-cli)](https://pypi.org/project/kimi-cli/)
 [![Downloads](https://img.shields.io/pypi/dw/kimi-cli)](https://pypistats.org/packages/kimi-cli)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/MoonshotAI/kimi-cli)
 
-[Kimi Code](https://www.kimi.com/code/) | [Documentation](https://moonshotai.github.io/kimi-cli/en/) | [文档](https://moonshotai.github.io/kimi-cli/zh/)
+[Kimi Code](https://www.kimi.com/code/) | [Upstream Docs](https://moonshotai.github.io/kimi-cli/en/) | [Upstream 文档](https://moonshotai.github.io/kimi-cli/zh/)
 
 Kimi Code CLI is an AI agent that runs in the terminal, helping you complete software development tasks and terminal operations. It can read and edit code, execute shell commands, search and fetch web pages, and autonomously plan and adjust actions during execution.
 
+---
+
+## Table of Contents
+
+- [Prompt Extensibility](#prompt-extensibility) — what's different in this fork
+- [Getting Started](#getting-started)
+- [Key Features](#key-features)
+- [Development](#development)
+
+---
+
+## Prompt Extensibility
+
+This fork extracts **all hardcoded system prompts** into plain `.md` files and lets you override them via configuration — no Python changes required.
+
+### Quick Examples
+
+**Override a main system prompt section** (`~/.kimi/config.toml`):
+
+```toml
+[system_prompt_overrides]
+identity = "~/prompts/my-identity.md"
+coding_guidelines = "~/prompts/my-coding.md"
+```
+
+**Load subagent prompts from files** (`coder.yaml`):
+
+```yaml
+agent:
+  system_prompt_args_files:
+    ROLE_ADDITIONAL: ./coder_role.md
+  when_to_use_file: ./coder_when_to_use.md
+```
+
+### What Changed
+
+| Area | Before (upstream) | After (this fork) |
+|---|---|---|
+| Main system prompt | Single monolithic `system.md` (160 lines) | 8 decomposed sections under `prompts/system/` |
+| Subagent prompts | Inline in YAML (`ROLE_ADDITIONAL`, `when_to_use`) | Loaded from `.md` files via `*_file` fields |
+| Secondary prompts | Hardcoded Python strings | Plain `.md` files in `prompts/` |
+| Customization | Fork + edit Python | Config-only overrides |
+
+### Prompt Files Overview
+
+**Main system prompt sections** (`src/kimi_cli/prompts/system/`):
+
+| File | Content |
+|---|---|
+| `identity.md` | Agent identity and role |
+| `prompt_and_tool_use.md` | Message handling, tool use, approvals |
+| `coding_guidelines.md` | Coding from scratch, existing codebases, git rules |
+| `research_guidelines.md` | Research tasks, multimedia |
+| `working_environment.md` | OS, shell, working directory |
+| `project_info.md` | `AGENTS.md` conventions |
+| `skills.md` | Available skills and usage |
+| `ultimate_reminders.md` | Final behavioral rules |
+
+**Subagent prompts** (`src/kimi_cli/agents/default/`):
+- `coder_role.md`, `coder_when_to_use.md`
+- `explore_role.md`, `explore_when_to_use.md`
+- `plan_role.md`, `plan_when_to_use.md`
+
+**Secondary/special-mode prompts** (`src/kimi_cli/prompts/`):
+- `compaction_system.md`, `compaction_output.md`
+- `side_question.md`
+- `plan_mode_full.md`, `plan_mode_sparse.md`, `plan_mode_reentry.md`
+- `afk_mode.md`, `afk_disabled.md`
+- `init_complete.md`, `add_dir.md`
+
+See [`PROMPT_EXTENSIBILITY.md`](./PROMPT_EXTENSIBILITY.md) for the full guide (architecture details, backward compatibility notes, and advanced customization).
+
+---
+
 ## Getting Started
 
-See [Getting Started](https://moonshotai.github.io/kimi-cli/en/guides/getting-started.html) for how to install and start using Kimi Code CLI.
+See the [upstream Getting Started guide](https://moonshotai.github.io/kimi-cli/en/guides/getting-started.html) for how to install and start using Kimi Code CLI.
+
+To install this fork directly from source:
+
+```sh
+git clone https://github.com/zemuro/kimi-cli-extensible.git
+cd kimi-cli-extensible
+
+make prepare  # prepare the development environment
+uv run kimi   # run Kimi Code CLI
+```
 
 ## Key Features
+
+> All features below are inherited from the upstream project.
 
 ### Shell command mode
 
@@ -139,15 +227,13 @@ kimi --mcp-config-file /path/to/mcp.json
 
 ### More
 
-See more features in the [Documentation](https://moonshotai.github.io/kimi-cli/en/).
+See more features in the [upstream documentation](https://moonshotai.github.io/kimi-cli/en/).
 
 ## Development
 
-To develop Kimi Code CLI, run:
-
 ```sh
-git clone https://github.com/MoonshotAI/kimi-cli.git
-cd kimi-cli
+git clone https://github.com/zemuro/kimi-cli-extensible.git
+cd kimi-cli-extensible
 
 make prepare  # prepare the development environment
 ```

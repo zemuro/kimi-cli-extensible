@@ -1,5 +1,7 @@
 # Prompt Extensibility Guide
 
+> For a quick overview, see the [README](./README.md#prompt-extensibility). This document covers the full details.
+
 This fork makes the kimi-cli system prompts fully customizable without requiring code changes. All hardcoded prompts have been extracted into plain `.md` files that can be overridden via configuration.
 
 ## What Changed
