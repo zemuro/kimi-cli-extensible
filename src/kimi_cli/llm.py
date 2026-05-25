@@ -191,6 +191,18 @@ def _generation_kwargs_for_provider(
     return kwargs
 
 
+def _map_cli_override(key: str, value: Any, provider_type: ProviderType) -> tuple[str, Any]:
+    """Map common CLI parameter names to provider-specific API names."""
+    if key == "max_tokens" and provider_type in (
+        "openai_responses",
+        "google_genai",
+        "gemini",
+        "vertexai",
+    ):
+        return "max_output_tokens", value
+    return key, value
+
+
 def create_llm(
     provider: LLMProvider,
     model: LLMModel,
@@ -198,6 +210,7 @@ def create_llm(
     thinking: bool | None = None,
     session_id: str | None = None,
     oauth: OAuthManager | None = None,
+    generation_overrides: dict[str, Any] | None = None,
 ) -> LLM | None:
     if provider.type not in {"_echo", "_scripted_echo"} and (
         not provider.base_url or not model.model
@@ -322,6 +335,12 @@ def create_llm(
             gen_kwargs["top_p"] = float(top_p)
         if max_tokens := os.getenv("KIMI_MODEL_MAX_TOKENS"):
             gen_kwargs["max_tokens"] = int(max_tokens)
+
+    # CLI overrides (highest precedence)
+    if generation_overrides:
+        for key, value in generation_overrides.items():
+            mapped_key, mapped_value = _map_cli_override(key, value, provider.type)
+            gen_kwargs[mapped_key] = mapped_value
 
     if gen_kwargs:
         chat_provider = chat_provider.with_generation_kwargs(**gen_kwargs)

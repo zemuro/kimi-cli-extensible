@@ -144,3 +144,25 @@ These are resolved relative to the agent YAML file and loaded at spec-parse time
 - Inline `system_prompt_args` and `when_to_use` in YAML still work
 - All existing tests pass without modification
 - The Jinja2 variable syntax (`${KIMI_OS}`, `{% if %}`) continues to work inside sections
+
+
+## Reload Semantics
+
+Prompt overrides are loaded **once per agent initialization** (when `Runtime` is constructed inside `App.create_soul()`). Editing an override file during a session requires `/restart` or a full process restart to take effect.
+
+Subagent prompts are loaded when the subagent spec is parsed, which happens on first invocation of that subagent type. Changing a subagent's `.md` file also requires `/restart` to take effect.
+
+Secondary/special-mode prompts (compaction, plan mode, AFK, etc.) are loaded from `src/kimi_cli/prompts/` at import time. To modify them, edit the files and restart the process.
+
+## Dynamic Injections
+
+Special-mode prompts that are injected into the message history (not the system prompt) live in `src/kimi_cli/soul/dynamic_injections/`:
+
+- `plan_mode.py` — periodic plan-mode reminders
+- `afk_mode.py` — AFK-mode system reminders
+
+These are loaded as injection providers by `KimiSoul` and appended as user messages during the agent loop, not assembled into the system prompt.
+
+## Rebasing from Upstream
+
+See [`REBASE.md`](./REBASE.md) for the merge strategy when syncing with upstream MoonshotAI/kimi-cli releases.

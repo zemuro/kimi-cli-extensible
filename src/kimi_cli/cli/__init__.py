@@ -185,6 +185,27 @@ def kimi(
             help="Enable thinking mode. Default: default thinking mode set in config file.",
         ),
     ] = None,
+    temperature: Annotated[
+        float | None,
+        typer.Option(
+            "--temperature",
+            help="Sampling temperature (0–2). Overrides config/env default.",
+        ),
+    ] = None,
+    top_p: Annotated[
+        float | None,
+        typer.Option(
+            "--top-p",
+            help="Nucleus sampling top-p (0–1). Overrides config/env default.",
+        ),
+    ] = None,
+    max_tokens: Annotated[
+        int | None,
+        typer.Option(
+            "--max-tokens",
+            help="Maximum tokens to generate. Overrides config/env default.",
+        ),
+    ] = None,
     # Run mode
     yolo: Annotated[
         bool,
@@ -616,6 +637,14 @@ def kimi(
             # the saved original stderr fd.
             redirect_stderr_to_logger()
 
+            generation_overrides: dict[str, Any] = {}
+            if temperature is not None:
+                generation_overrides["temperature"] = temperature
+            if top_p is not None:
+                generation_overrides["top_p"] = top_p
+            if max_tokens is not None:
+                generation_overrides["max_tokens"] = max_tokens
+
             instance = await KimiCLI.create(
                 session,
                 config=config,
@@ -635,6 +664,7 @@ def kimi(
                 startup_progress=startup_progress.update if ui == "shell" else None,
                 defer_mcp_loading=ui == "shell" and prompt is None,
                 ui_mode=ui,
+                generation_overrides=generation_overrides if generation_overrides else None,
             )
             startup_progress.stop()
 

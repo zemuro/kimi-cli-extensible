@@ -41,7 +41,10 @@ def load_section(name: str, overrides: dict[str, str] | None = None) -> str:
     else:
         path = _BUILTIN_SECTIONS_DIR / f"{name}.md"
     if not path.is_file():
-        raise FileNotFoundError(f"System prompt section not found: {path}")
+        raise FileNotFoundError(
+            f"System prompt section not found: {path} "
+            f"(check your system_prompt_overrides config or section file)"
+        )
     return path.read_text(encoding="utf-8")
 
 

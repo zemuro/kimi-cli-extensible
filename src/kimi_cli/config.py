@@ -372,6 +372,12 @@ class Config(BaseModel):
         for model in self.models.values():
             if model.provider not in self.providers:
                 raise ValueError(f"Provider {model.provider} not found in providers")
+        for section_name, path_str in self.system_prompt_overrides.items():
+            path = Path(path_str).expanduser()
+            if not path.is_file():
+                raise ValueError(
+                    f"system_prompt_overrides[{section_name!r}] file not found: {path}"
+                )
         return self
 
 

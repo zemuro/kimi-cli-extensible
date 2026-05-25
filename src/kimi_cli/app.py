@@ -136,6 +136,8 @@ class KimiCLI:
         agent_file: Path | None = None,
         mcp_configs: list[MCPConfig] | list[dict[str, Any]] | None = None,
         skills_dirs: list[KaosPath] | None = None,
+        # Generation overrides (CLI > env > config)
+        generation_overrides: dict[str, Any] | None = None,
         # Loop control
         max_steps_per_turn: int | None = None,
         max_retries_per_step: int | None = None,
@@ -245,6 +247,7 @@ class KimiCLI:
             thinking=thinking,
             session_id=session.id,
             oauth=oauth,
+            generation_overrides=generation_overrides,
         )
         if llm is not None:
             logger.info("Using LLM provider: {provider}", provider=provider)
