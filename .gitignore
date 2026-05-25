@@ -49,3 +49,5 @@ static/
 .memo/
 .entire
 .claude
+# Development scratch space (not tracked)
+scratch/
