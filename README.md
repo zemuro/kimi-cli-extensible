@@ -1,8 +1,8 @@
 # Kimi Code CLI — Prompt-Extensible Fork
 
-> This is a community fork of [MoonshotAI/kimi-cli](https://github.com/MoonshotAI/kimi-cli) focused on **making every system prompt editable without code changes**.
->
-> All upstream features are preserved. The additions are: decomposed system prompts, config-driven overrides, and file-based subagent prompt loading.
+> This is a community fork of [MoonshotAI/kimi-cli](https://github.com/MoonshotAI/kimi-cli) with two focus areas:
+> 1. **Prompt extensibility** — every system prompt is editable via config, without code changes.
+> 2. **Generation parameters** — per-model `temperature`, `top_p`, `max_tokens`, etc. via config file or CLI flags (`--temperature`, `--top-p`, `--max-tokens`).
 
 [![Commit Activity](https://img.shields.io/github/commit-activity/w/zemuro/kimi-cli-extensible)](https://github.com/zemuro/kimi-cli-extensible/graphs/commit-activity)
 [![Version](https://img.shields.io/pypi/v/kimi-cli)](https://pypi.org/project/kimi-cli/)
@@ -103,9 +103,15 @@ top_p = 0.9
 max_tokens = 32000
 ```
 
-### Supported parameters
+### Quick override from the CLI
 
-| Parameter | Providers | Description |
+```sh
+kimi --temperature 0.7 --top-p 0.9 --max-tokens 4096
+```
+
+Precedence: `CLI flags > env vars > config file > defaults`.
+
+### Supported parameters
 |---|---|---|
 | `temperature` | all | Sampling temperature (0–2) |
 | `top_p` | all | Nucleus sampling (0–1) |
