@@ -17,6 +17,7 @@ Kimi Code CLI is an AI agent that runs in the terminal, helping you complete sof
 ## Table of Contents
 
 - [Prompt Extensibility](#prompt-extensibility) — what's different in this fork
+- [Generation Parameters](#generation-parameters) — per-model config
 - [Getting Started](#getting-started)
 - [Key Features](#key-features)
 - [Development](#development)
@@ -83,6 +84,47 @@ agent:
 - `init_complete.md`, `add_dir.md`
 
 See [`PROMPT_EXTENSIBILITY.md`](./PROMPT_EXTENSIBILITY.md) for the full guide (architecture details, backward compatibility notes, and advanced customization).
+
+---
+
+## Generation Parameters
+
+Every model can have its own generation settings in `~/.kimi/config.toml`:
+
+```toml
+[models.my-kimi]
+provider = "kimi"
+model = "kimi-k2-turbo-preview"
+max_context_size = 256000
+
+[models.my-kimi.generation]
+temperature = 0.7
+top_p = 0.9
+max_tokens = 32000
+```
+
+### Supported parameters
+
+| Parameter | Providers | Description |
+|---|---|---|
+| `temperature` | all | Sampling temperature (0–2) |
+| `top_p` | all | Nucleus sampling (0–1) |
+| `max_tokens` | kimi, openai_legacy, anthropic | Max tokens to generate |
+| `max_output_tokens` | openai_responses, gemini | Max output tokens (falls back from `max_tokens`) |
+| `presence_penalty` | kimi, openai_legacy | Penalty for repeating present tokens |
+| `frequency_penalty` | kimi, openai_legacy | Penalty based on token frequency |
+| `stop` | kimi, openai_legacy | Stop sequence(s) |
+| `n` | kimi, openai_legacy | Completions per prompt |
+| `top_k` | anthropic, gemini | Top-k sampling |
+| `max_tool_calls` | openai_responses | Max tool calls per response |
+| `top_logprobs` | openai_responses | Logprobs to return |
+| `user` | openai_responses | End-user identifier |
+| `tool_choice` | anthropic | Tool choice configuration |
+| `extra_headers` | anthropic | Extra HTTP headers |
+
+Kimi-specific environment variables (`KIMI_MODEL_TEMPERATURE`, `KIMI_MODEL_TOP_P`, `KIMI_MODEL_MAX_TOKENS`) still work and override config values.
+
+See [`MODEL_OPTIONS_RESEARCH.md`](./MODEL_OPTIONS_RESEARCH.md) for the full technical breakdown.
 
 ---
 
