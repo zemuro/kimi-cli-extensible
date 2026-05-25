@@ -6,7 +6,7 @@ from kosong.chat_provider.kimi import Kimi
 from kosong.contrib.chat_provider.openai_responses import OpenAIResponses
 from pydantic import SecretStr
 
-from kimi_cli.config import LLMModel, LLMProvider
+from kimi_cli.config import GenerationConfig, LLMModel, LLMProvider
 from kimi_cli.llm import augment_provider_with_env_vars, create_llm
 
 
@@ -541,4 +541,319 @@ def test_create_llm_kimi_thinking_keep_injected_on_explicit_thinking_true(monkey
 
     assert llm.chat_provider.model_parameters.get("extra_body") == snapshot(
         {"thinking": {"type": "enabled", "keep": "all"}}
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# GenerationConfig tests
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def test_create_llm_kimi_generation_config():
+    """Config-based generation kwargs are forwarded to the Kimi provider."""
+    provider = LLMProvider(
+        type="kimi",
+        base_url="https://api.test/v1",
+        api_key=SecretStr("test-key"),
+    )
+    model = LLMModel(
+        provider="kimi",
+        model="kimi-base",
+        max_context_size=4096,
+        generation=GenerationConfig(
+            temperature=0.7,
+            top_p=0.9,
+            max_tokens=16000,
+            presence_penalty=0.5,
+            frequency_penalty=-0.5,
+            stop=["STOP", "END"],
+        ),
+    )
+
+    llm = create_llm(provider, model)
+    assert llm is not None
+    assert isinstance(llm.chat_provider, Kimi)
+
+    assert llm.chat_provider.model_parameters == snapshot(
+        {
+            "base_url": "https://api.test/v1/",
+            "temperature": 0.7,
+            "top_p": 0.9,
+            "max_tokens": 16000,
+            "presence_penalty": 0.5,
+            "frequency_penalty": -0.5,
+            "stop": ["STOP", "END"],
+        }
+    )
+
+
+def test_create_llm_kimi_env_overrides_config(monkeypatch):
+    """KIMI_MODEL_* env vars override config-based generation values."""
+    monkeypatch.setenv("KIMI_MODEL_TEMPERATURE", "0.2")
+    monkeypatch.setenv("KIMI_MODEL_TOP_P", "0.8")
+    monkeypatch.setenv("KIMI_MODEL_MAX_TOKENS", "1234")
+
+    provider = LLMProvider(
+        type="kimi",
+        base_url="https://api.test/v1",
+        api_key=SecretStr("test-key"),
+    )
+    model = LLMModel(
+        provider="kimi",
+        model="kimi-base",
+        max_context_size=4096,
+        generation=GenerationConfig(
+            temperature=0.7,
+            top_p=0.9,
+            max_tokens=16000,
+        ),
+    )
+
+    llm = create_llm(provider, model)
+    assert llm is not None
+    assert isinstance(llm.chat_provider, Kimi)
+
+    assert llm.chat_provider.model_parameters == snapshot(
+        {
+            "base_url": "https://api.test/v1/",
+            "temperature": 0.2,
+            "top_p": 0.8,
+            "max_tokens": 1234,
+        }
+    )
+
+
+def test_create_llm_kimi_generation_config_with_session_id():
+    """prompt_cache_key from session_id is merged with config generation kwargs."""
+    provider = LLMProvider(
+        type="kimi",
+        base_url="https://api.test/v1",
+        api_key=SecretStr("test-key"),
+    )
+    model = LLMModel(
+        provider="kimi",
+        model="kimi-base",
+        max_context_size=4096,
+        generation=GenerationConfig(temperature=0.5),
+    )
+
+    llm = create_llm(provider, model, session_id="sess-123")
+    assert llm is not None
+    assert isinstance(llm.chat_provider, Kimi)
+
+    assert llm.chat_provider.model_parameters == snapshot(
+        {
+            "base_url": "https://api.test/v1/",
+            "temperature": 0.5,
+            "prompt_cache_key": "sess-123",
+        }
+    )
+
+
+def test_create_llm_openai_legacy_respects_generation_config():
+    """OpenAI Legacy provider receives config-based generation kwargs."""
+    from kosong.contrib.chat_provider.openai_legacy import OpenAILegacy
+
+    provider = LLMProvider(
+        type="openai_legacy",
+        base_url="https://api.openai.com/v1",
+        api_key=SecretStr("test-key"),
+    )
+    model = LLMModel(
+        provider="openai",
+        model="gpt-4o",
+        max_context_size=128000,
+        generation=GenerationConfig(
+            temperature=0.7,
+            top_p=0.9,
+            max_tokens=4096,
+            presence_penalty=0.3,
+            frequency_penalty=-0.2,
+            stop="HALT",
+            n=2,
+        ),
+    )
+
+    llm = create_llm(provider, model)
+    assert llm is not None
+    assert isinstance(llm.chat_provider, OpenAILegacy)
+
+    # OpenAILegacy does not include generation kwargs in model_parameters,
+    # so we inspect _generation_kwargs directly.
+    assert llm.chat_provider._generation_kwargs == snapshot(
+        {
+            "temperature": 0.7,
+            "top_p": 0.9,
+            "max_tokens": 4096,
+            "presence_penalty": 0.3,
+            "frequency_penalty": -0.2,
+            "stop": "HALT",
+            "n": 2,
+        }
+    )
+
+
+def test_create_llm_openai_responses_respects_generation_config():
+    """OpenAI Responses provider receives max_output_tokens (fallback from max_tokens)."""
+    from kosong.contrib.chat_provider.openai_responses import OpenAIResponses
+
+    provider = LLMProvider(
+        type="openai_responses",
+        base_url="https://api.openai.com/v1",
+        api_key=SecretStr("test-key"),
+    )
+    model = LLMModel(
+        provider="openai",
+        model="gpt-5-codex",
+        max_context_size=128000,
+        generation=GenerationConfig(
+            temperature=0.7,
+            top_p=0.9,
+            max_tokens=8192,  # should be mapped to max_output_tokens
+            max_tool_calls=5,
+            top_logprobs=3,
+            user="alice",
+        ),
+    )
+
+    llm = create_llm(provider, model)
+    assert llm is not None
+    assert isinstance(llm.chat_provider, OpenAIResponses)
+
+    assert llm.chat_provider.model_parameters == snapshot(
+        {
+            "base_url": "https://api.openai.com/v1/",
+            "temperature": 0.7,
+            "top_p": 0.9,
+            "max_output_tokens": 8192,
+            "max_tool_calls": 5,
+            "top_logprobs": 3,
+            "user": "alice",
+        }
+    )
+
+
+def test_create_llm_openai_responses_max_output_tokens_takes_precedence():
+    """When both max_tokens and max_output_tokens are set, max_output_tokens wins."""
+    from kosong.contrib.chat_provider.openai_responses import OpenAIResponses
+
+    provider = LLMProvider(
+        type="openai_responses",
+        base_url="https://api.openai.com/v1",
+        api_key=SecretStr("test-key"),
+    )
+    model = LLMModel(
+        provider="openai",
+        model="gpt-5-codex",
+        max_context_size=128000,
+        generation=GenerationConfig(
+            max_tokens=1111,
+            max_output_tokens=2222,
+        ),
+    )
+
+    llm = create_llm(provider, model)
+    assert llm is not None
+    assert isinstance(llm.chat_provider, OpenAIResponses)
+    assert llm.chat_provider.model_parameters["max_output_tokens"] == 2222
+
+
+def test_create_llm_anthropic_respects_generation_config():
+    """Anthropic provider receives config-based generation kwargs."""
+    from kosong.contrib.chat_provider.anthropic import Anthropic
+
+    provider = LLMProvider(
+        type="anthropic",
+        base_url="https://api.anthropic.com",
+        api_key=SecretStr("test-key"),
+    )
+    model = LLMModel(
+        provider="anthropic",
+        model="claude-sonnet-4-20250514",
+        max_context_size=200000,
+        generation=GenerationConfig(
+            temperature=0.7,
+            top_p=0.9,
+            max_tokens=8192,
+            top_k=40,
+            tool_choice={"type": "auto"},
+            extra_headers={"X-Custom": "value"},
+        ),
+    )
+
+    llm = create_llm(provider, model)
+    assert llm is not None
+    assert isinstance(llm.chat_provider, Anthropic)
+
+    assert llm.chat_provider.model_parameters == snapshot(
+        {
+            "base_url": "https://api.anthropic.com",
+            "temperature": 0.7,
+            "beta_features": ["interleaved-thinking-2025-05-14"],
+            "top_p": 0.9,
+            "max_tokens": 8192,
+            "top_k": 40,
+            "tool_choice": {"type": "auto"},
+            "extra_headers": {"X-Custom": "value"},
+        }
+    )
+
+
+def test_create_llm_gemini_respects_generation_config():
+    """Gemini provider receives max_output_tokens (fallback from max_tokens)."""
+    from kosong.contrib.chat_provider.google_genai import GoogleGenAI
+
+    provider = LLMProvider(
+        type="gemini",
+        base_url="https://generativelanguage.googleapis.com",
+        api_key=SecretStr("test-key"),
+    )
+    model = LLMModel(
+        provider="google",
+        model="gemini-2.5-pro",
+        max_context_size=1000000,
+        generation=GenerationConfig(
+            temperature=0.7,
+            top_p=0.9,
+            max_tokens=4096,  # should be mapped to max_output_tokens
+            top_k=40,
+        ),
+    )
+
+    llm = create_llm(provider, model)
+    assert llm is not None
+    assert isinstance(llm.chat_provider, GoogleGenAI)
+
+    assert llm.chat_provider.model_parameters == snapshot(
+        {
+            "model": "gemini-2.5-pro",
+            "base_url": "https://generativelanguage.googleapis.com",
+            "temperature": 0.7,
+            "top_p": 0.9,
+            "max_output_tokens": 4096,
+            "top_k": 40,
+        }
+    )
+
+
+def test_create_llm_no_generation_config_unchanged():
+    """When generation is None, model_parameters contain only the base_url."""
+    provider = LLMProvider(
+        type="kimi",
+        base_url="https://api.test/v1",
+        api_key=SecretStr("test-key"),
+    )
+    model = LLMModel(
+        provider="kimi",
+        model="kimi-base",
+        max_context_size=4096,
+        generation=None,
+    )
+
+    llm = create_llm(provider, model)
+    assert llm is not None
+    assert isinstance(llm.chat_provider, Kimi)
+
+    assert llm.chat_provider.model_parameters == snapshot(
+        {"base_url": "https://api.test/v1/"}
     )

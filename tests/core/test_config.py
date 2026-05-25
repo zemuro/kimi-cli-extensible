@@ -58,6 +58,7 @@ def test_default_config_dump():
             "hooks": [],
             "merge_all_available_skills": True,
             "extra_skill_dirs": [],
+            "system_prompt_overrides": {},
             "telemetry": True,
             "skip_afk_prompt_injection": False,
         }

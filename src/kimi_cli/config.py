@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Literal, Self
+from typing import Any, Literal, Self
 
 import tomlkit
 from pydantic import (
@@ -21,6 +21,96 @@ from kimi_cli.hooks.config import HookDef
 from kimi_cli.llm import ModelCapability, ProviderType
 from kimi_cli.share import get_share_dir
 from kimi_cli.utils.logging import logger
+
+
+class GenerationConfig(BaseModel):
+    """Per-model generation parameters forwarded to the LLM API.
+
+    Not all parameters are supported by every provider. Parameters that a
+    provider does not recognise are silently omitted from the request. See the
+    description on each field for provider compatibility.
+    """
+
+    # ── Common: supported by all providers ──
+    temperature: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=2.0,
+        description="Sampling temperature. 0 = deterministic, higher = more random. Supported by all providers.",
+    )
+    top_p: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Nucleus sampling: only consider tokens comprising the top P probability mass. Supported by all providers.",
+    )
+
+    # ── OpenAI Chat Completions, Kimi, Anthropic ──
+    max_tokens: int | None = Field(
+        default=None,
+        ge=1,
+        description="Maximum number of tokens to generate. Supported by: kimi, openai_legacy, anthropic. For openai_responses and gemini, use `max_output_tokens` instead.",
+    )
+    n: int | None = Field(
+        default=None,
+        ge=1,
+        description="How many completions to generate for each prompt. Supported by: kimi, openai_legacy.",
+    )
+    presence_penalty: float | None = Field(
+        default=None,
+        ge=-2.0,
+        le=2.0,
+        description="Penalty for tokens already present in the generated text. Supported by: kimi, openai_legacy.",
+    )
+    frequency_penalty: float | None = Field(
+        default=None,
+        ge=-2.0,
+        le=2.0,
+        description="Penalty based on how frequently a token has appeared. Supported by: kimi, openai_legacy.",
+    )
+    stop: str | list[str] | None = Field(
+        default=None,
+        description="Stop sequence(s) that halt generation. Supported by: kimi, openai_legacy.",
+    )
+
+    # ── OpenAI Responses & Gemini ──
+    max_output_tokens: int | None = Field(
+        default=None,
+        ge=1,
+        description="Maximum output tokens. For OpenAI Responses and Gemini. If unset, `max_tokens` is used as a fallback for those providers.",
+    )
+
+    # ── OpenAI Responses only ──
+    max_tool_calls: int | None = Field(
+        default=None,
+        ge=1,
+        description="Maximum tool calls in a single response. Supported by: openai_responses.",
+    )
+    top_logprobs: float | None = Field(
+        default=None,
+        description="Number of most likely tokens to return logprobs for. Supported by: openai_responses.",
+    )
+    user: str | None = Field(
+        default=None,
+        description="End-user identifier for tracking/auditing. Supported by: openai_responses.",
+    )
+
+    # ── Anthropic & Gemini ──
+    top_k: int | None = Field(
+        default=None,
+        ge=1,
+        description="Top-k sampling: only sample from the K most likely tokens. Supported by: anthropic, gemini.",
+    )
+
+    # ── Anthropic only ──
+    tool_choice: dict[str, Any] | None = Field(
+        default=None,
+        description="Tool choice configuration, e.g. {type: 'auto'}. Supported by: anthropic.",
+    )
+    extra_headers: dict[str, str] | None = Field(
+        default=None,
+        description="Extra HTTP headers merged with provider-level custom_headers. Supported by: anthropic.",
+    )
 
 
 class OAuthRef(BaseModel):
@@ -70,6 +160,10 @@ class LLMModel(BaseModel):
     """Model capabilities"""
     display_name: str | None = None
     """Human-readable model name (sourced from the provider's models API when available)"""
+    generation: GenerationConfig | None = Field(
+        default=None,
+        description="Per-model generation parameters forwarded to the LLM API.",
+    )
 
 
 class LoopControl(BaseModel):

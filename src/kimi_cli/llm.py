@@ -106,6 +106,91 @@ def _kimi_default_headers(provider: LLMProvider, oauth: OAuthManager | None) -> 
     return headers
 
 
+def _generation_kwargs_for_provider(
+    generation: "LLMModel.generation | None",
+    provider_type: ProviderType,
+) -> dict[str, Any]:
+    """Extract provider-specific generation kwargs from a GenerationConfig.
+
+    Unknown params for a provider are silently omitted so strict SDKs
+    (e.g. Anthropic) do not receive unsupported keys.
+    """
+    if generation is None:
+        return {}
+
+    kwargs: dict[str, Any] = {}
+
+    match provider_type:
+        case "kimi" | "openai_legacy":
+            if generation.max_tokens is not None:
+                kwargs["max_tokens"] = generation.max_tokens
+            if generation.temperature is not None:
+                kwargs["temperature"] = generation.temperature
+            if generation.top_p is not None:
+                kwargs["top_p"] = generation.top_p
+            if generation.n is not None:
+                kwargs["n"] = generation.n
+            if generation.presence_penalty is not None:
+                kwargs["presence_penalty"] = generation.presence_penalty
+            if generation.frequency_penalty is not None:
+                kwargs["frequency_penalty"] = generation.frequency_penalty
+            if generation.stop is not None:
+                kwargs["stop"] = generation.stop
+
+        case "openai_responses":
+            if generation.max_output_tokens is not None:
+                kwargs["max_output_tokens"] = generation.max_output_tokens
+            elif generation.max_tokens is not None:
+                kwargs["max_output_tokens"] = generation.max_tokens
+            if generation.temperature is not None:
+                kwargs["temperature"] = generation.temperature
+            if generation.top_p is not None:
+                kwargs["top_p"] = generation.top_p
+            if generation.max_tool_calls is not None:
+                kwargs["max_tool_calls"] = generation.max_tool_calls
+            if generation.top_logprobs is not None:
+                kwargs["top_logprobs"] = generation.top_logprobs
+            if generation.user is not None:
+                kwargs["user"] = generation.user
+
+        case "anthropic":
+            if generation.max_tokens is not None:
+                kwargs["max_tokens"] = generation.max_tokens
+            if generation.temperature is not None:
+                kwargs["temperature"] = generation.temperature
+            if generation.top_p is not None:
+                kwargs["top_p"] = generation.top_p
+            if generation.top_k is not None:
+                kwargs["top_k"] = generation.top_k
+            if generation.tool_choice is not None:
+                kwargs["tool_choice"] = generation.tool_choice
+            if generation.extra_headers is not None:
+                kwargs["extra_headers"] = generation.extra_headers
+
+        case "google_genai" | "gemini" | "vertexai":
+            if generation.max_output_tokens is not None:
+                kwargs["max_output_tokens"] = generation.max_output_tokens
+            elif generation.max_tokens is not None:
+                kwargs["max_output_tokens"] = generation.max_tokens
+            if generation.temperature is not None:
+                kwargs["temperature"] = generation.temperature
+            if generation.top_p is not None:
+                kwargs["top_p"] = generation.top_p
+            if generation.top_k is not None:
+                kwargs["top_k"] = generation.top_k
+
+        case _:
+            # Unknown / test providers – pass common params and hope for the best
+            if generation.temperature is not None:
+                kwargs["temperature"] = generation.temperature
+            if generation.top_p is not None:
+                kwargs["top_p"] = generation.top_p
+            if generation.max_tokens is not None:
+                kwargs["max_tokens"] = generation.max_tokens
+
+    return kwargs
+
+
 def create_llm(
     provider: LLMProvider,
     model: LLMModel,
@@ -139,19 +224,6 @@ def create_llm(
                 api_key=resolved_api_key,
                 default_headers=_kimi_default_headers(provider, oauth),
             )
-
-            gen_kwargs: Kimi.GenerationKwargs = {}
-            if session_id:
-                gen_kwargs["prompt_cache_key"] = session_id
-            if temperature := os.getenv("KIMI_MODEL_TEMPERATURE"):
-                gen_kwargs["temperature"] = float(temperature)
-            if top_p := os.getenv("KIMI_MODEL_TOP_P"):
-                gen_kwargs["top_p"] = float(top_p)
-            if max_tokens := os.getenv("KIMI_MODEL_MAX_TOKENS"):
-                gen_kwargs["max_tokens"] = int(max_tokens)
-
-            if gen_kwargs:
-                chat_provider = chat_provider.with_generation_kwargs(**gen_kwargs)
         case "openai_legacy":
             from kosong.contrib.chat_provider.openai_legacy import OpenAILegacy
 
@@ -236,6 +308,23 @@ def create_llm(
                     error_types=[429, 500, 503],
                 ),
             )
+
+    # ── Apply generation kwargs from config ──
+    gen_kwargs = _generation_kwargs_for_provider(model.generation, provider.type)
+
+    # Kimi-specific env var overrides (backward compatibility)
+    if provider.type == "kimi":
+        if session_id:
+            gen_kwargs["prompt_cache_key"] = session_id
+        if temperature := os.getenv("KIMI_MODEL_TEMPERATURE"):
+            gen_kwargs["temperature"] = float(temperature)
+        if top_p := os.getenv("KIMI_MODEL_TOP_P"):
+            gen_kwargs["top_p"] = float(top_p)
+        if max_tokens := os.getenv("KIMI_MODEL_MAX_TOKENS"):
+            gen_kwargs["max_tokens"] = int(max_tokens)
+
+    if gen_kwargs:
+        chat_provider = chat_provider.with_generation_kwargs(**gen_kwargs)
 
     capabilities = derive_model_capabilities(model)
 
