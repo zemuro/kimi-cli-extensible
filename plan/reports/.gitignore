@@ -1,0 +1,3 @@
+# Auto-generated reports (audit, completion) — kept for structure but contents ignored
+*.md
+!README.md
