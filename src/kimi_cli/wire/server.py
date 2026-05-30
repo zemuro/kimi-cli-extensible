@@ -891,6 +891,15 @@ class WireServer:
 
         assert self._cancel_event is not None
         self._cancel_event.set()
+
+        # Instant cancellation: abort the underlying HTTP request
+        llm = getattr(self._soul, "_llm", None) or getattr(
+            getattr(self._soul, "_runtime", None), "llm", None
+        )
+        provider = getattr(llm, "chat_provider", None) if llm else None
+        if provider is not None and hasattr(provider, "force_abort"):
+            provider.force_abort()
+
         return JSONRPCSuccessResponse(
             id=msg.id,
             result={},

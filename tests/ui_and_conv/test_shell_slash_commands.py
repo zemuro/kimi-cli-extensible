@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Awaitable
 from pathlib import Path
 from typing import Any
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from kaos.path import KaosPath
@@ -306,3 +306,184 @@ class TestNewCommandSessionCleanup:
         assert not dir_b.exists()  # B cleaned up
         session_c = await Session.find(work_dir, session_c_id)
         assert session_c is not None
+
+
+
+# ---------------------------------------------------------------------------
+# /approve and /reject — plan review gate
+# ---------------------------------------------------------------------------
+
+
+def _ensure_runtime_attr(mock_shell: Mock) -> None:
+    """Ensure the mock soul has both .runtime and ._runtime for private access."""
+    if not hasattr(mock_shell.soul, "_runtime"):
+        mock_shell.soul._runtime = mock_shell.soul.runtime
+
+
+@pytest.mark.asyncio
+async def test_approve_no_do_session(mock_shell: Mock) -> None:
+    """/approve warns when no Do session is registered."""
+    _ensure_runtime_attr(mock_shell)
+    cmd = shell_slash_registry.find_command("approve")
+    assert cmd is not None
+    await _invoke_slash_command(cmd, mock_shell)
+
+
+@pytest.mark.asyncio
+async def test_reject_no_do_session(mock_shell: Mock) -> None:
+    """/reject warns when no Do session is registered."""
+    _ensure_runtime_attr(mock_shell)
+    cmd = shell_slash_registry.find_command("reject")
+    assert cmd is not None
+    await _invoke_slash_command(cmd, mock_shell)
+
+
+@pytest.mark.asyncio
+async def test_approve_not_awaiting(mock_shell: Mock, monkeypatch: pytest.MonkeyPatch) -> None:
+    """/approve warns when there is no pending review."""
+    _ensure_runtime_attr(mock_shell)
+    from kimi_cli.do.session import DoSession
+
+    do_session = Mock(spec=DoSession)
+    do_session.state = "idle"
+
+    monkeypatch.setattr(
+        "kimi_cli.do.registry.get_do_session", lambda _sid: do_session
+    )
+
+    cmd = shell_slash_registry.find_command("approve")
+    assert cmd is not None
+    await _invoke_slash_command(cmd, mock_shell)
+
+
+@pytest.mark.asyncio
+async def test_reject_not_awaiting(mock_shell: Mock, monkeypatch: pytest.MonkeyPatch) -> None:
+    """/reject warns when there is no pending review."""
+    _ensure_runtime_attr(mock_shell)
+    from kimi_cli.do.session import DoSession
+
+    do_session = Mock(spec=DoSession)
+    do_session.state = "idle"
+
+    monkeypatch.setattr(
+        "kimi_cli.do.registry.get_do_session", lambda _sid: do_session
+    )
+
+    cmd = shell_slash_registry.find_command("reject")
+    assert cmd is not None
+    await _invoke_slash_command(cmd, mock_shell)
+
+
+@pytest.mark.asyncio
+async def test_approve_approves_and_reruns(mock_shell: Mock, monkeypatch: pytest.MonkeyPatch) -> None:
+    """/approve calls approve_review() and re-runs the soul."""
+    _ensure_runtime_attr(mock_shell)
+    from kimi_cli.do.session import DoSession
+
+    do_session = Mock(spec=DoSession)
+    do_session.state = "awaiting_review"
+    do_session.approve_review = AsyncMock()
+
+    monkeypatch.setattr(
+        "kimi_cli.do.registry.get_do_session", lambda _sid: do_session
+    )
+
+    mock_shell.run_soul_command = AsyncMock()
+
+    cmd = shell_slash_registry.find_command("approve")
+    assert cmd is not None
+    await _invoke_slash_command(cmd, mock_shell)
+
+    do_session.approve_review.assert_awaited_once()
+    mock_shell.run_soul_command.assert_awaited_once_with("Proceed with the approved plan.")
+
+
+@pytest.mark.asyncio
+async def test_reject_rejects_and_clears(mock_shell: Mock, monkeypatch: pytest.MonkeyPatch) -> None:
+    """/reject calls reject_review() with an optional reason."""
+    _ensure_runtime_attr(mock_shell)
+    from kimi_cli.do.session import DoSession
+
+    do_session = Mock(spec=DoSession)
+    do_session.state = "awaiting_review"
+    do_session.reject_review = AsyncMock()
+
+    monkeypatch.setattr(
+        "kimi_cli.do.registry.get_do_session", lambda _sid: do_session
+    )
+
+    cmd = shell_slash_registry.find_command("reject")
+    assert cmd is not None
+
+    # Without reason
+    await _invoke_slash_command(cmd, mock_shell)
+    do_session.reject_review.assert_awaited_once_with(None)
+    do_session.reject_review.reset_mock()
+
+    # With reason
+    ret = cmd.func(mock_shell, "Too risky")
+    if isinstance(ret, Awaitable):
+        await ret
+    do_session.reject_review.assert_awaited_once_with("Too risky")
+
+
+
+# ---------------------------------------------------------------------------
+# /review — Phase 7 manual plan review
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_review_no_do_session(mock_shell: Mock) -> None:
+    """/review warns when no Do session is registered."""
+    _ensure_runtime_attr(mock_shell)
+    cmd = shell_slash_registry.find_command("review")
+    assert cmd is not None
+    await _invoke_slash_command(cmd, mock_shell)
+
+
+@pytest.mark.asyncio
+async def test_review_already_pending(mock_shell: Mock, monkeypatch: pytest.MonkeyPatch) -> None:
+    """/review warns when a review is already pending."""
+    _ensure_runtime_attr(mock_shell)
+    from kimi_cli.do.session import DoSession
+
+    do_session = Mock(spec=DoSession)
+    do_session.state = "awaiting_review"
+
+    monkeypatch.setattr(
+        "kimi_cli.do.registry.get_do_session", lambda _sid: do_session
+    )
+
+    cmd = shell_slash_registry.find_command("review")
+    assert cmd is not None
+    await _invoke_slash_command(cmd, mock_shell)
+
+
+@pytest.mark.asyncio
+async def test_review_triggers_manual_review(mock_shell: Mock, monkeypatch: pytest.MonkeyPatch) -> None:
+    """/review calls trigger_manual_review() and prints the report."""
+    _ensure_runtime_attr(mock_shell)
+    from kimi_cli.do.plan_review import PlanReviewReport
+    from kimi_cli.do.session import DoSession
+
+    report = PlanReviewReport(
+        feasible=True,
+        risks=["risk1"],
+        recommendations=["rec1"],
+        questions=["q1"],
+        summary="Looks good",
+    )
+
+    do_session = Mock(spec=DoSession)
+    do_session.state = "idle"
+    do_session.trigger_manual_review = AsyncMock(return_value=report)
+
+    monkeypatch.setattr(
+        "kimi_cli.do.registry.get_do_session", lambda _sid: do_session
+    )
+
+    cmd = shell_slash_registry.find_command("review")
+    assert cmd is not None
+    await _invoke_slash_command(cmd, mock_shell)
+
+    do_session.trigger_manual_review.assert_awaited_once()

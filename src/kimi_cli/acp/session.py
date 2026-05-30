@@ -253,6 +253,13 @@ class ACPSession:
 
         self._turn_state.cancel_event.set()
 
+        # Instant cancellation: abort the underlying HTTP request
+        soul = getattr(self._cli, "soul", None)
+        llm = getattr(getattr(soul, "_runtime", None), "llm", None)
+        provider = getattr(llm, "chat_provider", None) if llm else None
+        if provider is not None and hasattr(provider, "force_abort"):
+            provider.force_abort()
+
     async def _send_thinking(self, think: str):
         """Send thinking content to client."""
         if not self._id or not self._conn:

@@ -116,6 +116,78 @@ def _cleanup_stale_foreground_subagents(runtime: Runtime) -> None:
         subagent_store.update_instance(agent_id, status="failed")
 
 
+def _resolve_model_and_provider(
+    config: Config, model_name: str | None
+) -> tuple[LLMModel, LLMProvider]:
+    """Resolve model and provider from config and CLI overrides."""
+    model: LLMModel | None = None
+    provider: LLMProvider | None = None
+    if not model_name and config.default_model:
+        model = config.models[config.default_model]
+        provider = config.providers[model.provider]
+    if model_name and model_name in config.models:
+        model = config.models[model_name]
+        provider = config.providers[model.provider]
+    if not model:
+        model = LLMModel(provider="", model="", max_context_size=100_000)
+        provider = LLMProvider(type="kimi", base_url="", api_key=SecretStr(""))
+    assert provider is not None
+    assert model is not None
+    return model, provider
+
+
+async def create_think_soul(
+    session: Session,
+    config: Config | Path | None,
+    model_name: str | None,
+    thinking: bool | None,
+    generation_overrides: dict[str, Any] | None,
+    budget_tokens: int | None,
+) -> tuple[Any, dict[str, str]]:
+    """Create a ThinkSoul with the given configuration."""
+    from kimi_cli.think import ThinkSoul
+    from kimi_cli.think.models import ThinkSession
+    from kimi_cli.think.storage import load_session as load_think_session
+
+    _config = config if isinstance(config, Config) else load_config(config)
+    if budget_tokens is not None:
+        _config.budget_tokens = budget_tokens
+
+    model, provider = _resolve_model_and_provider(_config, model_name)
+    env_overrides = augment_provider_with_env_vars(provider, model)
+    _thinking = _config.default_thinking if thinking is None else thinking
+
+    from kimi_cli.auth.oauth import OAuthManager
+
+    oauth = OAuthManager(_config)
+    llm = create_llm(
+        provider,
+        model,
+        thinking=_thinking,
+        session_id=session.id,
+        oauth=oauth,
+        generation_overrides=generation_overrides,
+    )
+
+    think_session = load_think_session(session.id)
+    if think_session is None:
+        think_session = ThinkSession(id=session.id)
+
+    # Create a lightweight Runtime for subagent support in Think mode
+    from kimi_cli.soul.agent import Runtime
+
+    runtime = await Runtime.create(
+        _config,
+        oauth,
+        llm,
+        session,
+        yolo=False,
+        afk=False,
+    )
+
+    return ThinkSoul(session, llm, _config, think_session, runtime=runtime), env_overrides
+
+
 class KimiCLI:
     @staticmethod
     async def create(
@@ -144,6 +216,11 @@ class KimiCLI:
         max_ralph_iterations: int | None = None,
         startup_progress: Callable[[str], None] | None = None,
         defer_mcp_loading: bool = False,
+        budget_tokens: int | None = None,
+        do_mode: bool = False,
+        seed_from_think: str | None = None,
+        plan_file: Path | None = None,
+        phase: str | None = None,
     ) -> KimiCLI:
         """
         Create a KimiCLI instance.
@@ -202,6 +279,8 @@ class KimiCLI:
             config.loop_control.max_retries_per_step = max_retries_per_step
         if max_ralph_iterations is not None:
             config.loop_control.max_ralph_iterations = max_ralph_iterations
+        if budget_tokens is not None:
+            config.budget_tokens = budget_tokens
         logger.info("Loaded config: {config}", config=config)
 
         _phase_t = time.monotonic()
@@ -250,6 +329,8 @@ class KimiCLI:
             generation_overrides=generation_overrides,
         )
         if llm is not None:
+            from kimi_cli.chat_provider_ext import patch_chat_provider
+            patch_chat_provider(llm.chat_provider)
             logger.info("Using LLM provider: {provider}", provider=provider)
             logger.info("Using LLM model: {model}", model=model)
             logger.info("Thinking mode: {thinking}", thinking=thinking)
@@ -312,7 +393,48 @@ class KimiCLI:
         else:
             await context.write_system_prompt(agent.system_prompt)
 
+        # Seed Do-mode context from Think outbox
+        if seed_from_think:
+            from kosong.message import Message, TextPart
+
+            from kimi_cli.think.push import load_outbox
+
+            seed_messages = load_outbox(seed_from_think)
+            if seed_messages:
+                for msg in seed_messages:
+                    content = msg.get("content", "")
+                    if isinstance(content, str):
+                        await context.append_message(
+                            Message(role=msg["role"], content=[TextPart(text=content)])
+                        )
+                    else:
+                        await context.append_message(
+                            Message(role=msg["role"], content=content)
+                        )
+            else:
+                logger.warning(
+                    "No Think outbox found for session {sid}", sid=seed_from_think
+                )
+
         soul = KimiSoul(agent, context=context)
+
+        # Wire up Do mode versioning (git snapshotting + change journal)
+        if do_mode and config.do.auto_git_snapshot:
+            from kimi_cli.do.registry import register_do_session
+            from kimi_cli.do.session import DoSession
+
+            do_session = DoSession(
+                soul,
+                work_dir=Path(session.work_dir),
+                plan_file=plan_file,
+                phase=phase,
+            )
+            await do_session.start()
+
+            soul.register_pre_tool_hook(do_session.capture_baseline)
+            soul.register_post_tool_hook(do_session.on_tool_result)
+
+            register_do_session(session.id, do_session)
 
         # Activate plan mode if requested (for new sessions or --plan flag)
         if plan_mode and not soul.plan_mode:

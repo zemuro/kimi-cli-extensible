@@ -134,6 +134,77 @@ See [`MODEL_OPTIONS_RESEARCH.md`](./MODEL_OPTIONS_RESEARCH.md) for the full tech
 
 ---
 
+## Fork Features
+
+This fork adds a **Think/Do workflow**, **plan-driven orchestration**, and **subagent budget controls** on top of the upstream agent.
+
+### Think Mode — Research & Planning
+
+A mutable-history REPL for speculative reasoning, prompt engineering, and plan authoring.
+
+```
+[kimi]$ /think
+[Think] Entering Think mode. History is editable.
+
+> Design a new auth system
+...
+> /edit msg_abc123            # edit any past message
+> /delete msg_abc123          # soft-delete a message
+> /checkpoint save-name       # save snapshot
+> /compact                    # summarize old history
+> /push-to-do                 # send conclusion to Do mode
+```
+
+Features: editable history, JSONL storage, checkpoints, manual compaction, Python execution (`/python`), subagent exploration (`/explore`).
+
+### Do Mode — Execution & Implementation
+
+An immutable, tool-enabled agent loop with full audit trail.
+
+```
+[kimi]$ kimi --do --plan-file docs/plan.md --phase phase-02
+[Do] Stashed uncommitted changes. Starting Phase 2 audit...
+...
+> /review                     # manually audit the current plan
+> /approve                    # approve and continue
+> /reject too risky           # reject with reason
+> /commit "checkpoint"        # git commit current state
+> /abort                      # revert to initial stash
+```
+
+Features: git snapshotting, change journal (every file edit recorded), unified diffs, blob storage, plan review gate.
+
+### Plan Decomposition
+
+Large plans are split into per-phase documents instead of a single monolithic file:
+
+```
+docs/plan/
+├── index.md              # dependency graph + status overview
+├── phase-01.md           # individual phase
+├── phase-02.md
+└── ...
+```
+
+Do mode loads only the target phase + index, saving tokens on large projects. Think mode can generate and edit individual phases.
+
+### Subagent Budget Gate
+
+Subagents (explore, plan-review) run with token and tool-call budgets to prevent runaway costs:
+
+```toml
+[subagents.budget]
+max_tokens_per_task = 20_000
+max_tool_calls_per_task = 20
+warn_tokens_ratio = 0.8
+```
+
+Warnings are emitted at 80%; hard limits stop the subagent gracefully and return partial results.
+
+See [`docs/BEST_PRACTICES.md`](./docs/BEST_PRACTICES.md) for workflow guidance and [`ROADMAP.md`](./ROADMAP.md) for what's planned next.
+
+---
+
 ## Getting Started
 
 See the [upstream Getting Started guide](https://moonshotai.github.io/kimi-cli/en/guides/getting-started.html) for how to install and start using Kimi Code CLI.

@@ -277,6 +277,108 @@ class MCPConfig(BaseModel):
     )
 
 
+class PythonConfig(BaseModel):
+    """Configuration for Python execution in Think mode."""
+
+    restriction_level: Literal["none", "restricted", "sandboxed"] = Field(
+        default="restricted",
+        description="Sandbox level for Python execution",
+    )
+    allow_network: bool = Field(default=False)
+    timeout_seconds: int = Field(default=30, ge=1, le=300)
+    max_memory_mb: int = Field(default=512, ge=64)
+    auto_approve: bool = Field(default=False)
+
+
+class ThinkConfig(BaseModel):
+    """Think mode configuration."""
+
+    default_temperature: float = Field(
+        default=0.7, ge=0.0, le=2.0, description="Default temperature for Think mode"
+    )
+    max_context_tokens: int = Field(
+        default=200_000, ge=1000, description="Maximum context tokens for Think mode"
+    )
+    enable_checkpoints: bool = Field(
+        default=True, description="Enable checkpoint save/restore in Think mode"
+    )
+    python: PythonConfig = Field(default_factory=PythonConfig)
+    compaction_enabled: bool = Field(
+        default=True, description="Enable context compaction warnings and /compact command"
+    )
+    compaction_threshold: float = Field(
+        default=0.75, ge=0.1, le=0.99, description="Context usage ratio to warn at"
+    )
+    compaction_preserve_messages: int = Field(
+        default=6, ge=1, le=50, description="Messages to preserve during compaction"
+    )
+
+
+class SubagentBudgetConfig(BaseModel):
+    """Token and tool-call budget limits for subagent tasks."""
+
+    max_tokens_per_task: int = Field(
+        default=20_000, ge=1_000, description="Hard token limit per subagent task"
+    )
+    max_tool_calls_per_task: int = Field(
+        default=20, ge=1, description="Hard tool-call limit per subagent task"
+    )
+    warn_tokens_ratio: float = Field(
+        default=0.8, ge=0.1, le=1.0, description="Warn when token usage exceeds this ratio"
+    )
+    warn_tool_calls_ratio: float = Field(
+        default=0.8, ge=0.1, le=1.0, description="Warn when tool-call usage exceeds this ratio"
+    )
+
+
+class SubagentsConfig(BaseModel):
+    """Cross-cutting subagent configuration."""
+
+    enabled: bool = Field(default=True, description="Enable subagent spawning from Think and Do modes")
+    timeout_seconds: int = Field(default=300, ge=10, le=3600)
+    default_type: str = Field(default="explore", description="Default subagent type for Think mode")
+    budget: SubagentBudgetConfig = Field(
+        default_factory=SubagentBudgetConfig, description="Subagent budget limits"
+    )
+
+
+class PlanReviewConfig(BaseModel):
+    """Nested config for plan review gate."""
+
+    enabled: bool = Field(default=True, description="Enable plan review gate when seeded from Think")
+    timeout_seconds: int = Field(default=300, ge=30, le=3600)
+    model: str | None = Field(default=None, description="Optional model override for review subagent")
+    system_prompt_path: Path | None = Field(
+        default=None, description="Optional custom system prompt for plan review"
+    )
+
+
+class DoConfig(BaseModel):
+    """Do mode configuration."""
+
+    default_temperature: float = Field(
+        default=0.3, ge=0.0, le=2.0, description="Default temperature for Do mode"
+    )
+    auto_git_snapshot: bool = Field(
+        default=True, description="Automatically stash uncommitted changes on Do mode start"
+    )
+    max_iterations: int = Field(
+        default=50, ge=1, description="Maximum iterations per turn in Do mode"
+    )
+    enable_change_journal: bool = Field(
+        default=True, description="Record all file-modifying tool calls in the change journal"
+    )
+    journal_include_diffs: bool = Field(
+        default=True, description="Store unified diffs in the journal (increases storage)"
+    )
+    journal_retention_days: int = Field(
+        default=30, ge=0, description="Archive journals older than N days (0 = disable)"
+    )
+    plan_review: PlanReviewConfig = Field(
+        default_factory=PlanReviewConfig, description="Plan review gate configuration"
+    )
+
+
 class Config(BaseModel):
     """Main configuration structure."""
 
@@ -359,6 +461,20 @@ class Config(BaseModel):
             "Keys are section names (e.g. 'identity', 'coding_guidelines') and "
             "values are absolute or ~-prefixed paths to replacement .md files."
         ),
+    )
+    budget_tokens: int | None = Field(
+        default=None,
+        ge=1,
+        description="Maximum token budget for a session. Warns at 80%, stops at 100%.",
+    )
+    think: ThinkConfig = Field(
+        default_factory=ThinkConfig, description="Think mode configuration"
+    )
+    do: DoConfig = Field(
+        default_factory=DoConfig, description="Do mode configuration"
+    )
+    subagents: SubagentsConfig = Field(
+        default_factory=SubagentsConfig, description="Subagent configuration"
     )
     telemetry: bool = Field(
         default=True,

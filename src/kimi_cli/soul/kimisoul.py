@@ -5,6 +5,7 @@ import time
 import uuid
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, cast
 
@@ -17,6 +18,7 @@ from kosong.chat_provider import (
     APIStatusError,
     APITimeoutError,
     RetryableChatProvider,
+    TokenUsage,
 )
 from kosong.message import Message
 from tenacity import RetryCallState, retry_if_exception, stop_after_attempt, wait_exponential_jitter
@@ -80,6 +82,7 @@ from kimi_cli.wire.types import (
     StepInterrupted,
     StepRetry,
     TextPart,
+    ToolCall,
     ToolResult,
     TurnBegin,
     TurnEnd,
@@ -209,6 +212,17 @@ class KimiSoul:
         ]
         self._hook_engine: HookEngine = HookEngine()
         self._stop_hook_active: bool = False
+
+        # Do mode versioning hooks
+        self._current_turn_index: int = 0
+        self._pre_tool_hooks: list[Callable[[ToolCall], Awaitable[None]]] = []
+        self._post_tool_hooks: list[Callable[[ToolCall, ToolResult], Awaitable[None]]] = []
+        # Pre-run hooks (e.g., plan review gate) — additive only
+        self._pre_run_hooks: list[Callable[[Message], Awaitable[bool]]] = []
+        # Usage hooks (e.g., subagent budget tracking) — called after each LLM step
+        self._usage_hooks: list[Callable[[TokenUsage], None]] = []
+        # Step gates (e.g., subagent budget exceeded) — checked after each step
+        self._step_gates: list[Callable[[], StepOutcome | None]] = []
         if self.is_root:
             self._runtime.notifications.ack_ids("llm", extract_notification_ids(context.history))
 
@@ -275,6 +289,47 @@ class KimiSoul:
         self._hook_engine = engine
         if isinstance(self._agent.toolset, KimiToolset):
             self._agent.toolset.set_hook_engine(engine)
+
+    def register_pre_tool_hook(self, hook: Callable[[ToolCall], Awaitable[None]]) -> None:
+        """Register a callback to be called BEFORE each tool execution.
+
+        Used to capture pre-edit file baselines for change journaling.
+        Exceptions in hooks are logged but do not fail the tool execution.
+        """
+        self._pre_tool_hooks.append(hook)
+
+    def register_post_tool_hook(self, hook: Callable[[ToolCall, ToolResult], Awaitable[None]]) -> None:
+        """Register a callback to be called AFTER each tool execution.
+
+        The hook receives the original ToolCall (with function name and arguments)
+        and the resulting ToolResult. Exceptions in hooks are logged but do not
+        fail the tool execution.
+        """
+        self._post_tool_hooks.append(hook)
+
+    def register_pre_run_hook(self, hook: Callable[[Message], Awaitable[bool]]) -> None:
+        """Register a hook that runs before the first turn.
+
+        If the hook returns True, execution is paused. The caller is
+        responsible for resuming (e.g., via slash command).
+        """
+        self._pre_run_hooks.append(hook)
+
+    def register_usage_hook(self, hook: Callable[[TokenUsage], None]) -> None:
+        """Register a callback that receives TokenUsage after each LLM step.
+
+        Used for subagent budget tracking. Exceptions in hooks are logged
+        but do not fail the step.
+        """
+        self._usage_hooks.append(hook)
+
+    def register_step_gate(self, gate: Callable[[], StepOutcome | None]) -> None:
+        """Register a gate that is checked after each step.
+
+        If the gate returns a StepOutcome, the current turn stops with
+        that outcome. Used for subagent budget limits.
+        """
+        self._step_gates.append(gate)
 
     def add_injection_provider(self, provider: DynamicInjectionProvider) -> None:
         """Register an additional dynamic injection provider."""
@@ -631,6 +686,18 @@ class KimiSoul:
 
             _track_telemetry("turn_started", mode="plan" if self._plan_mode else "agent")
             user_message = Message(role="user", content=user_input)
+
+            # Run pre-run hooks before first turn
+            for hook in self._pre_run_hooks:
+                try:
+                    should_pause = await hook(user_message)
+                except Exception:
+                    logger.exception("Pre-run hook failed")
+                    should_pause = False
+                if should_pause:
+                    turn_finished = True
+                    return
+
             text_input = user_message.extract_text(" ").strip()
 
             if command_call := parse_slash_command_call(text_input):
@@ -715,11 +782,35 @@ class KimiSoul:
                 reset_current_approval_source(approval_source_token)
 
     async def _turn(self, user_message: Message) -> TurnOutcome:
+        self._current_turn_index += 1
+
         if self._runtime.llm is None:
             raise LLMNotSet()
 
         if missing_caps := check_message(user_message, self._runtime.llm.capabilities):
             raise LLMNotSupported(self._runtime.llm, list(missing_caps))
+
+        # Budget check before calling LLM
+        if self._runtime.config.budget_tokens:
+            from kimi_cli.token_tracker import BudgetExceededError, TokenTracker
+
+            tracker = TokenTracker()
+            summary = tracker.get_session_summary(self._runtime.session.id)
+            burned = summary["burned_tokens"]
+            budget = self._runtime.config.budget_tokens
+            if burned >= budget:
+                raise BudgetExceededError(
+                    f"Token budget exceeded: {burned:,} / {budget:,} tokens"
+                )
+            elif burned >= int(budget * 0.8):
+                wire_send(
+                    TextPart(
+                        text=(
+                            f"[Budget Warning] {burned:,} / {budget:,} "
+                            f"tokens used ({burned / budget:.0%})."
+                        )
+                    )
+                )
 
         self._current_turn_id = uuid.uuid4().hex
         self._last_tool_calls = []
@@ -915,6 +1006,19 @@ class KimiSoul:
 
                 # ── 2e. Step Execution ──────────────────────────────────────────
                 step_outcome = await self._step()
+
+                # ── 2e.x. Step Gates ────────────────────────────────────────────
+                # Check registered gates (e.g., subagent budget exceeded).
+                # Gates are evaluated in order; the first non-None outcome wins.
+                for gate in self._step_gates:
+                    try:
+                        gate_outcome = gate()
+                    except Exception:
+                        logger.exception("Step gate failed")
+                        continue
+                    if gate_outcome is not None:
+                        step_outcome = gate_outcome
+                        break
 
             except BackToTheFuture as e:
                 # ── 2f-i. D-Mail revert signal ────────────────────────────────
@@ -1139,6 +1243,27 @@ class KimiSoul:
             input_tokens=usage.input if usage else "?",
             output_tokens=usage.output if usage else "?",
         )
+        if usage and self._runtime.llm:
+            from kimi_cli.token_tracker import TokenLogEntry, TokenTracker
+
+            tracker = TokenTracker()
+            tracker.log(
+                TokenLogEntry(
+                    timestamp=datetime.now(datetime.UTC),
+                    session_id=self._runtime.session.id,
+                    turn_id=str(self._current_turn_id),
+                    model=self._runtime.llm.model_name,
+                    tokens_in=usage.input,
+                    tokens_out=usage.output,
+                    active_context=self._context.token_count,
+                )
+            )
+            # Fire usage hooks (e.g., subagent budget tracking)
+            for hook in self._usage_hooks:
+                try:
+                    hook(usage)
+                except Exception:
+                    logger.exception("Usage hook failed")
         status_update = StatusUpdate(
             token_usage=usage, message_id=result.id, plan_mode=self._plan_mode
         )
@@ -1154,10 +1279,32 @@ class KimiSoul:
         # ═══════════════════════════════════════════════════════════════════════
         # 2e.6. TOOL EXECUTION
         # ═══════════════════════════════════════════════════════════════════════
+        # Pre-tool hooks (e.g., baseline capture for change journaling)
+        for hook in self._pre_tool_hooks:
+            for tool_call in result.tool_calls:
+                try:
+                    await hook(tool_call)
+                except Exception:
+                    logger.exception(
+                        "Pre-tool hook failed for {tool}",
+                        tool=tool_call.function.name,
+                    )
+
         # wait for all tool results (may be interrupted)
         plan_mode_before_tools = self._plan_mode
         results = await result.tool_results()
         logger.debug("Got tool results: {results}", results=results)
+
+        # Post-tool hooks (e.g., diff recording for change journaling)
+        for hook in self._post_tool_hooks:
+            for tool_call, tool_result in zip(result.tool_calls, results):
+                try:
+                    await hook(tool_call, tool_result)
+                except Exception:
+                    logger.exception(
+                        "Post-tool hook failed for {tool}",
+                        tool=tool_call.function.name,
+                    )
 
         # Update dedup tracking for the next step
         if isinstance(self._agent.toolset, KimiToolset):

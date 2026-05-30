@@ -6,12 +6,16 @@ import contextlib
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
+from kosong.message import Message, TextPart
+
 from kimi_cli.approval_runtime import (
     ApprovalSource,
     reset_current_approval_source,
     set_current_approval_source,
 )
 from kimi_cli.soul import RunCancelled
+from kimi_cli.soul.kimisoul import StepOutcome
+from kimi_cli.subagents.budget_tracker import BudgetStatus, SubagentBudgetTracker
 from kimi_cli.subagents.builder import SubagentBuilder
 from kimi_cli.subagents.core import SubagentRunSpec, prepare_soul
 from kimi_cli.subagents.output import SubagentOutputWriter
@@ -160,6 +164,35 @@ class BackgroundAgentRunner:
             self._runtime.subagent_store,
             on_stage=output.stage,
         )
+
+        # ── Budget tracking ───────────────────────────────────────────────────
+        budget_config = self._runtime.config.subagents.budget
+        tracker = SubagentBudgetTracker(
+            budget_config, task_name=self._subagent_type
+        )
+
+        def _usage_hook(usage) -> None:
+            status = tracker.record_turn(usage.total)
+            if status == BudgetStatus.WARNING:
+                logger.warning(tracker.warning_message())
+
+        def _tool_hook(_tc, _tr) -> None:
+            tracker.record_tool_call()
+
+        def _budget_gate():
+            if tracker.exceeded:
+                return StepOutcome(
+                    stop_reason="no_tool_calls",
+                    assistant_message=Message(
+                        role="assistant",
+                        content=[TextPart(text=tracker.exceeded_message())],
+                    ),
+                )
+            return None
+
+        soul.register_usage_hook(_usage_hook)
+        soul.register_post_tool_hook(_tool_hook)
+        soul.register_step_gate(_budget_gate)
 
         async def _ui_loop_fn(wire: Wire) -> None:
             wire_ui = wire.ui_side(merge=True)

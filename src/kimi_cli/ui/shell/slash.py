@@ -883,6 +883,130 @@ async def fork(app: Shell, args: str):
     raise Reload(session_id=new_session_id)
 
 
+@registry.command
+@shell_mode_registry.command
+async def token_usage(app: Shell, args: str):
+    """Show token usage summary for the current session."""
+    soul = ensure_kimi_soul(app)
+    if soul is None:
+        return
+    from kimi_cli.token_tracker import TokenTracker
+
+    tracker = TokenTracker()
+    summary = tracker.get_session_summary(soul.runtime.session.id)
+    burned = summary["burned_tokens"]
+    active_max = summary["active_context_max"]
+    model_breakdown = summary["model_breakdown"]
+
+    from rich.text import Text
+
+    lines: list[str] = []
+    lines.append(f"[bold]Token Usage for session {soul.runtime.session.id[:8]}[/bold]")
+    lines.append(f"  Total burned: {burned:,} tokens")
+    lines.append(f"  Peak context: {active_max:,} tokens")
+    if model_breakdown:
+        lines.append("  By model:")
+        for model, tokens in sorted(model_breakdown.items(), key=lambda x: -x[1]):
+            lines.append(f"    - {model}: {tokens:,} tokens")
+    console.print(Text.from_markup("\n".join(lines)))
+
+
+@registry.command
+@shell_mode_registry.command
+async def approve(app: Shell, args: str) -> None:
+    """Approve a pending plan review and resume execution."""
+    soul = ensure_kimi_soul(app)
+    if soul is None:
+        return
+
+    from kimi_cli.do.registry import get_do_session
+
+    do_session = get_do_session(soul._runtime.session.id)
+    if do_session is None:
+        console.print("[red]No Do session found.[/red]")
+        return
+    if do_session.state != "awaiting_review":
+        console.print("[yellow]No pending plan review to approve.[/yellow]")
+        return
+
+    await do_session.approve_review()
+    console.print("[green]Plan approved. Resuming execution…[/green]")
+    # Re-trigger the soul so the approved plan can proceed.
+    await app.run_soul_command("Proceed with the approved plan.")
+
+
+@registry.command
+@shell_mode_registry.command
+async def reject(app: Shell, args: str) -> None:
+    """Reject a pending plan review and clear the gate."""
+    soul = ensure_kimi_soul(app)
+    if soul is None:
+        return
+
+    from kimi_cli.do.registry import get_do_session
+
+    do_session = get_do_session(soul._runtime.session.id)
+    if do_session is None:
+        console.print("[red]No Do session found.[/red]")
+        return
+    if do_session.state != "awaiting_review":
+        console.print("[yellow]No pending plan review to reject.[/yellow]")
+        return
+
+    reason = args.strip() or None
+    await do_session.reject_review(reason)
+    console.print("[yellow]Plan review rejected.[/yellow]")
+
+
+@registry.command
+@shell_mode_registry.command
+async def review(app: Shell, args: str) -> None:
+    """Manually trigger a plan review for the current Do session."""
+    soul = ensure_kimi_soul(app)
+    if soul is None:
+        return
+
+    from kimi_cli.do.registry import get_do_session
+
+    do_session = get_do_session(soul._runtime.session.id)
+    if do_session is None:
+        console.print("[red]No Do session found.[/red]")
+        return
+    if do_session.state == "awaiting_review":
+        console.print(
+            "[yellow]A plan review is already pending. Use /approve or /reject.[/yellow]"
+        )
+        return
+
+    try:
+        report = await do_session.trigger_manual_review()
+    except RuntimeError as exc:
+        console.print(f"[yellow]{exc}[/yellow]")
+        return
+
+    # Print formatted report
+    lines: list[str] = []
+    lines.append("")
+    lines.append("[bold]Plan Review Complete[/bold]")
+    lines.append(f"Feasible: {'[green]Yes[/green]' if report.feasible else '[red]No[/red]'}")
+    if report.risks:
+        lines.append("Risks:")
+        for risk in report.risks:
+            lines.append(f"  - {risk}")
+    if report.recommendations:
+        lines.append("Recommendations:")
+        for rec in report.recommendations:
+            lines.append(f"  - {rec}")
+    if report.questions:
+        lines.append("Questions:")
+        for q in report.questions:
+            lines.append(f"  - {q}")
+    lines.append(f"Summary: {report.summary}")
+    lines.append("")
+    lines.append("Use /approve to proceed or /reject to discard.")
+    console.print("\n".join(lines))
+
+
 from . import (  # noqa: E402
     debug,  # noqa: F401 # type: ignore[reportUnusedImport]
     export_import,  # noqa: F401 # type: ignore[reportUnusedImport]

@@ -513,6 +513,64 @@ class ToolCallRequest(BaseModel):
         return self._future is not None and self._future.done()
 
 
+class ToolFileModifiedEvent(BaseModel):
+    """Sent when a tool call modifies a file in Do mode.
+
+    The extension uses this to open or refresh an inline diff view.
+    """
+
+    type: Literal["tool_file_modified"] = "tool_file_modified"
+    entry_id: str
+    turn_index: int
+    step_index: int
+    tool_call_id: str
+    tool_name: str
+    path: str
+    baseline_hash: str
+    post_hash: str
+    lines_added: int
+    lines_removed: int
+
+
+class PlanReviewEvent(BaseModel):
+    type: Literal["plan_review"] = "plan_review"
+    session_id: str
+    feasible: bool
+    risks: list[str]
+    recommendations: list[str]
+    questions: list[str]
+    summary: str
+
+
+class PlanLoadedEvent(BaseModel):
+    type: Literal["plan_loaded"] = "plan_loaded"
+    plan_id: str
+    phases: list[dict]
+
+
+class PhaseAuditEvent(BaseModel):
+    type: Literal["phase_audit"] = "phase_audit"
+    phase_id: str
+    feasible: bool
+    summary: str
+    risks: list[str]
+
+
+class PhaseCompleteEvent(BaseModel):
+    type: Literal["phase_complete"] = "phase_complete"
+    phase_id: str
+    commit_hash: str | None = None
+
+
+class SubagentBudgetWarningEvent(BaseModel):
+    type: Literal["subagent_budget_warning"] = "subagent_budget_warning"
+    task_name: str
+    tokens_burned: int
+    tokens_limit: int
+    tool_calls_made: int
+    tool_calls_limit: int
+
+
 type Event = (
     TurnBegin
     | SteerInput
@@ -537,6 +595,12 @@ type Event = (
     | PlanDisplay
     | BtwBegin
     | BtwEnd
+    | ToolFileModifiedEvent
+    | PlanReviewEvent
+    | PlanLoadedEvent
+    | PhaseAuditEvent
+    | PhaseCompleteEvent
+    | SubagentBudgetWarningEvent
 )
 """Any event, including control flow and content/tooling events."""
 
@@ -686,6 +750,11 @@ __all__ = [
     "PlanDisplay",
     "BtwBegin",
     "BtwEnd",
+    "ToolFileModifiedEvent",
+    "PlanReviewEvent",
+    "PlanLoadedEvent",
+    "PhaseAuditEvent",
+    "PhaseCompleteEvent",
     "ApprovalRequest",
     "ToolCallRequest",
     "QuestionOption",

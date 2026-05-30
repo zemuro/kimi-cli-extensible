@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from kosong.chat_provider import APIStatusError, ChatProviderError
+from kosong.message import Message, TextPart
 from kosong.tooling import ToolError, ToolOk, ToolReturnValue
 
 from kimi_cli.approval_runtime import (
@@ -15,8 +16,9 @@ from kimi_cli.approval_runtime import (
     set_current_approval_source,
 )
 from kimi_cli.soul import MaxStepsReached, RunCancelled, UILoopFn, get_wire_or_none, run_soul
-from kimi_cli.soul.kimisoul import KimiSoul
+from kimi_cli.soul.kimisoul import KimiSoul, StepOutcome
 from kimi_cli.soul.toolset import get_current_tool_call_or_none
+from kimi_cli.subagents.budget_tracker import BudgetStatus, SubagentBudgetTracker
 from kimi_cli.subagents.builder import SubagentBuilder
 from kimi_cli.subagents.core import SubagentRunSpec, prepare_soul
 from kimi_cli.subagents.models import AgentInstanceRecord, AgentLaunchSpec
@@ -30,6 +32,7 @@ from kimi_cli.wire.types import (
     ApprovalResponse,
     HookRequest,
     QuestionRequest,
+    SubagentBudgetWarningEvent,
     SubagentEvent,
     ToolCallRequest,
 )
@@ -245,6 +248,47 @@ class ForegroundSubagentRunner:
             # Propagate hook engine from parent runtime to subagent soul
             if self._runtime.hook_engine is not None:
                 soul.set_hook_engine(self._runtime.hook_engine)
+
+            # ── Budget tracking ───────────────────────────────────────────────
+            budget_config = self._runtime.config.subagents.budget
+            tracker = SubagentBudgetTracker(
+                budget_config, task_name=req.description.strip() or actual_type
+            )
+
+            def _usage_hook(usage) -> None:
+                status = tracker.record_turn(usage.total)
+                if status == BudgetStatus.WARNING:
+                    wire = get_wire_or_none()
+                    if wire is not None:
+                        wire.emit(
+                            SubagentBudgetWarningEvent(
+                                task_name=tracker._task_name,
+                                tokens_burned=tracker.tokens_burned,
+                                tokens_limit=budget_config.max_tokens_per_task,
+                                tool_calls_made=tracker.tool_calls_made,
+                                tool_calls_limit=budget_config.max_tool_calls_per_task,
+                            )
+                        )
+                    logger.warning(tracker.warning_message())
+
+            def _tool_hook(_tc, _tr) -> None:
+                tracker.record_tool_call()
+
+            def _budget_gate():
+                if tracker.exceeded:
+                    return StepOutcome(
+                        stop_reason="no_tool_calls",
+                        assistant_message=Message(
+                            role="assistant",
+                            content=[TextPart(text=tracker.exceeded_message())],
+                        ),
+                    )
+                return None
+
+            soul.register_usage_hook(_usage_hook)
+            soul.register_post_tool_hook(_tool_hook)
+            soul.register_step_gate(_budget_gate)
+
             tool_call = get_current_tool_call_or_none()
             ui_loop_fn = self._make_ui_loop_fn(
                 parent_tool_call_id=tool_call.id if tool_call is not None else None,

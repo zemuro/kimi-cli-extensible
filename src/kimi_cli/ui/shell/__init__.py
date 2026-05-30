@@ -28,6 +28,7 @@ from kimi_cli.llm import model_display_name
 from kimi_cli.notifications import NotificationManager, NotificationWatcher
 from kimi_cli.soul import LLMNotSet, LLMNotSupported, MaxStepsReached, RunCancelled, Soul, run_soul
 from kimi_cli.soul.kimisoul import FLOW_COMMAND_PREFIX, KimiSoul
+from kimi_cli.soul.slash import SessionAborted
 from kimi_cli.ui.shell import update as _update_mod
 from kimi_cli.ui.shell.console import console
 from kimi_cli.ui.shell.echo import render_user_echo_text
@@ -951,6 +952,10 @@ class Shell:
                     console.print(f"[yellow]Queued message dropped: {msg.command}[/yellow]")
                 pending.clear()
             return True
+        except SessionAborted:
+            # Graceful exit — user explicitly aborted the Do session
+            self._exit_after_run = True
+            return False
         except LLMNotSet:
             logger.exception("LLM not set:")
             console.print('[red]LLM not set, send "/login" to login[/red]')

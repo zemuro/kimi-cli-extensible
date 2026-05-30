@@ -206,6 +206,41 @@ def kimi(
             help="Maximum tokens to generate. Overrides config/env default.",
         ),
     ] = None,
+    budget_tokens: Annotated[
+        int | None,
+        typer.Option(
+            "--budget-tokens",
+            help="Maximum tokens budget for this session. Warns at 80%, stops at 100%.",
+        ),
+    ] = None,
+    do_mode: Annotated[
+        bool,
+        typer.Option(
+            "--do",
+            help="Run in Do mode (agent loop with tools). Default: Think mode.",
+        ),
+    ] = False,
+    seed_from_think: Annotated[
+        str | None,
+        typer.Option(
+            "--seed-from-think",
+            help="Seed Do-mode context from a Think session outbox (session ID).",
+        ),
+    ] = None,
+    plan_file: Annotated[
+        Path | None,
+        typer.Option(
+            "--plan-file",
+            help="Path to phased plan document (Markdown) for plan-driven execution.",
+        ),
+    ] = None,
+    phase: Annotated[
+        str | None,
+        typer.Option(
+            "--phase",
+            help="Target phase ID from the plan (e.g., phase-3). Requires --plan-file.",
+        ),
+    ] = None,
     # Run mode
     yolo: Annotated[
         bool,
@@ -398,6 +433,8 @@ def kimi(
 
     del version  # handled in the callback
 
+    from typing import Any
+
     from kaos.path import KaosPath
 
     from kimi_cli.agentspec import DEFAULT_AGENT_FILE, OKABE_AGENT_FILE
@@ -407,6 +444,7 @@ def kimi(
     from kimi_cli.hooks import events as hook_events
     from kimi_cli.metadata import load_metadata, save_metadata
     from kimi_cli.session import Session
+    from kimi_cli.ui.shell import Shell
     from kimi_cli.ui.shell.startup import ShellStartupProgress
     from kimi_cli.utils.logging import logger, open_original_stderr, redirect_stderr_to_logger
 
@@ -472,6 +510,11 @@ def kimi(
             "--config-file": config_file is not None,
         },
     ]
+    if do_mode and (acp_mode or wire_mode):
+        raise typer.BadParameter(
+            "Do mode cannot be combined with ACP or Wire UI (yet)",
+            param_hint="--do",
+        )
     for option_set in conflict_option_sets:
         active_options = [flag for flag, active in option_set.items() if active]
         if len(active_options) > 1:
@@ -645,100 +688,211 @@ def kimi(
             if max_tokens is not None:
                 generation_overrides["max_tokens"] = max_tokens
 
-            instance = await KimiCLI.create(
-                session,
-                config=config,
-                model_name=model_name,
-                thinking=thinking,
-                yolo=yolo,
-                afk=afk,
-                runtime_afk=ui == "print",
-                plan_mode=plan,
-                resumed=resumed,
-                agent_file=agent_file,
-                mcp_configs=mcp_configs,
-                skills_dirs=skills_dirs,
-                max_steps_per_turn=max_steps_per_turn,
-                max_retries_per_step=max_retries_per_step,
-                max_ralph_iterations=max_ralph_iterations,
-                startup_progress=startup_progress.update if ui == "shell" else None,
-                defer_mcp_loading=ui == "shell" and prompt is None,
-                ui_mode=ui,
-                generation_overrides=generation_overrides if generation_overrides else None,
-            )
-            startup_progress.stop()
+            if seed_from_think and not do_mode:
+                raise typer.BadParameter(
+                    "--seed-from-think requires --do",
+                    param_hint="--seed-from-think",
+                )
+            if phase and not plan_file:
+                raise typer.BadParameter(
+                    "--phase requires --plan-file",
+                    param_hint="--phase",
+                )
+            if plan_file and not plan_file.exists():
+                raise typer.BadParameter(
+                    f"Plan file not found: {plan_file}",
+                    param_hint="--plan-file",
+                )
 
-            # --- SessionStart hook ---
-            _session_source = "resume" if resumed else "startup"
-            await instance.soul.hook_engine.trigger(
-                "SessionStart",
-                matcher_value=_session_source,
-                input_data=hook_events.session_start(
-                    session_id=session.id,
-                    cwd=str(work_dir),
-                    source=_session_source,
-                ),
-            )
+            if do_mode:
+                instance = await KimiCLI.create(
+                    session,
+                    config=config,
+                    model_name=model_name,
+                    thinking=thinking,
+                    yolo=yolo,
+                    afk=afk,
+                    runtime_afk=ui == "print",
+                    plan_mode=plan,
+                    resumed=resumed,
+                    agent_file=agent_file,
+                    mcp_configs=mcp_configs,
+                    skills_dirs=skills_dirs,
+                    max_steps_per_turn=max_steps_per_turn,
+                    max_retries_per_step=max_retries_per_step,
+                    max_ralph_iterations=max_ralph_iterations,
+                    startup_progress=startup_progress.update if ui == "shell" else None,
+                    defer_mcp_loading=ui == "shell" and prompt is None,
+                    ui_mode=ui,
+                    generation_overrides=generation_overrides if generation_overrides else None,
+                    budget_tokens=budget_tokens,
+                    do_mode=True,
+                    seed_from_think=seed_from_think,
+                    plan_file=plan_file,
+                    phase=phase,
+                )
+                startup_progress.stop()
 
-            # Install stderr redirection only after initialization succeeded, so runtime
-            # stderr noise is captured into logs without hiding startup failures.
-            redirect_stderr_to_logger()
-            preserve_background_tasks = False
-            try:
-                match ui:
-                    case "shell":
-                        shell_ok = await instance.run_shell(prompt, prefill_text=prefill_text)
-                        exit_code = ExitCode.SUCCESS if shell_ok else ExitCode.FAILURE
-                    case "print":
-                        exit_code = await instance.run_print(
-                            input_format or "text",
-                            output_format or "text",
-                            prompt,
-                            final_only=final_message_only,
-                        )
-                    case "acp":
-                        if prompt is not None:
-                            logger.warning("ACP server ignores prompt argument")
-                        await instance.run_acp()
-                        exit_code = ExitCode.SUCCESS
-                    case "wire":
-                        if prompt is not None:
-                            logger.warning("Wire server ignores prompt argument")
-                        await instance.run_wire_stdio()
-                        exit_code = ExitCode.SUCCESS
-            except Reload as e:
-                preserve_background_tasks = True
-                if e.session_id is None:
-                    r = Reload(session_id=session.id, prefill_text=e.prefill_text)
-                    r.source_session = session
-                    raise r from e
-                e.source_session = session
-                raise
-            except SwitchToWeb:
-                preserve_background_tasks = True
-                raise
-            except SwitchToVis:
-                preserve_background_tasks = True
-                raise
-            finally:
-                # --- SessionEnd hook ---
-                with contextlib.suppress(Exception):
-                    await asyncio.wait_for(
-                        instance.soul.hook_engine.trigger(
-                            "SessionEnd",
-                            matcher_value="exit",
-                            input_data=hook_events.session_end(
-                                session_id=session.id,
-                                cwd=str(work_dir),
-                                reason="exit",
+                # --- SessionStart hook ---
+                _session_source = "resume" if resumed else "startup"
+                await instance.soul.hook_engine.trigger(
+                    "SessionStart",
+                    matcher_value=_session_source,
+                    input_data=hook_events.session_start(
+                        session_id=session.id,
+                        cwd=str(work_dir),
+                        source=_session_source,
+                    ),
+                )
+
+                # Install stderr redirection only after initialization succeeded, so runtime
+                # stderr noise is captured into logs without hiding startup failures.
+                redirect_stderr_to_logger()
+                preserve_background_tasks = False
+                try:
+                    match ui:
+                        case "shell":
+                            shell_ok = await instance.run_shell(prompt, prefill_text=prefill_text)
+                            exit_code = ExitCode.SUCCESS if shell_ok else ExitCode.FAILURE
+                        case "print":
+                            exit_code = await instance.run_print(
+                                input_format or "text",
+                                output_format or "text",
+                                prompt,
+                                final_only=final_message_only,
+                            )
+                        case "acp":
+                            if prompt is not None:
+                                logger.warning("ACP server ignores prompt argument")
+                            await instance.run_acp()
+                            exit_code = ExitCode.SUCCESS
+                        case "wire":
+                            if prompt is not None:
+                                logger.warning("Wire server ignores prompt argument")
+                            await instance.run_wire_stdio()
+                            exit_code = ExitCode.SUCCESS
+                except Reload as e:
+                    preserve_background_tasks = True
+                    if e.session_id is None:
+                        r = Reload(session_id=session.id, prefill_text=e.prefill_text)
+                        r.source_session = session
+                        raise r from e
+                    e.source_session = session
+                    raise
+                except SwitchToWeb:
+                    preserve_background_tasks = True
+                    raise
+                except SwitchToVis:
+                    preserve_background_tasks = True
+                    raise
+                finally:
+                    # --- SessionEnd hook ---
+                    with contextlib.suppress(Exception):
+                        await asyncio.wait_for(
+                            instance.soul.hook_engine.trigger(
+                                "SessionEnd",
+                                matcher_value="exit",
+                                input_data=hook_events.session_end(
+                                    session_id=session.id,
+                                    cwd=str(work_dir),
+                                    reason="exit",
+                                ),
                             ),
-                        ),
-                        timeout=5,
-                    )
+                            timeout=5,
+                        )
 
-                if not preserve_background_tasks:
-                    await instance.shutdown_background_tasks()
-                    await instance.await_bg_tasks_shutdown()
+                    if not preserve_background_tasks:
+                        await instance.shutdown_background_tasks()
+                        await instance.await_bg_tasks_shutdown()
+            else:
+                # --- Think mode (default) ---
+                from kimi_cli.app import create_think_soul
+                from kimi_cli.llm import model_display_name
+                from kimi_cli.ui.shell import WelcomeInfoItem
+                from kimi_cli.utils.path import shorten_home
+
+                think_soul, _ = await create_think_soul(
+                    session,
+                    config=config,
+                    model_name=model_name,
+                    thinking=thinking,
+                    generation_overrides=generation_overrides if generation_overrides else None,
+                    budget_tokens=budget_tokens,
+                )
+                startup_progress.stop()
+
+                redirect_stderr_to_logger()
+                try:
+                    match ui:
+                        case "shell":
+                            welcome_info = [
+                                WelcomeInfoItem(
+                                    name="Directory",
+                                    value=str(shorten_home(session.work_dir)),
+                                ),
+                                WelcomeInfoItem(name="Session", value=session.id),
+                                WelcomeInfoItem(name="Mode", value="Think"),
+                            ]
+                            if think_soul.model_name:
+                                welcome_info.append(
+                                    WelcomeInfoItem(
+                                        name="Model",
+                                        value=model_display_name(think_soul.model_name),
+                                    )
+                                )
+                            else:
+                                welcome_info.append(
+                                    WelcomeInfoItem(
+                                        name="Model",
+                                        value="not set, send /login to login",
+                                        level=WelcomeInfoItem.Level.WARN,
+                                    )
+                                )
+                            shell = Shell(
+                                think_soul,
+                                welcome_info=welcome_info,
+                                prefill_text=prefill_text,
+                            )
+                            shell_ok = await shell.run(prompt)
+                            exit_code = ExitCode.SUCCESS if shell_ok else ExitCode.FAILURE
+                        case "print":
+                            from kimi_cli.ui.print import Print
+
+                            print_ = Print(
+                                think_soul,
+                                input_format or "text",
+                                output_format or "text",
+                                session.context_file,
+                                final_only=final_message_only,
+                            )
+                            exit_code = await print_.run(prompt)
+                        case "acp":
+                            if prompt is not None:
+                                logger.warning("ACP server ignores prompt argument")
+                            from kimi_cli.ui.acp import ACP
+
+                            acp = ACP(think_soul)
+                            await acp.run()
+                            exit_code = ExitCode.SUCCESS
+                        case "wire":
+                            if prompt is not None:
+                                logger.warning("Wire server ignores prompt argument")
+                            from kimi_cli.wire.server import WireServer
+
+                            server = WireServer(think_soul)
+                            await server.serve()
+                            exit_code = ExitCode.SUCCESS
+                except Reload as e:
+                    if e.session_id is None:
+                        r = Reload(session_id=session.id, prefill_text=e.prefill_text)
+                        r.source_session = session
+                        raise r from e
+                    e.source_session = session
+                    raise
+                except SwitchToWeb:
+                    raise
+                except SwitchToVis:
+                    raise
 
             return session, exit_code
         finally:
@@ -759,12 +913,18 @@ def kimi(
 
     def _print_resume_hint(session: Session) -> None:
         """Print a hint for resuming the session after exit."""
-        if not session.is_empty():
+        from kimi_cli.think.storage import think_path
+
+        has_think_history = think_path(session.id).exists()
+        if not session.is_empty() or has_think_history:
             _emit_fatal_error(f"\nTo resume this session: kimi -r {session.id}")
 
     async def _post_run(last_session: Session, exit_code: int) -> None:
+        from kimi_cli.think.storage import think_path
+
         _print_resume_hint(last_session)
-        if last_session.is_empty():
+        has_think_history = think_path(last_session.id).exists()
+        if last_session.is_empty() and not has_think_history:
             # Always clean up empty sessions regardless of exit code
             await _delete_empty_session(last_session)
         elif exit_code == ExitCode.SUCCESS:

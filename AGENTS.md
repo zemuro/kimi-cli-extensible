@@ -62,6 +62,17 @@ shell UI, ACP server mode for IDE integrations, and MCP tool loading.
 - **Approvals**: `src/kimi_cli/soul/approval.py` is the tool-facing facade. `ApprovalRuntime`
   in `src/kimi_cli/approval_runtime/` is the session-level source of truth for pending approvals,
   and approval requests are projected onto the root wire stream for Shell/Web style UIs.
+- **Think mode**: `src/kimi_cli/think/` provides a mutable-history research REPL with JSONL
+  storage, editable messages, checkpoints, compaction, and Python execution. Think is for
+  speculative reasoning and plan authoring.
+- **Do mode**: `src/kimi_cli/do/` provides an immutable execution environment with git
+  snapshotting, change journaling, unified diffs, and plan review gates. Do is for implementing
+  plans generated in Think.
+- **Plan orchestration**: `src/kimi_cli/plan/` parses, validates, and audits plan documents.
+  Supports both monolithic `plan.md` and decomposed `docs/plan/` directories. Handles dispatch
+  (`dispatch.json`), handover documents, and docs indexing.
+- **Subagent budget gate**: `src/kimi_cli/subagents/budget_tracker.py` enforces token and
+  tool-call limits on subagent tasks. Integrated into both foreground and background runners.
 - **UI/Wire**: `src/kimi_cli/soul/run_soul` connects `KimiSoul` to a `Wire`
   (`src/kimi_cli/wire/`) so UI loops can stream events. UIs live in `src/kimi_cli/ui/`
   (shell/print/acp/wire).
@@ -83,6 +94,11 @@ shell UI, ACP server mode for IDE integrations, and MCP tool loading.
 - `src/kimi_cli/soul/context.py`: conversation history + checkpoints; used by DMail for
   checkpointed replies.
 - `src/kimi_cli/soul/toolset.py`: load tools, run tool calls, bridge to MCP tools.
+- `src/kimi_cli/think/`: mutable-history research mode (ThinkSoul, history, storage, push).
+- `src/kimi_cli/do/`: immutable execution mode (DoSession, git snapshot, journal, diff computer,
+  plan review).
+- `src/kimi_cli/plan/`: plan parsing, validation, audit, dispatch, handover, docs index.
+- `src/kimi_cli/subagents/`: subagent runner integration with budget tracking.
 - `src/kimi_cli/ui/*`: shell/print/acp frontends; they consume `Wire` messages.
 - `src/kimi_cli/wire/*`: event types and transport used between soul and UI.
 
@@ -93,6 +109,10 @@ shell UI, ACP server mode for IDE integrations, and MCP tool loading.
 - `src/kimi_cli/prompts/system/`: decomposed main system prompt sections (identity, coding,
   research, working environment, project info, skills, ultimate reminders)
 - `src/kimi_cli/soul/`: core runtime/loop, context, compaction, approvals
+- `src/kimi_cli/think/`: Think mode — mutable history, checkpoints, compaction, Python exec
+- `src/kimi_cli/do/`: Do mode — git snapshotting, change journal, diff computer, plan review
+- `src/kimi_cli/plan/`: plan parser, validator, audit, dispatch, handover, docs index
+- `src/kimi_cli/subagents/`: subagent runner + budget tracker
 - `src/kimi_cli/tools/`: built-in tools
 - `src/kimi_cli/ui/`: UI frontends (shell/print/acp/wire)
 - `src/kimi_cli/acp/`: ACP server components

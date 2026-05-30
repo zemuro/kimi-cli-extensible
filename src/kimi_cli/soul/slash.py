@@ -210,7 +210,33 @@ async def add_dir(soul: KimiSoul, args: str):
             for d in soul.runtime.additional_dirs:
                 lines.append(f"  - {d}")
             wire_send(TextPart(text="\n".join(lines)))
+
+
+@registry.command
+async def inject(soul: KimiSoul, args: str) -> None:
+    """Inject a message into the Do-mode context. Usage: /inject <text> or /inject {"role":"user","content":"..."}"""
+    if not args.strip():
+        wire_send(TextPart(text="Usage: /inject <text> or /inject {\"role\":\"user\",\"content\":\"...\"}"))
         return
+
+    text = args.strip()
+    role = "user"
+    content = text
+
+    # Try parsing as JSON
+    if text.startswith("{"):
+        import json
+        try:
+            data = json.loads(text)
+            role = data.get("role", "user")
+            content = data.get("content", "")
+        except json.JSONDecodeError:
+            pass
+
+    from kosong.message import Message, TextPart
+    await soul.context.append_message(Message(role=role, content=[TextPart(text=content)]))
+    wire_send(TextPart(text=f"Injected {role} message into context."))
+
 
     path = KaosPath(args).expanduser().canonical()
 
@@ -333,3 +359,68 @@ async def import_context(soul: KimiSoul, args: str):
                 "The content is now part of your session context."
             )
         )
+
+
+class SessionAborted(Exception):
+    """Raised when user aborts a Do session."""
+
+
+@registry.command
+async def commit(soul: KimiSoul, args: str) -> None:
+    """Create an intermediate git commit with the current changes."""
+    from kimi_cli.do.registry import get_do_session
+
+    do_session = get_do_session(soul._runtime.session.id)
+    if not do_session:
+        wire_send(TextPart(text="Not in Do mode."))
+        return
+
+    message = args.strip() or f"kimi-do checkpoint at turn {soul._current_turn_index}"
+    commit_hash = await do_session.commit(message)
+    if commit_hash:
+        wire_send(TextPart(text=f"Committed: {commit_hash} — {message}"))
+    else:
+        wire_send(TextPart(text="Nothing to commit."))
+
+
+@registry.command
+async def abort(soul: KimiSoul, args: str) -> None:
+    """Abort the session and revert to the initial git state."""
+    from kimi_cli.do.registry import get_do_session, unregister_do_session
+
+    do_session = get_do_session(soul._runtime.session.id)
+    if not do_session:
+        wire_send(TextPart(text="Not in Do mode."))
+        return
+
+    wire_send(TextPart(text="Aborting session and reverting changes..."))
+    ok = await do_session.abort()
+    if ok:
+        wire_send(TextPart(text="Reverted to initial state. Session ended."))
+    else:
+        wire_send(TextPart(text="Abort failed. Check git status manually."))
+
+    unregister_do_session(soul._runtime.session.id)
+    raise SessionAborted()
+
+
+@registry.command
+async def status(soul: KimiSoul, args: str) -> None:
+    """Show current git status and session versioning info."""
+    from kimi_cli.do.registry import get_do_session
+
+    do_session = get_do_session(soul._runtime.session.id)
+    if not do_session:
+        wire_send(TextPart(text="Not in Do mode."))
+        return
+
+    git_status = do_session.git.status()
+    lines = ["[Do Mode Status]"]
+    for key, value in git_status.items():
+        lines.append(f"  {key}: {value}")
+
+    if do_session.journal:
+        diffs = do_session.journal.get_entries("diff")
+        lines.append(f"  changes_recorded: {len(diffs)}")
+
+    wire_send(TextPart(text="\n".join(lines)))
