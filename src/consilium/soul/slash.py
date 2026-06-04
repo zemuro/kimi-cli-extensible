@@ -210,30 +210,6 @@ async def add_dir(soul: KimiSoul, args: str):
             wire_send(TextPart(text="\n".join(lines)))
 
 
-@registry.command
-async def inject(soul: KimiSoul, args: str) -> None:
-    """Inject a message into the Do-mode context. Usage: /inject <text> or /inject {"role":"user","content":"..."}"""
-    if not args.strip():
-        wire_send(TextPart(text="Usage: /inject <text> or /inject {\"role\":\"user\",\"content\":\"...\"}"))
-        return
-
-    text = args.strip()
-    role = "user"
-    content = text
-
-    # Try parsing as JSON
-    if text.startswith("{"):
-        import json
-        try:
-            data = json.loads(text)
-            role = data.get("role", "user")
-            content = data.get("content", "")
-        except json.JSONDecodeError:
-            pass
-
-    from kosong.message import Message, TextPart
-    await soul.context.append_message(Message(role=role, content=[TextPart(text=content)]))
-    wire_send(TextPart(text=f"Injected {role} message into context."))
 
 
     path = KaosPath(args).expanduser().canonical()
@@ -490,3 +466,29 @@ async def complete(soul: KimiSoul, args: str) -> None:
              f"Report: {report_path}\n"
              f"Plan index updated."
     ))
+
+
+@registry.command
+async def inject(soul: KimiSoul, args: str) -> None:
+    """Inject a message into the Do-mode context. Usage: /inject <text> or /inject {"role":"user","content":"..."}"""
+    if not args.strip():
+        wire_send(TextPart(text="Usage: /inject <text> or /inject {\"role\":\"user\",\"content\":\"...\"}"))
+        return
+
+    text = args.strip()
+    role = "user"
+    content = text
+
+    # Try parsing as JSON
+    if text.startswith("{"):
+        import json
+        try:
+            data = json.loads(text)
+            role = data.get("role", "user")
+            content = data.get("content", "")
+        except json.JSONDecodeError:
+            pass
+
+    from kosong.message import Message, TextPart
+    await soul.context.append_message(Message(role=role, content=[TextPart(text=content)]))
+    wire_send(TextPart(text=f"Injected {role} message into context."))

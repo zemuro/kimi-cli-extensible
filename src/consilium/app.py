@@ -172,7 +172,7 @@ async def create_think_soul(
     think_session = load_think_session(session.id)
     if think_session is None:
         think_session = ThinkSession(id=session.id)
-        
+
         # Migrate legacy Do history to Think history if available
         if not session.is_empty():
             import json
@@ -192,14 +192,18 @@ async def create_think_soul(
                         role = data.get("role")
                         if role not in ("user", "assistant"):
                             continue
-                            
+
                         content = data.get("content", "")
                         if isinstance(content, list):
-                            text_parts = [p.get("text", "") for p in content if isinstance(p, dict) and p.get("type") == "text"]
+                            text_parts = [
+                                p.get("text", "")
+                                for p in content
+                                if isinstance(p, dict) and p.get("type") == "text"
+                            ]
                             content = "".join(text_parts)
                         elif not isinstance(content, str):
                             content = str(content)
-                            
+
                         if content.strip():
                             think_session.messages.append(
                                 ThinkMessage(
@@ -211,7 +215,10 @@ async def create_think_soul(
                             )
                 if think_session.messages:
                     save_session(think_session)
-                    logger.info("Migrated {n} messages from legacy session to Think mode", n=len(think_session.messages))
+                    logger.info(
+                        "Migrated {n} messages from legacy session to Think mode",
+                        n=len(think_session.messages),
+                    )
             except Exception:
                 logger.exception("Failed to migrate legacy session to Think mode")
 
@@ -229,7 +236,7 @@ async def create_think_soul(
 
     from consilium.agentspec import load_agent_spec
     from consilium.subagents.models import AgentTypeDefinition, ToolPolicy
-    
+
     try:
         agent_file = Path(__file__).parent / "agents" / "default" / "agent.yaml"
         agent_spec = load_agent_spec(agent_file)
@@ -252,6 +259,7 @@ async def create_think_soul(
             )
     except Exception as e:
         from consilium.utils.logging import logger
+
         logger.warning(f"Failed to load builtin subagents for Think mode: {e}")
 
     return ThinkSoul(session, llm, _config, think_session, runtime=runtime), env_overrides
@@ -373,12 +381,15 @@ class KimiCLI:
         if not model:
             from consilium.config import OAuthRef
             from consilium.auth.oauth import KIMI_CODE_OAUTH_KEY
-            model = LLMModel(provider="kimi", model=model_name or "kimi-for-coding", max_context_size=128_000)
+
+            model = LLMModel(
+                provider="kimi", model=model_name or "kimi-for-coding", max_context_size=128_000
+            )
             provider = LLMProvider(
                 type="kimi",
                 base_url="https://api.moonshot.cn/v1",
                 api_key=SecretStr(""),
-                oauth=OAuthRef(storage="file", key=KIMI_CODE_OAUTH_KEY)
+                oauth=OAuthRef(storage="file", key=KIMI_CODE_OAUTH_KEY),
             )
 
         # try overwrite with environment variables
@@ -406,6 +417,7 @@ class KimiCLI:
         )
         if llm is not None:
             from consilium.chat_provider_ext import patch_chat_provider
+
             patch_chat_provider(llm.chat_provider)
             logger.info("Using LLM provider: {provider}", provider=provider)
             logger.info("Using LLM model: {model}", model=model)
@@ -469,7 +481,64 @@ class KimiCLI:
         else:
             await context.write_system_prompt(agent.system_prompt)
 
-        # Seed Do-mode context from Think session
+        # Auto-migrate: if starting Do mode but think.jsonl exists and has newer messages,
+        # fast-forward context.jsonl from think.jsonl. This handles resuming legacy Think
+        # sessions in the new Do tab.
+        if do_mode and resumed:
+            from consilium.think.storage import think_path
+            import json
+            from kosong.message import Message, TextPart
+
+            tf = think_path(session.id)
+            if tf.exists():
+                imported = 0
+                existing_texts = set()
+                for m in context.history:
+                    # simplistic deduplication by content string
+                    existing_texts.add(str(m.content))
+
+                with open(tf, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            entry = json.loads(line)
+                            role = entry.get("role")
+                            if role not in ("user", "assistant"):
+                                continue
+
+                            content = entry.get("content", "")
+                            if isinstance(content, str):
+                                msg = Message(role=role, content=[TextPart(text=content)])
+                            else:
+                                msg = Message(role=role, content=content)
+
+                            # Deduplicate
+                            if str(msg.content) not in existing_texts:
+                                await context.append_message(msg)
+                                existing_texts.add(str(msg.content))
+                                imported += 1
+                        except Exception:
+                            continue
+
+                if imported > 0:
+                    break_msg = Message(
+                        role="user",
+                        content=[
+                            TextPart(
+                                text="<EPHEMERAL_MESSAGE>\nThe user has opened this session in the Do tab. You now have full access to tools and the filesystem. You are no longer restricted to reasoning. You can and should execute tools to solve the user's task. Disregard any previous constraints about not executing commands or modifying files.\n</EPHEMERAL_MESSAGE>"
+                            )
+                        ],
+                    )
+                    await context.append_message(break_msg)
+                    logger.info(
+                        "Auto-migrated {count} missing messages from think.jsonl to context.jsonl for session {sid}",
+                        count=imported,
+                        sid=session.id,
+                    )
+
+        # Seed Do-mode context from Think session (explicit flag)
         if seed_from_think and do_mode:
             import json
 
