@@ -10,19 +10,19 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kimi_cli.do.diff_computer import is_binary_file
-from kimi_cli.do.journal import (
+from consilium.do.diff_computer import is_binary_file
+from consilium.do.journal import (
     JOURNAL_DIR,
     ChangeJournal,
     DiffEntry,
     archive_old_journals,
 )
-from kimi_cli.do.session import DoSession
+from consilium.do.session import DoSession
 
 
 class TestArchiveOldJournals:
     def test_archives_journals_older_than_threshold(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr("kimi_cli.do.journal.JOURNAL_DIR", tmp_path)
+        monkeypatch.setattr("consilium.do.journal.JOURNAL_DIR", tmp_path)
 
         # Create a "recent" journal dir
         recent = tmp_path / "recent-session"
@@ -46,7 +46,7 @@ class TestArchiveOldJournals:
         assert recent.exists()  # Recent journal untouched
 
     def test_disabled_when_zero(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr("kimi_cli.do.journal.JOURNAL_DIR", tmp_path)
+        monkeypatch.setattr("consilium.do.journal.JOURNAL_DIR", tmp_path)
 
         old = tmp_path / "old-session"
         old.mkdir()
@@ -59,7 +59,7 @@ class TestArchiveOldJournals:
         assert old.exists()
 
     def test_skips_non_directories(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr("kimi_cli.do.journal.JOURNAL_DIR", tmp_path)
+        monkeypatch.setattr("consilium.do.journal.JOURNAL_DIR", tmp_path)
 
         # A plain file in the journal dir should be ignored
         (tmp_path / "not-a-dir.txt").write_text("hello")
@@ -84,7 +84,7 @@ class TestBinaryDiffHandling:
 
     @pytest.mark.asyncio
     async def test_binary_diff_skips_unified_diff(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        from kimi_cli.do import journal as journal_mod
+        from consilium.do import journal as journal_mod
         monkeypatch.setattr(journal_mod, "JOURNAL_DIR", tmp_path / "do_sessions")
 
         mock_soul = MagicMock()
@@ -112,7 +112,7 @@ class TestBinaryDiffHandling:
         tool_result = MagicMock()
         tool_result.tool_call_id = "tc_bin"
 
-        with patch("kimi_cli.soul.get_wire_or_none", return_value=None):
+        with patch("consilium.soul.get_wire_or_none", return_value=None):
             await do_session.on_tool_result(tool_call, tool_result)
 
         diffs = do_session.journal.get_entries("diff")
@@ -127,7 +127,7 @@ class TestBinaryDiffHandling:
 
     @pytest.mark.asyncio
     async def test_text_diff_still_works(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        from kimi_cli.do import journal as journal_mod
+        from consilium.do import journal as journal_mod
         monkeypatch.setattr(journal_mod, "JOURNAL_DIR", tmp_path / "do_sessions")
 
         mock_soul = MagicMock()
@@ -153,7 +153,7 @@ class TestBinaryDiffHandling:
         tool_result = MagicMock()
         tool_result.tool_call_id = "tc_text"
 
-        with patch("kimi_cli.soul.get_wire_or_none", return_value=None):
+        with patch("consilium.soul.get_wire_or_none", return_value=None):
             await do_session.on_tool_result(tool_call, tool_result)
 
         diffs = do_session.journal.get_entries("diff")

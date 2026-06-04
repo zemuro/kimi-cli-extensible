@@ -18,7 +18,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kimi_cli.app import KimiCLI
+from consilium.app import KimiCLI
 
 
 def _fake_view(
@@ -106,7 +106,7 @@ async def test_shutdown_prints_notice_and_kills_when_active(capsys) -> None:
     async def fake_sleep(duration):
         sleep_calls.append(duration)
 
-    with patch("kimi_cli.app.asyncio.sleep", side_effect=fake_sleep):
+    with patch("consilium.app.asyncio.sleep", side_effect=fake_sleep):
         await cli.shutdown_background_tasks()
 
     # Each fresh active task was kill-requested once.
@@ -136,7 +136,7 @@ async def test_shutdown_skipped_when_keep_alive_on_exit(capsys) -> None:
     async def fake_sleep(duration):
         pass
 
-    with patch("kimi_cli.app.asyncio.sleep", side_effect=fake_sleep):
+    with patch("consilium.app.asyncio.sleep", side_effect=fake_sleep):
         await cli.shutdown_background_tasks()
 
     # keep_alive_on_exit=True → complete no-op
@@ -164,7 +164,7 @@ async def test_shutdown_reports_survivors_after_grace(capsys) -> None:
     async def fake_sleep(duration):
         pass
 
-    with patch("kimi_cli.app.asyncio.sleep", side_effect=fake_sleep):
+    with patch("consilium.app.asyncio.sleep", side_effect=fake_sleep):
         await cli.shutdown_background_tasks()
 
     captured = capsys.readouterr()
@@ -206,12 +206,12 @@ async def test_shutdown_writes_to_original_stderr_when_redirected(monkeypatch) -
     def fake_open_original_stderr():
         yield _FakeOriginalStream()
 
-    monkeypatch.setattr("kimi_cli.app.open_original_stderr", fake_open_original_stderr)
+    monkeypatch.setattr("consilium.app.open_original_stderr", fake_open_original_stderr)
 
     async def fake_sleep(duration):
         pass
 
-    with patch("kimi_cli.app.asyncio.sleep", side_effect=fake_sleep):
+    with patch("consilium.app.asyncio.sleep", side_effect=fake_sleep):
         await cli.shutdown_background_tasks()
 
     output = captured.getvalue().decode("utf-8")
@@ -238,7 +238,7 @@ async def test_shutdown_swallows_manager_exception(capsys) -> None:
         pass
 
     # Must NOT raise.
-    with patch("kimi_cli.app.asyncio.sleep", side_effect=fake_sleep):
+    with patch("consilium.app.asyncio.sleep", side_effect=fake_sleep):
         await cli.shutdown_background_tasks()
 
 
@@ -267,7 +267,7 @@ async def test_shutdown_skips_already_kill_requested_tasks(capsys) -> None:
     async def fake_sleep(duration):
         pass
 
-    with patch("kimi_cli.app.asyncio.sleep", side_effect=fake_sleep):
+    with patch("consilium.app.asyncio.sleep", side_effect=fake_sleep):
         await cli.shutdown_background_tasks()
 
     # Only the fresh task (b-002) was kill-requested by shutdown.
@@ -300,7 +300,7 @@ async def test_shutdown_survivors_from_print_timeout_labelled_terminating(capsys
     async def fake_sleep(duration):
         pass
 
-    with patch("kimi_cli.app.asyncio.sleep", side_effect=fake_sleep):
+    with patch("consilium.app.asyncio.sleep", side_effect=fake_sleep):
         await cli.shutdown_background_tasks()
 
     captured = capsys.readouterr()
@@ -328,7 +328,7 @@ async def test_shutdown_survivors_from_failed_kill_labelled_alive(capsys) -> Non
     async def fake_sleep(duration):
         pass
 
-    with patch("kimi_cli.app.asyncio.sleep", side_effect=fake_sleep):
+    with patch("consilium.app.asyncio.sleep", side_effect=fake_sleep):
         await cli.shutdown_background_tasks()
 
     captured = capsys.readouterr()
@@ -351,7 +351,7 @@ async def test_shutdown_with_only_already_killed_tasks_stays_quiet(capsys) -> No
     async def fake_sleep(duration):
         pass
 
-    with patch("kimi_cli.app.asyncio.sleep", side_effect=fake_sleep):
+    with patch("consilium.app.asyncio.sleep", side_effect=fake_sleep):
         await cli.shutdown_background_tasks()
 
     # No kill calls, no stderr "Killing" header (user already saw the
@@ -371,7 +371,7 @@ async def test_shutdown_no_notice_when_no_active_tasks(capsys) -> None:
     async def fake_sleep(duration):
         pass
 
-    with patch("kimi_cli.app.asyncio.sleep", side_effect=fake_sleep):
+    with patch("consilium.app.asyncio.sleep", side_effect=fake_sleep):
         await cli.shutdown_background_tasks()
 
     # No active tasks means no kill call (early return) and nothing on stderr.

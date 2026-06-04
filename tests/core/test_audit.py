@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from kimi_cli.plan.audit_l1 import audit_l1
-from kimi_cli.plan.models import L1Severity, PhaseStatus
-from kimi_cli.plan.parser import parse_plan
+from consilium.plan.audit_l1 import audit_l1
+from consilium.plan.models import L1Severity, PhaseStatus
+from consilium.plan.parser import parse_plan
 
 
 PLAN_TEXT = """\

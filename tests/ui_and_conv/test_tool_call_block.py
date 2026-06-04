@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from kimi_cli.ui.shell.visualize import _ToolCallBlock
+from consilium.ui.shell.visualize import _ToolCallBlock
 
 
 class TestExtractFullUrl:

@@ -7,7 +7,7 @@ import pytest
 from inline_snapshot import snapshot
 from kaos.path import KaosPath
 
-from kimi_cli.skill import (
+from consilium.skill import (
     ScopedSkillsRoot,
     Skill,
     discover_skills,
@@ -638,7 +638,7 @@ def test_get_builtin_skills_dir_frozen_env(monkeypatch, tmp_path):
     monkeypatch.setattr(sys, "_MEIPASS", str(fake_meipass), raising=False)
 
     result = get_builtin_skills_dir()
-    assert result == fake_meipass / "kimi_cli" / "skills"
+    assert result == fake_meipass / "consilium" / "skills"
 
 
 def test_get_builtin_skills_dir_normal_env():
@@ -646,7 +646,7 @@ def test_get_builtin_skills_dir_normal_env():
     result = get_builtin_skills_dir()
     # Should resolve relative to the skill package
     assert result.name == "skills"
-    assert result.parent.name == "kimi_cli"
+    assert result.parent.name == "consilium"
 
 
 @pytest.mark.asyncio
@@ -1029,7 +1029,7 @@ async def test_resolve_skills_roots_extra_skill_dirs_cli_override_still_wins(mon
 async def test_project_scope_skill_overrides_builtin_with_same_name(monkeypatch, tmp_path):
     """Project > Built-in: a project-local skill wins over a same-named builtin."""
     # Fake the bundled builtin skills dir via the module-level getter
-    import kimi_cli.skill as skill_mod
+    import consilium.skill as skill_mod
 
     builtin_dir = tmp_path / "fake_builtin"
     builtin_dir.mkdir()
@@ -1063,7 +1063,7 @@ async def test_project_scope_skill_overrides_builtin_with_same_name(monkeypatch,
 @pytest.mark.asyncio
 async def test_user_scope_skill_overrides_builtin_with_same_name(monkeypatch, tmp_path):
     """User > Built-in: a user-scope skill wins over a same-named builtin."""
-    import kimi_cli.skill as skill_mod
+    import consilium.skill as skill_mod
 
     builtin_dir = tmp_path / "fake_builtin"
     builtin_dir.mkdir()
@@ -1128,7 +1128,7 @@ async def test_project_scope_skill_overrides_user_with_same_name(monkeypatch, tm
 @pytest.mark.asyncio
 async def test_extra_scope_skill_overrides_builtin_with_same_name(monkeypatch, tmp_path):
     """Extra > Built-in: an extra_skill_dirs skill wins over a same-named builtin."""
-    import kimi_cli.skill as skill_mod
+    import consilium.skill as skill_mod
 
     builtin_dir = tmp_path / "fake_builtin"
     builtin_dir.mkdir()
@@ -1274,7 +1274,7 @@ async def test_resolve_skills_roots_extra_skill_dirs_symlink_dedup(monkeypatch, 
     ``KaosPath.canonical()`` does not walk symlinks, so this relies on
     ``_append`` running a ``Path.resolve()`` pass on local backends.
     """
-    import kimi_cli.skill as skill_mod
+    import consilium.skill as skill_mod
 
     # Suppress built-in skills so we can make a tight ``len(roots) == 1``
     # assertion — the point of this test is exactly that the real dir and the
@@ -1308,7 +1308,7 @@ async def test_resolve_skills_roots_extra_skill_dirs_symlink_dedup(monkeypatch, 
 @pytest.mark.asyncio
 async def test_resolve_skills_roots_extra_skill_dirs_trailing_slash_dedup(monkeypatch, tmp_path):
     """Entries that differ only by a trailing slash collapse to one root."""
-    import kimi_cli.skill as skill_mod
+    import consilium.skill as skill_mod
 
     # Suppress built-in skills so we can make a tight ``len(roots) == 1``
     # assertion — otherwise the built-in roots would also land in ``roots``
@@ -1340,7 +1340,7 @@ async def test_resolve_skills_roots_extra_skill_dirs_trailing_slash_dedup(monkey
 @pytest.mark.asyncio
 async def test_resolve_skills_roots_extra_skill_dirs_symlink_scope_is_extra(monkeypatch, tmp_path):
     """After symlink dedup the surviving root still carries ``scope='extra'``."""
-    import kimi_cli.skill as skill_mod
+    import consilium.skill as skill_mod
 
     monkeypatch.setattr(skill_mod, "_supports_builtin_skills", lambda: False)
     monkeypatch.setattr(Path, "home", lambda: tmp_path / "empty_home")
@@ -1373,7 +1373,7 @@ async def test_resolve_skills_roots_extra_skill_dirs_symlink_stored_root_is_real
     keeps ``Path:`` lines stable across users who happen to add different
     symlinks to the same underlying directory.
     """
-    import kimi_cli.skill as skill_mod
+    import consilium.skill as skill_mod
 
     monkeypatch.setattr(skill_mod, "_supports_builtin_skills", lambda: False)
     monkeypatch.setattr(Path, "home", lambda: tmp_path / "empty_home")
@@ -1410,7 +1410,7 @@ async def test_discover_skills_permission_denied_returns_empty(monkeypatch, tmp_
     """If ``iterdir`` raises PermissionError, discovery logs and returns [] —
     it does not bubble the exception up and crash the whole session.
     """
-    import kimi_cli.skill as skill_mod
+    import consilium.skill as skill_mod
 
     # Build a real dir so the initial is_dir() check succeeds.
     root = tmp_path / "locked"
@@ -1492,7 +1492,7 @@ async def test_three_scope_conflict_project_wins_over_user_and_builtin(monkeypat
     pairwise smoking-gun tests each cover 2 scopes at a time). Locks in that
     the full pipeline collapses to a single foo tagged ``project``.
     """
-    import kimi_cli.skill as skill_mod
+    import consilium.skill as skill_mod
 
     builtin_dir = tmp_path / "fake_builtin"
     builtin_dir.mkdir()
@@ -1751,7 +1751,7 @@ def test_config_default_merges_all_brand_skills():
     silently flips the default back to False shows up as an obvious red
     test, independent of the wiring inside Runtime.create.
     """
-    from kimi_cli.config import Config
+    from consilium.config import Config
 
     assert Config().merge_all_available_skills is True
 
@@ -1767,7 +1767,7 @@ async def test_default_config_effectively_merges_user_brand_skill_dirs(monkeypat
     default is ever silently reverted, OR if the merge pipeline breaks for
     ``merge_brands=True``, this test catches it.
     """
-    from kimi_cli.config import Config
+    from consilium.config import Config
 
     home_dir = tmp_path / "home"
     kimi_dir = home_dir / ".kimi" / "skills"

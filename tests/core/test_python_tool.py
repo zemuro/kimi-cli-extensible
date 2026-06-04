@@ -7,8 +7,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kimi_cli.config import Config, PythonConfig, ThinkConfig
-from kimi_cli.think.python_tool import PythonExecutionError, PythonTool
+from consilium.config import Config, PythonConfig, ThinkConfig
+from consilium.think.python_tool import PythonExecutionError, PythonTool
 
 
 @pytest.fixture

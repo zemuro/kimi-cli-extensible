@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from kimi_cli.do.blob_store import exists, retrieve, retrieve_text, store
+from consilium.do.blob_store import exists, retrieve, retrieve_text, store
 
 
 def test_blob_store_roundtrip() -> None:

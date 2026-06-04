@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import time
 
-from kimi_cli.background import BackgroundTaskStore, TaskSpec
+from consilium.background import BackgroundTaskStore, TaskSpec
 
 
 def test_create_task_and_merge_view(runtime):

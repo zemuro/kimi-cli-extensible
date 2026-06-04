@@ -10,14 +10,14 @@ from typing import Any
 import pytest
 from inline_snapshot import snapshot
 
-from kimi_cli.config import Config
-from kimi_cli.exception import InvalidToolError, SystemPromptTemplateError
-from kimi_cli.session import Session
-from kimi_cli.soul.agent import BuiltinSystemPromptArgs, Runtime, _load_system_prompt, load_agent
-from kimi_cli.soul.approval import Approval
-from kimi_cli.soul.denwarenji import DenwaRenji
-from kimi_cli.soul.toolset import KimiToolset
-from kimi_cli.utils.environment import Environment
+from consilium.config import Config
+from consilium.exception import InvalidToolError, SystemPromptTemplateError
+from consilium.session import Session
+from consilium.soul.agent import BuiltinSystemPromptArgs, Runtime, _load_system_prompt, load_agent
+from consilium.soul.approval import Approval
+from consilium.soul.denwarenji import DenwaRenji
+from consilium.soul.toolset import KimiToolset
+from consilium.utils.environment import Environment
 
 
 def test_load_system_prompt(system_prompt_file: Path, builtin_args: BuiltinSystemPromptArgs):
@@ -37,7 +37,7 @@ def test_system_prompt_contains_platform_info(builtin_args: BuiltinSystemPromptA
     generate Linux commands. The platform info must be in the system prompt,
     not just in tool descriptions.
     """
-    from kimi_cli.agentspec import DEFAULT_AGENT_FILE
+    from consilium.agentspec import DEFAULT_AGENT_FILE
 
     prompt = _load_system_prompt(
         DEFAULT_AGENT_FILE.parent / "system.md",
@@ -67,7 +67,7 @@ def test_system_prompt_renders_os_and_shell(temp_work_dir, os_kind, shell, expec
     one-line hint right after the Shell line so the model uses Unix syntax in
     Shell commands (the only failure mode where path-form actually matters,
     since file tools accept both forms)."""
-    from kimi_cli.agentspec import DEFAULT_AGENT_FILE
+    from consilium.agentspec import DEFAULT_AGENT_FILE
 
     args = BuiltinSystemPromptArgs(
         KIMI_NOW="1970-01-01T00:00:00+00:00",
@@ -133,7 +133,7 @@ def test_load_system_prompt_missing_arg_raises(builtin_args: BuiltinSystemPrompt
 
 def test_load_tools_valid(runtime: Runtime):
     """Test loading valid tools."""
-    tool_paths = ["kimi_cli.tools.think:Think", "kimi_cli.tools.shell:Shell"]
+    tool_paths = ["consilium.tools.think:Think", "consilium.tools.shell:Shell"]
     toolset = KimiToolset()
     toolset.load_tools(
         tool_paths,
@@ -152,7 +152,7 @@ def test_load_tools_valid(runtime: Runtime):
 
 def test_load_tools_invalid(runtime: Runtime):
     """Test loading with invalid tool paths."""
-    tool_paths = ["kimi_cli.tools.nonexistent:Tool", "kimi_cli.tools.think:Think"]
+    tool_paths = ["consilium.tools.nonexistent:Tool", "consilium.tools.think:Think"]
     toolset = KimiToolset()
     try:
         toolset.load_tools(
@@ -168,7 +168,7 @@ def test_load_tools_invalid(runtime: Runtime):
         )
         raise AssertionError("should fail to load non-existing tool")
     except InvalidToolError as e:
-        assert "kimi_cli.tools.nonexistent:Tool" in str(e)
+        assert "consilium.tools.nonexistent:Tool" in str(e)
 
 
 async def test_load_agent_invalid_tools(agent_file_invalid_tools: Path, runtime: Runtime):
@@ -191,7 +191,7 @@ async def test_load_agent_registers_builtin_subagent_types(runtime: Runtime):
         builtin_type_yaml.write_text(
             'version: 1\nagent:\n  name: "Sub"\n'
             "  system_prompt_path: ./sub_system.md\n"
-            '  tools: ["kimi_cli.tools.think:Think"]\n'
+            '  tools: ["consilium.tools.think:Think"]\n'
         )
 
         # Create main agent YAML that registers one builtin subagent type
@@ -199,7 +199,7 @@ async def test_load_agent_registers_builtin_subagent_types(runtime: Runtime):
         agent_yaml.write_text(
             'version: 1\nagent:\n  name: "Main"\n'
             "  system_prompt_path: ./system.md\n"
-            '  tools: ["kimi_cli.tools.think:Think"]\n'
+            '  tools: ["consilium.tools.think:Think"]\n'
             "  subagents:\n"
             "    coder:\n"
             "      path: ./child.yaml\n"
@@ -229,7 +229,7 @@ async def test_load_agent_starts_mcp_in_background(runtime: Runtime, monkeypatch
         agent_yaml.write_text(
             'version: 1\nagent:\n  name: "Main"\n'
             "  system_prompt_path: ./system.md\n"
-            '  tools: ["kimi_cli.tools.think:Think"]\n'
+            '  tools: ["consilium.tools.think:Think"]\n'
         )
 
         await load_agent(agent_yaml, runtime, mcp_configs=[{"mcpServers": {}}])
@@ -256,7 +256,7 @@ async def test_load_agent_can_defer_mcp_loading(runtime: Runtime, monkeypatch):
         agent_yaml.write_text(
             'version: 1\nagent:\n  name: "Main"\n'
             "  system_prompt_path: ./system.md\n"
-            '  tools: ["kimi_cli.tools.think:Think"]\n'
+            '  tools: ["consilium.tools.think:Think"]\n'
         )
 
         await load_agent(
@@ -286,7 +286,7 @@ version: 1
 agent:
   name: "Test Agent"
   system_prompt_path: ./system.md
-  tools: ["kimi_cli.tools.nonexistent:Tool"]
+  tools: ["consilium.tools.nonexistent:Tool"]
 """)
 
         yield agent_yaml

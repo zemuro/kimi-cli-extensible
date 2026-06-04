@@ -1,23 +1,28 @@
 ---
 phase_id: phase-11
 title: 11: Think Project Plan Command + Plan-Centric Handoff
-status: deferred
+status: implemented
 dependencies:
   - phase-10
 files_involved:
-  - src/kimi_cli/think/plan_commands.py
-  - src/kimi_cli/think/plan_synthesis.py
   - src/kimi_cli/plan/adr.py
   - src/kimi_cli/plan/finding.py
+  - src/kimi_cli/plan/models.py
   - src/kimi_cli/plan/dispatch.py
+  - src/kimi_cli/think/plan_synthesis.py
+  - src/kimi_cli/think/plan_commands.py
   - src/kimi_cli/think/push.py
   - src/kimi_cli/think/slash.py
+  - src/kimi_cli/soul/slash.py
+  - src/kimi_cli/do/journal.py
   - src/kimi_cli/app.py
-  - src/kimi_cli/do/session.py
-  - src/kimi_cli/ui/shell/slash.py
+  - src/kimi_cli/cli/__init__.py
 ---
 
-**Status: STAGED — 4/5 blockers resolved, Blocker 3 (synthesis validation) remains open.**
+**Status: IMPLEMENTED — 1035 tests passing (41 new + 994 previous).**
+
+**Implementation report:** `plan/reports/phase-11-report.md`
+**Review:** `plan/reports/phase-11-review.md`
 
 **Blockers review:** `scratch/reports/phase_11_blockers_review.md`
 
@@ -388,10 +393,11 @@ async def complete(soul: KimiSoul, args: str):
     """
     from kimi_cli.do.session import DoSession
     
-    # Find the DoSession attached to this soul (if any)
+    # DC-1: Mode guard — /complete is Do-mode only
+    # Check if this soul has an associated DoSession
     do_session = _find_do_session_for_soul(soul)
     if do_session is None:
-        wire_send(TextPart(text="No active Do session. /complete only works in Do mode."))
+        wire_send(TextPart(text="/complete only works in Do mode."))
         return
     
     if do_session._phase is None:
@@ -401,11 +407,12 @@ async def complete(soul: KimiSoul, args: str):
     phase_id = do_session._phase
     plan_file = do_session._plan_file
     notes = args.strip()
+    work_dir = do_session.work_dir  # DC-2: use DoSession's public attr, not soul._runtime
     
     # 1. Write completion report
-    report_path = _write_completion_report(plan_file, phase_id, soul, notes)
+    report_path = _write_completion_report(plan_file, phase_id, work_dir, notes)
     
-    # 2. Update plan index
+    # 2. Update plan index (CI-2: parse → mutate → re-render)
     _update_plan_index_status(plan_file, phase_id, status="implemented", locked=True)
     
     # 3. Store signal in journal
@@ -425,18 +432,23 @@ async def complete(soul: KimiSoul, args: str):
 
 
 def _find_do_session_for_soul(soul: KimiSoul) -> DoSession | None:
-    """Weak-ref lookup or registry — DoSession holds a reference to soul."""
-    # Option A: Maintain a weak-value dict in DoSession class
-    return DoSession._active_sessions.get(id(soul))
+    """CI-1: Iterate the DoSession registry instead of using id(soul)."""
+    from kimi_cli.do.registry import _DO_SESSIONS
+    for do_session in _DO_SESSIONS.values():
+        if do_session.soul is soul:
+            return do_session
+    return None
 
 
 def _write_completion_report(
     plan_file: Path | None,
     phase_id: str,
-    soul: KimiSoul,
+    work_dir: Path,
     notes: str,
 ) -> Path:
-    work_dir = soul._runtime.work_dir
+    """CI-3: Use unified timestamps (Phase 10), not datetime.now()."""
+    from kimi_cli.utils.timestamp import format_iso
+    
     reports_dir = work_dir / "plan" / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
     
@@ -448,7 +460,7 @@ def _write_completion_report(
     
     content = f"""---
 phase_id: {phase_id}
-completed_at: {datetime.now(timezone.utc).isoformat()}
+completed_at: {format_iso(time.time())}
 ---
 
 # Completion Report: {phase_id}
@@ -474,19 +486,51 @@ def _update_plan_index_status(
     status: str,
     locked: bool,
 ) -> None:
+    """CI-2: Parse → mutate → re-render using PlanDirectory model.
+    
+    Do NOT use regex on Markdown tables. Load the index into a
+    PlanDirectory, update the phase object, then re-render.
+    """
     if plan_file is None:
         return
     index_file = plan_file if plan_file.name == "index.md" else plan_file.parent / "index.md"
     if not index_file.exists():
         return
     
-    text = index_file.read_text(encoding="utf-8")
-    # Update the status table row for this phase
-    # Regex: find | [phase_id] | ... | old_status | ... |
-    pattern = rf"(\| \[?{phase_id}\]? \| .*? \| )\w+( \| .+? \|)"
-    replacement = rf"\g<1>{status}\g<2>"
-    text = re.sub(pattern, replacement, text)
-    index_file.write_text(text, encoding="utf-8")
+    from kimi_cli.plan.parser import parse_plan_directory_from_path
+    from kimi_cli.plan.models import PlanDirectory
+    
+    plan_dir = parse_plan_directory_from_path(index_file)
+    phase = plan_dir.get_phase(phase_id)
+    if phase is None:
+        return
+    
+    phase.status = status  # type: ignore
+    phase.locked = locked  # type: ignore
+    # Re-render index.md from model
+    rendered = _render_plan_index(plan_dir)
+    index_file.write_text(rendered, encoding="utf-8")
+
+
+def _render_plan_index(plan_dir: PlanDirectory) -> str:
+    """Render PlanDirectory back to index.md Markdown."""
+    lines = ["---"]
+    lines.append(f"plan_id: {plan_dir.metadata.plan_id}")
+    from kimi_cli.utils.timestamp import format_date
+    lines.append(f"last_updated: {format_date(time.time())}")
+    lines.append("---")
+    lines.append("")
+    lines.append(f"# Plan: {plan_dir.metadata.plan_id or 'Untitled'}")
+    lines.append("")
+    lines.append("## Phase Status Table")
+    lines.append("")
+    lines.append("| Phase | Title | Status | Locked |")
+    lines.append("|-------|-------|--------|--------|")
+    for phase in plan_dir.phases:
+        lock_icon = "✅" if phase.locked else "❌"
+        lines.append(f"| [{phase.phase_id}]({phase.phase_id}.md) | {phase.title} | {phase.status} | {lock_icon} |")
+    # ... (dependency graph, decisions table, etc.)
+    return "\n".join(lines) + "\n"
 ```
 
 **Registration:** Add `complete` to the Do-mode slash command registry. If Do mode uses a separate registry from Think mode, register there instead.
@@ -553,22 +597,245 @@ if seed_from_think:
 plan_file = plan_file or (dispatch.plan_file if dispatch else None)
 ```
 
-#### 11.9 Synthesis validation rules
+#### 11.9 Incremental plan synthesis
 
-**Blocker 3 resolution:** LLM synthesis format needs concrete validation.
+**Blocker 3 resolution:** Use incremental generation with sequential phase synthesis. Max 20 phases per `/plan init`.
 
-| Rule | Enforcement |
-|------|-------------|
-| Path must start with `plan/` | Reject any file outside project plan directory |
-| Frontmatter must parse with YAML | Validate each file before writing |
-| Index.md must exist in output | Require at least one `index.md` |
-| File count matches expected phases | Warn if fewer files than expected |
-| Retry with constrained prompt | On parse failure, retry with stronger instructions |
+**Decision rationale:**
+- Approach B (incremental) selected over single-shot and hybrid
+- Max 20 phases — generous cap, excess phases go into a "deferred" section of the index
+- Sequential synthesis — simpler debugging, predictable token usage, no subagent budget complications
 
-**Alternative (recommended):** Generate files incrementally instead of single-shot:
-1. First call: synthesize `index.md` only
-2. Second call: synthesize phase files one at a time
-This stays within token limits and reduces format deviation risk.
+**Algorithm:**
+
+```python
+MAX_PHASES_PER_INIT = 10  # MVP cap; increase to 20 after validation
+MAX_RETRIES = 2
+
+async def synthesize_plan_incrementally(
+    messages: list[ThinkMessage],
+    llm: LLMProvider,
+) -> dict[str, str]:
+    """Returns {filepath: content} for all plan files.
+    
+    DC-3: Compacts conversation history before synthesis to reduce token cost.
+    Up to 10 phases = 1 index call + 10 phase calls = 11 LLM calls max.
+    """
+    files: dict[str, str] = {}
+    
+    # DC-3: Compact conversation to summary before synthesis
+    summary = await _summarize_for_planning(messages)
+    
+    # Step 1: Synthesize index
+    index_prompt = _format_index_prompt(summary)
+    index_content = await _generate_and_validate(
+        llm, index_prompt, expected_path="plan/index.md"
+    )
+    files["plan/index.md"] = index_content
+    
+    # Step 2: Parse phase list from index frontmatter/status table
+    phase_ids = _extract_phase_ids(index_content)
+    
+    if len(phase_ids) > MAX_PHASES_PER_INIT:
+        logger.warning(
+            f"Conversation suggests {len(phase_ids)} phases; "
+            f"capping at {MAX_PHASES_PER_INIT}. Remainder goes to deferred section."
+        )
+        phase_ids = phase_ids[:MAX_PHASES_PER_INIT]
+        files["plan/index.md"] = _append_deferred_section(index_content, phase_ids)
+    
+    # Step 3: Synthesize each phase sequentially
+    for phase_id in phase_ids:
+        phase_prompt = _format_phase_prompt(summary, index_content, phase_id)
+        phase_content = await _generate_and_validate(
+            llm, phase_prompt, expected_path=f"plan/{phase_id}.md"
+        )
+        files[f"plan/{phase_id}.md"] = phase_content
+    
+    return files
+
+
+async def _summarize_for_planning(messages: list[ThinkMessage]) -> str:
+    """DC-3: Summarize conversation into planning-relevant context.
+    Reduces token cost from full history to ~1-2K tokens."""
+    # Reuse think compaction or a dedicated summary prompt
+    ...
+
+
+async def _generate_and_validate(
+    llm: LLMProvider,
+    prompt: str,
+    expected_path: str,
+) -> str:
+    """CI-5: Use chat-based LLM interface, not completion-based.
+    
+    Kosong is chat-based. Format prompt as system+user messages.
+    """
+    from kosong import Message as KosongMessage
+    
+    for attempt in range(MAX_RETRIES + 1):
+        # CI-5: chat_provider.chat() not llm.generate()
+        response = await llm.chat_provider.chat([
+            KosongMessage.system(
+                "You are a project planner. Output only the requested file using === FILE: delimiters."
+            ),
+            KosongMessage.user(prompt),
+        ])
+        raw = response.content  # or extract text from response
+        
+        try:
+            content = _extract_file_block(raw, expected_path)
+            _validate_file(content, expected_path)
+            return content
+        except SynthesisError as e:
+            # G5: Error handling for exhausted retries
+            if attempt < MAX_RETRIES:
+                prompt = _strengthen_prompt(prompt, expected_path, str(e))
+            else:
+                raise SynthesisError(
+                    f"Failed to synthesize {expected_path} after {MAX_RETRIES} retries. "
+                    f"Last error: {e}. "
+                    f"Try /plan init with a shorter conversation or clearer requirements."
+                )
+    raise RuntimeError("Unreachable")
+
+
+def _validate_file(content: str, expected_path: str) -> None:
+    """Validate extracted file content before writing."""
+    # CI-7: Path traversal check using Path.is_relative_to(), not string prefix
+    allowed_root = Path("plan").resolve()
+    resolved = allowed_root / expected_path
+    try:
+        if not resolved.resolve().is_relative_to(allowed_root):
+            raise SynthesisError(f"Path traversal detected: {expected_path}")
+    except ValueError:  # is_relative_to raises ValueError on Windows for different drives
+        raise SynthesisError(f"Invalid path: {expected_path}")
+    
+    # Rule 2: YAML frontmatter must parse
+    frontmatter, _ = _split_frontmatter(content)
+    if frontmatter:
+        try:
+            yaml.safe_load(frontmatter)
+        except yaml.YAMLError as e:
+            raise SynthesisError(f"Invalid YAML frontmatter: {e}")
+    
+    # Rule 3: For index.md, must have a phase status table
+    if expected_path.endswith("index.md"):
+        if "| Phase |" not in content and "## Phase" not in content:
+            raise SynthesisError("index.md missing phase list or status table")
+
+
+def _extract_file_block(text: str, expected_path: str) -> str:
+    """Extract content for expected_path from === FILE: delimiters."""
+    pattern = rf"=== FILE: {re.escape(expected_path)} ===\n(.*?)\n(?=== FILE: |\Z)"
+    match = re.search(pattern, text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    
+    # Fallback: if no delimiters, assume the entire output is the file
+    if "=== FILE:" not in text:
+        return text.strip()
+    
+    # Fallback: if delimiters exist but wrong path, search for any matching path
+    alt_pattern = r"=== FILE: (plan/[^\s]+) ===\n(.*?)\n(?=== FILE: |\Z)"
+    for path, content in re.findall(alt_pattern, text, re.DOTALL):
+        if path == expected_path or path.endswith(Path(expected_path).name):
+            return content.strip()
+    
+    raise SynthesisError(f"Could not find file block for {expected_path}")
+
+
+def _strengthen_prompt(original: str, expected_path: str, error: str) -> str:
+    """Add stronger instructions to the prompt after a failure."""
+    return f"""{original}
+
+IMPORTANT: Your previous attempt failed validation: {error}
+Please strictly follow this format:
+
+=== FILE: {expected_path} ===
+---
+frontmatter: here
+---
+content here
+
+Do not add any other text outside the === FILE: block.
+"""
+```
+
+**Prompt structure for index synthesis:**
+```markdown
+You are a project planner. Based on the conversation below, synthesize a
+phased implementation plan.
+
+Conversation:
+{{formatted_messages}}
+
+Output ONLY the plan index file using this exact format:
+
+=== FILE: plan/index.md ===
+---
+plan_id: ...
+created: YYYY-MM-DD
+---
+
+# Plan: ...
+
+## Phase Status Table
+| Phase | Title | Status | Locked |
+|-------|-------|--------|--------|
+| phase-01 | ... | pending | ❌ |
+...
+
+## Dependency Graph
+```mermaid
+graph TD
+    P01[phase-01: ...] --> P02[phase-02: ...]
+```
+
+Guidelines:
+- Use at most 20 phases. If more are needed, list the first 20 and add a "Deferred" section.
+- Every phase must have a unique phase_id matching pattern phase-NN
+- Status is always "pending" for new plans
+- Dependencies must reference existing phase_ids in this plan
+```
+
+**Prompt structure for phase synthesis:**
+```markdown
+You are a project planner. Based on the conversation and the plan index below,
+synthesize the detailed specification for one phase.
+
+Plan index:
+{{index_content}}
+
+Target phase: {{phase_id}}
+
+Output ONLY the phase file using this exact format:
+
+=== FILE: plan/{{phase_id}}.md ===
+---
+phase_id: {{phase_id}}
+title: ...
+status: pending
+dependencies:
+  - ...
+---
+
+# {{title}}
+
+## Description
+...
+
+## Acceptance Criteria
+- [ ] ...
+
+## Files Involved
+- src/...
+
+Guidelines:
+- Reference only phases that exist in the provided index
+- Files involved should be realistic paths relative to project root
+- Acceptance criteria must be verifiable
+```
 
 #### 11.10 Deprecation timeline
 
@@ -610,11 +877,18 @@ def slash_push_to_do(history, session, args):
 
 **`src/kimi_cli/think/plan_commands.py`:**
 ```python
-def _backup_existing_plan(plan_file: Path) -> Path:
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    backup_path = plan_file.parent / f"{plan_file.name}.backup.{timestamp}"
-    plan_file.rename(backup_path)
-    return backup_path
+def _backup_plan_directory(plan_dir: Path) -> Path:
+    """CI-4, CI-6: Copy (not move) the entire plan/ directory for backup.
+    
+    Uses shutil.copytree to preserve decisions/, findings/, and all phase files.
+    Does NOT use Path.rename() — that would move (not copy) and risk data loss
+    if the subsequent write fails.
+    """
+    import shutil
+    timestamp = int(time.time())
+    backup_dir = plan_dir.parent / f"plan.backup.{timestamp}"
+    shutil.copytree(plan_dir, backup_dir)
+    return backup_dir
 
 @think_registry.command(name="plan")
 async def slash_plan(history, session, args):
@@ -624,14 +898,12 @@ async def slash_plan(history, session, args):
     force = "--force" in parts
     ...
     if subcommand == "init":
-        plan_file = Path("plan/index.md")
+        plan_dir = Path("plan")
+        plan_file = plan_dir / "index.md"
         if plan_file.exists() and not force:
-            # Auto-backup by default
-            backup = _backup_existing_plan(plan_file)
-            # Also backup phase files
-            for phase_file in plan_file.parent.glob("phase-*.md"):
-                _backup_existing_plan(phase_file)
-            msg = f"Existing plan backed up to {backup}. Use --force to skip backup."
+            # CI-6: Auto-backup entire plan/ directory by default
+            backup_dir = _backup_plan_directory(plan_dir)
+            msg = f"Existing plan backed up to {backup_dir}. Use --force to skip backup."
         ...
 ```
 
@@ -652,28 +924,44 @@ Ensure `mkdir -p` for:
 - `plan/findings/`
 - `plan/reports/`
 
+**G1:** Also create `plan/reports/.gitignore` so auto-generated reports don't dirty `git status`:
+```python
+reports_gitignore = plan_dir / "reports" / ".gitignore"
+if not reports_gitignore.exists():
+    reports_gitignore.write_text("# Auto-generated reports\n*.md\n", encoding="utf-8")
+```
+
 ### Testing Requirements
 
-| Test | Description |
-|------|-------------|
-| `test_plan_init_creates_index_and_phases` | `/plan init` writes correct structure |
-| `test_plan_init_synthesis_prompt_format` | Prompt includes conversation history |
-| `test_plan_init_parses_file_delimiters` | `=== FILE: ===` blocks parsed correctly |
-| `test_plan_status_shows_table` | Status command renders readable table |
-| `test_push_to_do_requires_plan` | Error if no plan exists |
-| `test_push_to_do_writes_dispatch` | Dispatch.json written with correct phase |
-| `test_adr_render_and_parse` | ADR roundtrip: render → write → parse |
-| `test_finding_render_and_parse` | Finding roundtrip |
-| `test_do_updates_plan_index_on_complete` | Phase status updated after Do completion |
-| `test_backward_compat_outbox` | Old outbox still loads with deprecation warning |
-| `test_complete_command_writes_report` | `/complete` writes completion report and updates index |
-| `test_dispatch_plan_file_field` | Dispatch roundtrip with `plan_file` |
-| `test_plan_init_auto_backup` | Existing plan backed up before overwrite |
-| `test_plan_init_force_overwrite` | `--force` skips backup |
-| `test_synthesis_validation_rejects_bad_path` | Path traversal rejected |
-| `test_synthesis_validation_requires_index` | Missing index.md fails validation |
+| Test | Description | Priority |
+|------|-------------|----------|
+| `test_plan_synthesis_extract_file_block` | `=== FILE: ===` delimiter parsing with fallbacks | P1 |
+| `test_plan_synthesis_validate_yaml_frontmatter` | Rejects malformed frontmatter | P1 |
+| `test_plan_synthesis_validate_path_traversal` | CI-7: `Path.is_relative_to()` rejects `../../../etc/passwd` | P1 |
+| `test_plan_synthesis_validate_requires_index` | Missing index.md fails validation | P1 |
+| `test_plan_synthesis_retry_exhausted` | G5: User-friendly error after max retries | P1 |
+| `test_plan_init_creates_index_and_phases` | `/plan init` writes correct structure | P2 |
+| `test_plan_init_synthesis_prompt_format` | Prompt includes conversation summary | P2 |
+| `test_plan_init_caps_at_10_phases` | MVP cap enforced, deferred section added | P2 |
+| `test_plan_status_shows_table` | Status command renders readable table | P2 |
+| `test_plan_init_auto_backup` | CI-4/CI-6: Entire `plan/` directory copied (not moved) before overwrite | P2 |
+| `test_plan_init_force_overwrite` | `--force` skips backup | P2 |
+| `test_push_to_do_requires_plan` | Error if no plan exists | P2 |
+| `test_push_to_do_writes_dispatch` | Dispatch roundtrip with `plan_file` | P2 |
+| `test_adr_render_and_parse` | ADR roundtrip: render → write → parse | P3 |
+| `test_finding_render_and_parse` | Finding roundtrip | P3 |
+| `test_complete_command_writes_report` | CI-3: Report uses unified timestamps (float, not datetime) | P2 |
+| `test_complete_command_updates_index` | CI-2: Index updated via parse→mutate→re-render, not regex | P2 |
+| `test_complete_command_mode_guard` | DC-1: Returns error in Think mode | P2 |
+| `test_complete_command_no_phase` | Returns error when no `--phase` set | P2 |
+| `test_dispatch_plan_file_field` | `plan_file` roundtrip in read/write | P2 |
+| `test_plan_init_creates_gitignore` | G1: `plan/reports/.gitignore` created | P3 |
+| `test_backup_uses_copy_not_rename` | CI-4: Original files preserved after backup | P2 |
+| `test_synthesis_chat_interface` | CI-5: Uses `chat_provider.chat()`, not `generate()` | P2 |
+| `test_find_do_session_by_registry` | CI-1: `_find_do_session_for_soul` iterates registry | P2 |
+| `test_render_plan_index_from_model` | CI-2: `_render_plan_index` produces valid Markdown | P2 |
 
-**Estimated effort:** 3–4 days (will extend to 4–5 days with blocker resolutions).
+**Estimated effort:** 4–5 days (review-adjusted; 20–25 tests, not 10).
 
 ---
 

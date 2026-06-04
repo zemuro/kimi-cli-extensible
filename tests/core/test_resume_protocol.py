@@ -12,9 +12,9 @@ async def test_resume_protocol_surfaces_actual_subagent_type(agent_tool, runtime
     from kosong.message import Message
     from kosong.tooling.empty import EmptyToolset
 
-    from kimi_cli.soul.agent import Agent as SoulAgent
-    from kimi_cli.subagents import AgentLaunchSpec, AgentTypeDefinition, ToolPolicy
-    from kimi_cli.wire.types import TextPart
+    from consilium.soul.agent import Agent as SoulAgent
+    from consilium.subagents import AgentLaunchSpec, AgentTypeDefinition, ToolPolicy
+    from consilium.wire.types import TextPart
 
     runtime.labor_market.add_builtin_type(
         AgentTypeDefinition(
@@ -40,8 +40,8 @@ async def test_resume_protocol_surfaces_actual_subagent_type(agent_tool, runtime
             Message(role="assistant", content=[TextPart(text="done")])
         )
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
-    monkeypatch.setattr("kimi_cli.subagents.runner.run_soul", fake_run_soul)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.runner.run_soul", fake_run_soul)
 
     runtime.subagent_store.create_instance(
         agent_id="aexisting",

@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from kimi_cli.config import Config, load_config_from_string
+from consilium.config import Config, load_config_from_string
 
 
 def test_system_prompt_overrides_valid_paths(tmp_path):

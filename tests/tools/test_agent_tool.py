@@ -9,11 +9,11 @@ from kosong.chat_provider import APIConnectionError, APIStatusError, ChatProvide
 from kosong.message import Message
 from kosong.tooling.empty import EmptyToolset
 
-from kimi_cli.approval_runtime import get_current_approval_source_or_none
-from kimi_cli.soul import MaxStepsReached, RunCancelled
-from kimi_cli.soul.agent import Agent as SoulAgent
-from kimi_cli.subagents import AgentLaunchSpec, AgentTypeDefinition, ToolPolicy
-from kimi_cli.wire.types import ApprovalRequest, TextPart
+from consilium.approval_runtime import get_current_approval_source_or_none
+from consilium.soul import MaxStepsReached, RunCancelled
+from consilium.soul.agent import Agent as SoulAgent
+from consilium.subagents import AgentLaunchSpec, AgentTypeDefinition, ToolPolicy
+from consilium.wire.types import ApprovalRequest, TextPart
 from tests.conftest import tool_call_context
 
 
@@ -54,8 +54,8 @@ async def test_agent_tool_creates_instance_and_returns_agent_id(agent_tool, runt
             Message(role="assistant", content=[TextPart(text="done")])
         )
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
-    monkeypatch.setattr("kimi_cli.subagents.runner.run_soul", fake_run_soul)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.runner.run_soul", fake_run_soul)
 
     result = await agent_tool(
         agent_tool.params(
@@ -102,8 +102,8 @@ async def test_agent_tool_foreground_passes_subagent_wire_file(agent_tool, runti
             Message(role="assistant", content=[TextPart(text="done")])
         )
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
-    monkeypatch.setattr("kimi_cli.subagents.runner.run_soul", fake_run_soul)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.runner.run_soul", fake_run_soul)
 
     result = await agent_tool(
         agent_tool.params(
@@ -143,8 +143,8 @@ async def test_agent_tool_resume_uses_actual_type(agent_tool, runtime, monkeypat
             Message(role="assistant", content=[TextPart(text="done")])
         )
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
-    monkeypatch.setattr("kimi_cli.subagents.runner.run_soul", fake_run_soul)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.runner.run_soul", fake_run_soul)
 
     runtime.subagent_store.create_instance(
         agent_id="aexisting",
@@ -232,8 +232,8 @@ async def test_agent_tool_marks_instance_failed_when_summary_continuation_hits_m
             return
         raise MaxStepsReached(10)
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
-    monkeypatch.setattr("kimi_cli.subagents.runner.run_soul", fake_run_soul)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.runner.run_soul", fake_run_soul)
 
     result = await agent_tool(
         agent_tool.params(
@@ -287,8 +287,8 @@ async def test_agent_tool_marks_instance_killed_when_summary_continuation_is_can
             return
         raise asyncio.CancelledError()
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
-    monkeypatch.setattr("kimi_cli.subagents.runner.run_soul", fake_run_soul)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.runner.run_soul", fake_run_soul)
 
     with pytest.raises(asyncio.CancelledError):
         await agent_tool(
@@ -332,8 +332,8 @@ async def test_agent_tool_marks_instance_failed_when_initial_run_raises(
     ):
         raise RuntimeError("boom")
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
-    monkeypatch.setattr("kimi_cli.subagents.runner.run_soul", fake_run_soul)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.runner.run_soul", fake_run_soul)
 
     result = await agent_tool(
         agent_tool.params(
@@ -379,8 +379,8 @@ async def test_agent_tool_marks_instance_killed_when_initial_run_is_cancelled(
     ):
         raise asyncio.CancelledError()
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
-    monkeypatch.setattr("kimi_cli.subagents.runner.run_soul", fake_run_soul)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.runner.run_soul", fake_run_soul)
 
     with pytest.raises(asyncio.CancelledError):
         await agent_tool(
@@ -431,8 +431,8 @@ async def test_agent_tool_returns_rejected_by_user_when_tool_request_is_rejected
             )
         )
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
-    monkeypatch.setattr("kimi_cli.subagents.runner.run_soul", fake_run_soul)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.runner.run_soul", fake_run_soul)
 
     result = await agent_tool(
         agent_tool.params(
@@ -956,8 +956,8 @@ async def test_agent_tool_background_agent_waits_for_approval(agent_tool, runtim
             Message(role="assistant", content=[TextPart(text="x" * 250)])
         )
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
-    monkeypatch.setattr("kimi_cli.subagents.runner.run_soul", fake_run_soul)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.runner.run_soul", fake_run_soul)
 
     queue = runtime.root_wire_hub.subscribe()
     try:
@@ -1035,8 +1035,8 @@ async def test_task_stop_kills_background_agent_waiting_for_approval(
         )
         await soul.runtime.approval_runtime.wait_for_response("req-bg-stop")
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
-    monkeypatch.setattr("kimi_cli.subagents.runner.run_soul", fake_run_soul)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.runner.run_soul", fake_run_soul)
 
     with tool_call_context("Agent"):
         result = await agent_tool(
@@ -1099,8 +1099,8 @@ async def test_foreground_agent_explicit_timeout_returns_tool_error(
         # Simulate a subagent that never finishes
         await asyncio.Event().wait()
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
-    monkeypatch.setattr("kimi_cli.subagents.runner.run_soul", fake_run_soul_hang)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.runner.run_soul", fake_run_soul_hang)
 
     import time
 
@@ -1150,8 +1150,8 @@ async def test_foreground_agent_internal_timeout_with_explicit_deadline(
     ):
         raise TimeoutError("aiohttp sock_read timeout")
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
-    monkeypatch.setattr("kimi_cli.subagents.runner.run_soul", fake_run_soul_internal_timeout)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.runner.run_soul", fake_run_soul_internal_timeout)
 
     params = agent_tool.params(
         description="internal timeout with deadline",
@@ -1201,8 +1201,8 @@ async def test_agent_tool_returns_informative_error_when_chat_provider_fails(
     ):
         raise ChatProviderError("Model overloaded, please retry")
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
-    monkeypatch.setattr("kimi_cli.subagents.runner.run_soul", fake_run_soul)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.runner.run_soul", fake_run_soul)
 
     result = await agent_tool(
         agent_tool.params(
@@ -1253,8 +1253,8 @@ async def test_agent_tool_returns_informative_error_when_api_status_error(
     ):
         raise APIStatusError(429, "Rate limit exceeded")
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
-    monkeypatch.setattr("kimi_cli.subagents.runner.run_soul", fake_run_soul)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.runner.run_soul", fake_run_soul)
 
     result = await agent_tool(
         agent_tool.params(
@@ -1297,7 +1297,7 @@ async def test_agent_tool_returns_error_when_final_response_is_none(
             runtime=runtime,
         )
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
 
     # Patch run_with_summary_continuation to return (None, None) — simulating
     # the defensive scenario where final_response is None but failure is also None.
@@ -1305,7 +1305,7 @@ async def test_agent_tool_returns_error_when_final_response_is_none(
         return None, None
 
     monkeypatch.setattr(
-        "kimi_cli.subagents.runner.run_with_summary_continuation",
+        "consilium.subagents.runner.run_with_summary_continuation",
         fake_run_with_summary,
     )
 
@@ -1353,8 +1353,8 @@ async def test_agent_tool_marks_instance_killed_when_run_cancelled(
     ):
         raise RunCancelled()
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
-    monkeypatch.setattr("kimi_cli.subagents.runner.run_soul", fake_run_soul)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.runner.run_soul", fake_run_soul)
 
     # RunCancelled is caught by AgentTool and returned as ToolError,
     # but the instance must be marked as "killed" (not "failed").
@@ -1406,8 +1406,8 @@ async def test_agent_tool_returns_informative_error_when_api_connection_error(
     ):
         raise APIConnectionError("Connection refused")
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
-    monkeypatch.setattr("kimi_cli.subagents.runner.run_soul", fake_run_soul)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.runner.run_soul", fake_run_soul)
 
     result = await agent_tool(
         agent_tool.params(
@@ -1455,13 +1455,13 @@ async def test_background_agent_marks_failed_when_final_response_is_none(
             runtime=runtime,
         )
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
 
     async def fake_run_with_summary(soul, prompt, ui_loop_fn, wire_path):
         return None, None
 
     monkeypatch.setattr(
-        "kimi_cli.background.agent_runner.run_with_summary_continuation",
+        "consilium.background.agent_runner.run_with_summary_continuation",
         fake_run_with_summary,
     )
 
@@ -1513,7 +1513,7 @@ async def test_foreground_runner_hook_trigger_exception_marks_instance_failed(
             runtime=runtime,
         )
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
 
     # Make subagent_start (called to build input_data for the SubagentStart hook)
     # raise an exception.  This triggers the except Exception branch inside the
@@ -1522,7 +1522,7 @@ async def test_foreground_runner_hook_trigger_exception_marks_instance_failed(
         raise RuntimeError("hook input builder failed")
 
     monkeypatch.setattr(
-        "kimi_cli.hooks.events.subagent_start",
+        "consilium.hooks.events.subagent_start",
         exploding_subagent_start,
     )
 
@@ -1571,13 +1571,13 @@ async def test_background_agent_marks_killed_when_run_cancelled(agent_tool, runt
             runtime=runtime,
         )
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
 
     async def fake_run_with_summary(soul, prompt, ui_loop_fn, wire_path):
         raise RunCancelled()
 
     monkeypatch.setattr(
-        "kimi_cli.background.agent_runner.run_with_summary_continuation",
+        "consilium.background.agent_runner.run_with_summary_continuation",
         fake_run_with_summary,
     )
 

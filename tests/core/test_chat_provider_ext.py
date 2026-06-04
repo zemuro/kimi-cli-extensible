@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kimi_cli.chat_provider_ext import patch_chat_provider
+from consilium.chat_provider_ext import patch_chat_provider
 
 
 class TestPatchChatProvider:

@@ -1,0 +1,22 @@
+version: 1
+agent:
+  extend: default
+  tools:
+    - "consilium.tools.agent:Agent"
+    - "consilium.tools.dmail:SendDMail"
+    - "consilium.tools.ask_user:AskUserQuestion"
+    - "consilium.tools.todo:SetTodoList"
+    - "consilium.tools.shell:Shell"
+    - "consilium.tools.background:TaskList"
+    - "consilium.tools.background:TaskOutput"
+    - "consilium.tools.background:TaskStop"
+    - "consilium.tools.file:ReadFile"
+    - "consilium.tools.file:ReadMediaFile"
+    - "consilium.tools.file:Glob"
+    - "consilium.tools.file:Grep"
+    - "consilium.tools.file:WriteFile"
+    - "consilium.tools.file:StrReplaceFile"
+    - "consilium.tools.web:SearchWeb"
+    - "consilium.tools.web:FetchURL"
+    - "consilium.tools.plan:ExitPlanMode"
+    - "consilium.tools.plan.enter:EnterPlanMode"

@@ -7,9 +7,9 @@ from unittest.mock import MagicMock
 import pytest
 from kosong.chat_provider import TokenUsage
 
-from kimi_cli.config import SubagentBudgetConfig, SubagentsConfig
-from kimi_cli.subagents.budget_tracker import BudgetStatus, SubagentBudgetTracker
-from kimi_cli.wire.types import SubagentBudgetWarningEvent
+from consilium.config import SubagentBudgetConfig, SubagentsConfig
+from consilium.subagents.budget_tracker import BudgetStatus, SubagentBudgetTracker
+from consilium.wire.types import SubagentBudgetWarningEvent
 
 
 class TestBudgetTracker:
@@ -150,7 +150,7 @@ class TestBudgetConfig:
 
 class TestKimiSoulHooks:
     def test_register_usage_hook(self) -> None:
-        from kimi_cli.soul.kimisoul import KimiSoul
+        from consilium.soul.kimisoul import KimiSoul
 
         soul = MagicMock(spec=KimiSoul)
         soul._usage_hooks = []
@@ -162,7 +162,7 @@ class TestKimiSoulHooks:
         assert hook in soul._usage_hooks
 
     def test_register_step_gate(self) -> None:
-        from kimi_cli.soul.kimisoul import KimiSoul
+        from consilium.soul.kimisoul import KimiSoul
 
         soul = MagicMock(spec=KimiSoul)
         soul._step_gates = []

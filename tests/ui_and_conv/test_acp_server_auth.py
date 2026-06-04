@@ -4,8 +4,8 @@ from unittest.mock import patch
 import acp
 import pytest
 
-from kimi_cli.acp.server import ACPServer
-from kimi_cli.auth.oauth import OAuthToken
+from consilium.acp.server import ACPServer
+from consilium.auth.oauth import OAuthToken
 
 
 @pytest.fixture
@@ -47,7 +47,7 @@ def _make_token(
 
 def test_check_auth_raises_when_no_token(server: ACPServer) -> None:
     """Test that _check_auth raises AUTH_REQUIRED when no token exists."""
-    with patch("kimi_cli.acp.server.load_tokens", return_value=None):
+    with patch("consilium.acp.server.load_tokens", return_value=None):
         with pytest.raises(acp.RequestError) as exc_info:
             server._check_auth()
 
@@ -58,7 +58,7 @@ def test_check_auth_raises_when_token_has_no_access_token(server: ACPServer) -> 
     """Test that _check_auth raises AUTH_REQUIRED when token has no access_token."""
     token = _make_token(access_token="")
 
-    with patch("kimi_cli.acp.server.load_tokens", return_value=token):
+    with patch("consilium.acp.server.load_tokens", return_value=token):
         with pytest.raises(acp.RequestError) as exc_info:
             server._check_auth()
 
@@ -69,7 +69,7 @@ def test_check_auth_passes_when_valid_token(server: ACPServer) -> None:
     """Test that _check_auth passes when a valid token exists."""
     token = _make_token()
 
-    with patch("kimi_cli.acp.server.load_tokens", return_value=token):
+    with patch("consilium.acp.server.load_tokens", return_value=token):
         # Should not raise
         server._check_auth()
 
@@ -81,7 +81,7 @@ def test_check_auth_raises_when_token_expired_without_refresh(server: ACPServer)
         refresh_token="",
     )
 
-    with patch("kimi_cli.acp.server.load_tokens", return_value=token):
+    with patch("consilium.acp.server.load_tokens", return_value=token):
         with pytest.raises(acp.RequestError) as exc_info:
             server._check_auth()
 
@@ -98,7 +98,7 @@ def test_check_auth_passes_when_token_expired_but_has_refresh(server: ACPServer)
         refresh_token="refresh_123",
     )
 
-    with patch("kimi_cli.acp.server.load_tokens", return_value=token):
+    with patch("consilium.acp.server.load_tokens", return_value=token):
         # Should not raise — background refresh will handle it
         server._check_auth()
 
@@ -112,7 +112,7 @@ def test_check_auth_passes_when_expires_at_is_zero(server: ACPServer) -> None:
     """
     token = _make_token(expires_at=0.0)
 
-    with patch("kimi_cli.acp.server.load_tokens", return_value=token):
+    with patch("consilium.acp.server.load_tokens", return_value=token):
         # Should not raise
         server._check_auth()
 
@@ -133,7 +133,7 @@ async def test_authenticate_rejects_expired_token_without_refresh(server: ACPSer
         refresh_token="",
     )
 
-    with patch("kimi_cli.acp.server.load_tokens", return_value=token):
+    with patch("consilium.acp.server.load_tokens", return_value=token):
         with pytest.raises(acp.RequestError) as exc_info:
             await server.authenticate(method_id="login")
 
@@ -145,7 +145,7 @@ async def test_authenticate_accepts_valid_token(server: ACPServer) -> None:
     """authenticate('login') should succeed for a valid, non-expired token."""
     token = _make_token()
 
-    with patch("kimi_cli.acp.server.load_tokens", return_value=token):
+    with patch("consilium.acp.server.load_tokens", return_value=token):
         result = await server.authenticate(method_id="login")
 
     assert result is not None

@@ -8,13 +8,13 @@ from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.document import Document
 from rich.text import Text
 
-from kimi_cli.ui.shell.prompt import PromptMode, UserInput
-from kimi_cli.wire.types import ApprovalRequest, StatusUpdate, SteerInput, TextPart
+from consilium.ui.shell.prompt import PromptMode, UserInput
+from consilium.wire.types import ApprovalRequest, StatusUpdate, SteerInput, TextPart
 
-shell_visualize = importlib.import_module("kimi_cli.ui.shell.visualize")
+shell_visualize = importlib.import_module("consilium.ui.shell.visualize")
 # Sub-modules for monkeypatching internal names (Live, _keyboard_listener, console)
-_live_view_mod = importlib.import_module("kimi_cli.ui.shell.visualize._live_view")
-_interactive_mod = importlib.import_module("kimi_cli.ui.shell.visualize._interactive")
+_live_view_mod = importlib.import_module("consilium.ui.shell.visualize._live_view")
+_interactive_mod = importlib.import_module("consilium.ui.shell.visualize._interactive")
 _LiveView = shell_visualize._LiveView
 _PromptLiveView = shell_visualize._PromptLiveView
 
@@ -766,8 +766,8 @@ QuestionPromptDelegate = shell_visualize.QuestionPromptDelegate
 
 def _make_two_question_request():
     """Create a QuestionRequest with two single-select questions."""
-    from kimi_cli.wire.types import QuestionItem, QuestionOption
-    from kimi_cli.wire.types import QuestionRequest as QR
+    from consilium.wire.types import QuestionItem, QuestionOption
+    from consilium.wire.types import QuestionRequest as QR
 
     return QR(
         id="qr-test",
@@ -1009,7 +1009,7 @@ def test_approval_feedback_cursor_markup_in_middle():
     it with a reverse-video span — mimicking a terminal's native block cursor."""
     from rich.text import Span
 
-    from kimi_cli.ui.shell.visualize._approval_panel import _render_feedback_with_cursor
+    from consilium.ui.shell.visualize._approval_panel import _render_feedback_with_cursor
 
     # Cursor at position 2 ("he|llo world" — on the first 'l').
     out = _render_feedback_with_cursor("hello world", 2)
@@ -1025,7 +1025,7 @@ def test_approval_feedback_cursor_markup_in_middle():
 def test_approval_feedback_cursor_markup_at_end():
     """When the cursor sits past the last character, a trailing block glyph
     is emitted (the reverse-video trick requires a character to invert)."""
-    from kimi_cli.ui.shell.visualize._approval_panel import _render_feedback_with_cursor
+    from consilium.ui.shell.visualize._approval_panel import _render_feedback_with_cursor
 
     assert _render_feedback_with_cursor("abc", 3).plain == "abc\u2588"
     # Past-end cursor (defensive) also falls through to the trailing-block branch.
@@ -1041,7 +1041,7 @@ def test_approval_feedback_cursor_markup_escapes_rich_metachars():
     literal text, not be interpreted as styles — ``Text()`` takes plain strings."""
     from rich.text import Span
 
-    from kimi_cli.ui.shell.visualize._approval_panel import _render_feedback_with_cursor
+    from consilium.ui.shell.visualize._approval_panel import _render_feedback_with_cursor
 
     # The "[bold]" prefix stays verbatim; the reverse-cursor span is still
     # applied around the character under the cursor ('h').

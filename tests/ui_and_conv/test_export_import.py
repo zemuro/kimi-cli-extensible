@@ -7,8 +7,8 @@ from pathlib import Path
 
 from kosong.message import Message
 
-from kimi_cli.soul.message import system, system_reminder
-from kimi_cli.utils.export import (
+from consilium.soul.message import system, system_reminder
+from consilium.utils.export import (
     _IMPORTABLE_EXTENSIONS,
     _extract_tool_call_hint,
     _format_content_part_md,
@@ -26,7 +26,7 @@ from kimi_cli.utils.export import (
     resolve_import_source,
     stringify_context_history,
 )
-from kimi_cli.wire.types import (
+from consilium.wire.types import (
     AudioURLPart,
     ContentPart,
     ImageURLPart,
@@ -975,7 +975,7 @@ class TestResolveImportSource:
         assert "Cannot import the current session" in result
 
     async def test_nonexistent_session_returns_error(self, tmp_path: Path, monkeypatch) -> None:
-        from kimi_cli.session import Session
+        from consilium.session import Session
 
         async def fake_find(_work_dir, _target):
             return None
@@ -986,7 +986,7 @@ class TestResolveImportSource:
         assert "not a valid file path or session ID" in result
 
     async def test_file_too_large_returns_error(self, tmp_path: Path, monkeypatch) -> None:
-        import kimi_cli.utils.export as export_mod
+        import consilium.utils.export as export_mod
 
         monkeypatch.setattr(export_mod, "MAX_IMPORT_SIZE", 10)  # 10 bytes
         big = tmp_path / "big.md"
@@ -998,8 +998,8 @@ class TestResolveImportSource:
     async def test_session_content_too_large_returns_error(
         self, tmp_path: Path, monkeypatch
     ) -> None:
-        import kimi_cli.utils.export as export_mod
-        from kimi_cli.session import Session
+        import consilium.utils.export as export_mod
+        from consilium.session import Session
 
         # Mock Session.find to return a fake session
         fake_session = type("FakeSession", (), {"context_file": tmp_path / "ctx.jsonl"})()
@@ -1020,7 +1020,7 @@ class TestResolveImportSource:
             async def restore(self):
                 return True
 
-        from kimi_cli.soul import context as context_mod
+        from consilium.soul import context as context_mod
 
         monkeypatch.setattr(context_mod, "Context", FakeContext)
         monkeypatch.setattr(export_mod, "MAX_IMPORT_SIZE", 10)  # 10 bytes
@@ -1030,8 +1030,8 @@ class TestResolveImportSource:
         assert "too large" in result.lower()
 
     async def test_session_restore_failure_returns_error(self, tmp_path: Path, monkeypatch) -> None:
-        from kimi_cli.session import Session
-        from kimi_cli.soul import context as context_mod
+        from consilium.session import Session
+        from consilium.soul import context as context_mod
 
         fake_session = type("FakeSession", (), {"context_file": tmp_path / "ctx.jsonl"})()
 
@@ -1134,7 +1134,7 @@ class TestResolveImportRelativePath:
 class TestPerformExportEdgeCases:
     async def test_checkpoint_only_history_still_exports(self, tmp_path: Path) -> None:
         """History with only checkpoint messages should still export (they are filtered in turns)."""
-        from kimi_cli.soul.message import system as sys_msg
+        from consilium.soul.message import system as sys_msg
 
         history = [
             Message(role="user", content=[sys_msg("CHECKPOINT 0")]),
@@ -1253,8 +1253,8 @@ class TestPerformImport:
         self, tmp_path: Path, monkeypatch
     ) -> None:
         """Session import that exceeds model context budget is rejected."""
-        from kimi_cli.session import Session
-        from kimi_cli.soul import context as context_mod
+        from consilium.session import Session
+        from consilium.soul import context as context_mod
 
         fake_session = type("FakeSession", (), {"context_file": tmp_path / "ctx.jsonl"})()
 

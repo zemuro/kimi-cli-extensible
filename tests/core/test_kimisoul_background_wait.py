@@ -24,10 +24,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from kimi_cli.cli import ExitCode, InputFormat
-from kimi_cli.soul import RunCancelled
-from kimi_cli.soul.kimisoul import KimiSoul
-from kimi_cli.ui.print import Print
+from consilium.cli import ExitCode, InputFormat
+from consilium.soul import RunCancelled
+from consilium.soul.kimisoul import KimiSoul
+from consilium.ui.print import Print
 
 
 class _FakeState:
@@ -155,7 +155,7 @@ async def test_print_reruns_soul_on_pending_notification(tmp_path: Path) -> None
             # Re-entry drains the pending notification (like real deliver_pending)
             state.pending = False
 
-    with patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul):
+    with patch("consilium.ui.print.run_soul", side_effect=fake_run_soul):
         code = await p.run(command="do work")
 
     assert code == ExitCode.SUCCESS
@@ -194,8 +194,8 @@ async def test_print_calls_reconcile_each_poll_iteration(tmp_path: Path) -> None
         await real_sleep(0)
 
     with (
-        patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul),
-        patch("kimi_cli.ui.print.asyncio.sleep", side_effect=fake_sleep),
+        patch("consilium.ui.print.run_soul", side_effect=fake_run_soul),
+        patch("consilium.ui.print.asyncio.sleep", side_effect=fake_sleep),
     ):
         await p.run(command="test")
 
@@ -229,8 +229,8 @@ async def test_print_skips_reentry_when_no_pending_notifications(tmp_path: Path)
         await real_sleep(0)
 
     with (
-        patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul),
-        patch("kimi_cli.ui.print.asyncio.sleep", side_effect=fake_sleep),
+        patch("consilium.ui.print.run_soul", side_effect=fake_run_soul),
+        patch("consilium.ui.print.asyncio.sleep", side_effect=fake_sleep),
     ):
         code = await p.run(command="hello")
 
@@ -269,7 +269,7 @@ async def test_print_reruns_soul_when_tasks_done_but_notifications_pending(
         if len(run_soul_calls) > 1:
             state.pending = False
 
-    with patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul):
+    with patch("consilium.ui.print.run_soul", side_effect=fake_run_soul):
         code = await p.run(command="trigger")
 
     assert code == ExitCode.SUCCESS
@@ -294,7 +294,7 @@ async def test_print_exits_normally_when_no_background_work(tmp_path: Path) -> N
     async def fake_run_soul(soul_arg, user_input, *args, **kwargs):
         run_soul_calls.append(user_input)
 
-    with patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul):
+    with patch("consilium.ui.print.run_soul", side_effect=fake_run_soul):
         code = await p.run(command="hello")
 
     assert code == ExitCode.SUCCESS
@@ -333,7 +333,7 @@ async def test_print_stream_json_does_not_wait_for_background_tasks(
     async def fake_run_soul(soul_arg, user_input, *args, **kwargs):
         run_soul_calls.append(user_input)
 
-    with patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul):
+    with patch("consilium.ui.print.run_soul", side_effect=fake_run_soul):
         code = await p.run(command="first command")
 
     assert code == ExitCode.SUCCESS
@@ -363,7 +363,7 @@ async def test_print_skips_wait_when_keep_alive_on_exit_enabled(tmp_path: Path) 
     async def fake_run_soul(soul_arg, user_input, *args, **kwargs):
         run_soul_calls.append(user_input)
 
-    with patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul):
+    with patch("consilium.ui.print.run_soul", side_effect=fake_run_soul):
         code = await p.run(command="fire and forget")
 
     assert code == ExitCode.SUCCESS
@@ -391,8 +391,8 @@ async def test_print_background_wait_cancel_returns_failure(tmp_path: Path) -> N
         pass
 
     with (
-        patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul),
-        patch("kimi_cli.ui.print.install_sigint_handler") as mock_sigint,
+        patch("consilium.ui.print.run_soul", side_effect=fake_run_soul),
+        patch("consilium.ui.print.install_sigint_handler") as mock_sigint,
     ):
         cancel_handler = None
 
@@ -451,7 +451,7 @@ async def test_print_reruns_soul_even_with_active_sibling_tasks(
             state.pending = False
             state.active = False
 
-    with patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul):
+    with patch("consilium.ui.print.run_soul", side_effect=fake_run_soul):
         code = await p.run(command="siblings")
 
     assert code == ExitCode.SUCCESS
@@ -500,9 +500,9 @@ async def test_print_wait_timeout_kills_and_reenters_soul(tmp_path: Path) -> Non
         await real_sleep(0)
 
     with (
-        patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul),
-        patch("kimi_cli.ui.print.asyncio.sleep", side_effect=fake_sleep),
-        patch("kimi_cli.ui.print.time.monotonic", side_effect=fake_monotonic),
+        patch("consilium.ui.print.run_soul", side_effect=fake_run_soul),
+        patch("consilium.ui.print.asyncio.sleep", side_effect=fake_sleep),
+        patch("consilium.ui.print.time.monotonic", side_effect=fake_monotonic),
     ):
         code = await p.run(command="kick off work")
 
@@ -579,9 +579,9 @@ async def test_print_wait_timeout_followup_prompt_labels_from_post_kill_state(
         await real_sleep(0)
 
     with (
-        patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul),
-        patch("kimi_cli.ui.print.asyncio.sleep", side_effect=fake_sleep),
-        patch("kimi_cli.ui.print.time.monotonic", side_effect=fake_monotonic),
+        patch("consilium.ui.print.run_soul", side_effect=fake_run_soul),
+        patch("consilium.ui.print.asyncio.sleep", side_effect=fake_sleep),
+        patch("consilium.ui.print.time.monotonic", side_effect=fake_monotonic),
     ):
         await p.run(command="work")
 
@@ -678,9 +678,9 @@ async def test_pending_reentry_soul_failure_preserves_success_exit_code(
         return clock[0]
 
     with (
-        patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul),
-        patch("kimi_cli.ui.print.asyncio.sleep", side_effect=fake_sleep),
-        patch("kimi_cli.ui.print.time.monotonic", side_effect=fake_monotonic),
+        patch("consilium.ui.print.run_soul", side_effect=fake_run_soul),
+        patch("consilium.ui.print.asyncio.sleep", side_effect=fake_sleep),
+        patch("consilium.ui.print.time.monotonic", side_effect=fake_monotonic),
     ):
         code = await p.run(command="original user command")
 
@@ -746,10 +746,10 @@ async def test_timeout_finally_reconcile_failure_preserves_run_cancelled(
         await real_sleep(0)
 
     with (
-        patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul),
-        patch("kimi_cli.ui.print.asyncio.sleep", side_effect=fake_sleep),
-        patch("kimi_cli.ui.print.time.monotonic", side_effect=fake_monotonic),
-        patch("kimi_cli.ui.print.logger") as mock_logger,
+        patch("consilium.ui.print.run_soul", side_effect=fake_run_soul),
+        patch("consilium.ui.print.asyncio.sleep", side_effect=fake_sleep),
+        patch("consilium.ui.print.time.monotonic", side_effect=fake_monotonic),
+        patch("consilium.ui.print.logger") as mock_logger,
     ):
         code = await p.run(command="work")
 
@@ -817,9 +817,9 @@ async def test_timeout_race_natural_completion_at_deadline_exits_success(
         await real_sleep(0)
 
     with (
-        patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul),
-        patch("kimi_cli.ui.print.asyncio.sleep", side_effect=fake_sleep),
-        patch("kimi_cli.ui.print.time.monotonic", side_effect=fake_monotonic),
+        patch("consilium.ui.print.run_soul", side_effect=fake_run_soul),
+        patch("consilium.ui.print.asyncio.sleep", side_effect=fake_sleep),
+        patch("consilium.ui.print.time.monotonic", side_effect=fake_monotonic),
     ):
         code = await p.run(command="work")
 
@@ -878,9 +878,9 @@ async def test_print_wait_timeout_followup_prompt_distinguishes_kill_failures(
         await real_sleep(0)
 
     with (
-        patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul),
-        patch("kimi_cli.ui.print.asyncio.sleep", side_effect=fake_sleep),
-        patch("kimi_cli.ui.print.time.monotonic", side_effect=fake_monotonic),
+        patch("consilium.ui.print.run_soul", side_effect=fake_run_soul),
+        patch("consilium.ui.print.asyncio.sleep", side_effect=fake_sleep),
+        patch("consilium.ui.print.time.monotonic", side_effect=fake_monotonic),
     ):
         await p.run(command="work")
 
@@ -936,9 +936,9 @@ async def test_print_wait_timeout_reconciles_after_followup_soul(tmp_path: Path)
         await real_sleep(0)
 
     with (
-        patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul),
-        patch("kimi_cli.ui.print.asyncio.sleep", side_effect=fake_sleep),
-        patch("kimi_cli.ui.print.time.monotonic", side_effect=fake_monotonic),
+        patch("consilium.ui.print.run_soul", side_effect=fake_run_soul),
+        patch("consilium.ui.print.asyncio.sleep", side_effect=fake_sleep),
+        patch("consilium.ui.print.time.monotonic", side_effect=fake_monotonic),
     ):
         code = await p.run(command="work")
 
@@ -996,9 +996,9 @@ async def test_print_wait_timeout_survives_followup_soul_exception(tmp_path: Pat
         await real_sleep(0)
 
     with (
-        patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul),
-        patch("kimi_cli.ui.print.asyncio.sleep", side_effect=fake_sleep),
-        patch("kimi_cli.ui.print.time.monotonic", side_effect=fake_monotonic),
+        patch("consilium.ui.print.run_soul", side_effect=fake_run_soul),
+        patch("consilium.ui.print.asyncio.sleep", side_effect=fake_sleep),
+        patch("consilium.ui.print.time.monotonic", side_effect=fake_monotonic),
     ):
         code = await p.run(command="work")
 
@@ -1044,7 +1044,7 @@ async def test_print_wait_timeout_writes_to_original_stderr_when_redirected(
     def fake_open_original_stderr():
         yield _FakeOriginalStream()
 
-    monkeypatch.setattr("kimi_cli.ui.print.open_original_stderr", fake_open_original_stderr)
+    monkeypatch.setattr("consilium.ui.print.open_original_stderr", fake_open_original_stderr)
 
     async def fake_run_soul(soul_arg, user_input, *args, **kwargs):
         pass
@@ -1060,9 +1060,9 @@ async def test_print_wait_timeout_writes_to_original_stderr_when_redirected(
         await real_sleep(0)
 
     with (
-        patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul),
-        patch("kimi_cli.ui.print.asyncio.sleep", side_effect=fake_sleep),
-        patch("kimi_cli.ui.print.time.monotonic", side_effect=fake_monotonic),
+        patch("consilium.ui.print.run_soul", side_effect=fake_run_soul),
+        patch("consilium.ui.print.asyncio.sleep", side_effect=fake_sleep),
+        patch("consilium.ui.print.time.monotonic", side_effect=fake_monotonic),
     ):
         await p.run(command="work")
 
@@ -1109,10 +1109,10 @@ async def test_print_wait_timeout_followup_propagates_run_cancelled(tmp_path: Pa
         await real_sleep(0)
 
     with (
-        patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul),
-        patch("kimi_cli.ui.print.asyncio.sleep", side_effect=fake_sleep),
-        patch("kimi_cli.ui.print.time.monotonic", side_effect=fake_monotonic),
-        patch("kimi_cli.ui.print.logger") as mock_logger,
+        patch("consilium.ui.print.run_soul", side_effect=fake_run_soul),
+        patch("consilium.ui.print.asyncio.sleep", side_effect=fake_sleep),
+        patch("consilium.ui.print.time.monotonic", side_effect=fake_monotonic),
+        patch("consilium.ui.print.logger") as mock_logger,
     ):
         code = await p.run(command="work")
 
@@ -1169,9 +1169,9 @@ async def test_print_wait_respects_zero_timeout_s(tmp_path: Path) -> None:
         await real_sleep(0)
 
     with (
-        patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul),
-        patch("kimi_cli.ui.print.asyncio.sleep", side_effect=fake_sleep),
-        patch("kimi_cli.ui.print.time.monotonic", side_effect=fake_monotonic),
+        patch("consilium.ui.print.run_soul", side_effect=fake_run_soul),
+        patch("consilium.ui.print.asyncio.sleep", side_effect=fake_sleep),
+        patch("consilium.ui.print.time.monotonic", side_effect=fake_monotonic),
     ):
         await p.run(command="x")
 
@@ -1216,9 +1216,9 @@ async def test_print_wait_cap_uses_max_of_active_timeouts(tmp_path: Path) -> Non
         await real_sleep(0)
 
     with (
-        patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul),
-        patch("kimi_cli.ui.print.asyncio.sleep", side_effect=fake_sleep),
-        patch("kimi_cli.ui.print.time.monotonic", side_effect=fake_monotonic),
+        patch("consilium.ui.print.run_soul", side_effect=fake_run_soul),
+        patch("consilium.ui.print.asyncio.sleep", side_effect=fake_sleep),
+        patch("consilium.ui.print.time.monotonic", side_effect=fake_monotonic),
     ):
         await p.run(command="x")
 
@@ -1257,9 +1257,9 @@ async def test_print_wait_cap_respects_ceiling(tmp_path: Path) -> None:
         await real_sleep(0)
 
     with (
-        patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul),
-        patch("kimi_cli.ui.print.asyncio.sleep", side_effect=fake_sleep),
-        patch("kimi_cli.ui.print.time.monotonic", side_effect=fake_monotonic),
+        patch("consilium.ui.print.run_soul", side_effect=fake_run_soul),
+        patch("consilium.ui.print.asyncio.sleep", side_effect=fake_sleep),
+        patch("consilium.ui.print.time.monotonic", side_effect=fake_monotonic),
     ):
         await p.run(command="x")
 
@@ -1320,9 +1320,9 @@ async def test_print_synthetic_prompts_skip_user_prompt_hook(tmp_path: Path) -> 
         await real_sleep(0)
 
     with (
-        patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul),
-        patch("kimi_cli.ui.print.asyncio.sleep", side_effect=fake_sleep),
-        patch("kimi_cli.ui.print.time.monotonic", side_effect=fake_monotonic),
+        patch("consilium.ui.print.run_soul", side_effect=fake_run_soul),
+        patch("consilium.ui.print.asyncio.sleep", side_effect=fake_sleep),
+        patch("consilium.ui.print.time.monotonic", side_effect=fake_monotonic),
     ):
         await p.run(command="user request")
 
@@ -1389,9 +1389,9 @@ async def test_print_wait_timeout_catches_tasks_spawned_during_reentry(
         await real_sleep(0)
 
     with (
-        patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul),
-        patch("kimi_cli.ui.print.asyncio.sleep", side_effect=fake_sleep),
-        patch("kimi_cli.ui.print.time.monotonic", side_effect=fake_monotonic),
+        patch("consilium.ui.print.run_soul", side_effect=fake_run_soul),
+        patch("consilium.ui.print.asyncio.sleep", side_effect=fake_sleep),
+        patch("consilium.ui.print.time.monotonic", side_effect=fake_monotonic),
     ):
         await p.run(command="work")
 
@@ -1450,9 +1450,9 @@ async def test_pending_notification_preempts_timeout(tmp_path: Path) -> None:
         await real_sleep(0)
 
     with (
-        patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul),
-        patch("kimi_cli.ui.print.asyncio.sleep", side_effect=fake_sleep),
-        patch("kimi_cli.ui.print.time.monotonic", side_effect=fake_monotonic),
+        patch("consilium.ui.print.run_soul", side_effect=fake_run_soul),
+        patch("consilium.ui.print.asyncio.sleep", side_effect=fake_sleep),
+        patch("consilium.ui.print.time.monotonic", side_effect=fake_monotonic),
     ):
         code = await p.run(command="x")
 

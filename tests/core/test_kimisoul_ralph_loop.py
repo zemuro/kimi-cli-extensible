@@ -13,16 +13,16 @@ from kosong.tooling import CallableTool2, Tool, ToolResult, ToolReturnValue, Too
 from kosong.tooling.simple import SimpleToolset
 from pydantic import BaseModel
 
-from kimi_cli.llm import LLM, ModelCapability
-from kimi_cli.soul import run_soul
-from kimi_cli.soul.agent import Agent, Runtime
-from kimi_cli.soul.approval import Approval
-from kimi_cli.soul.context import Context
-from kimi_cli.soul.kimisoul import KimiSoul
-from kimi_cli.tools.utils import ToolRejectedError
-from kimi_cli.utils.aioqueue import QueueShutDown
-from kimi_cli.wire import Wire
-from kimi_cli.wire.types import TurnBegin
+from consilium.llm import LLM, ModelCapability
+from consilium.soul import run_soul
+from consilium.soul.agent import Agent, Runtime
+from consilium.soul.approval import Approval
+from consilium.soul.context import Context
+from consilium.soul.kimisoul import KimiSoul
+from consilium.tools.utils import ToolRejectedError
+from consilium.utils.aioqueue import QueueShutDown
+from consilium.wire import Wire
+from consilium.wire.types import TurnBegin
 
 
 @pytest.fixture

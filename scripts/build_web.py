@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 WEB_DIR = ROOT / "web"
 DIST_DIR = WEB_DIR / "dist"
 NODE_MODULES = WEB_DIR / "node_modules"
-STATIC_DIR = ROOT / "src" / "kimi_cli" / "web" / "static"
+STATIC_DIR = ROOT / "src" / "consilium" / "web" / "static"
 
 STRICT_VERSION = os.environ.get("KIMI_WEB_STRICT_VERSION", "").lower() in {"1", "true", "yes"}
 

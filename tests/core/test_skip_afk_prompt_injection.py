@@ -11,11 +11,11 @@ from pathlib import Path
 import pytest
 from kosong.tooling.empty import EmptyToolset
 
-from kimi_cli.soul.agent import Agent, Runtime
-from kimi_cli.soul.context import Context
-from kimi_cli.soul.dynamic_injections.afk_mode import AfkModeInjectionProvider
-from kimi_cli.soul.dynamic_injections.plan_mode import PlanModeInjectionProvider
-from kimi_cli.soul.kimisoul import KimiSoul
+from consilium.soul.agent import Agent, Runtime
+from consilium.soul.context import Context
+from consilium.soul.dynamic_injections.afk_mode import AfkModeInjectionProvider
+from consilium.soul.dynamic_injections.plan_mode import PlanModeInjectionProvider
+from consilium.soul.kimisoul import KimiSoul
 
 
 def _make_soul(runtime: Runtime, tmp_path: Path) -> KimiSoul:

@@ -6,13 +6,13 @@ from pathlib import Path
 
 import pytest
 
-from kimi_cli.plan.docs_index import (
+from consilium.plan.docs_index import (
     generate_docs_index,
     parse_docs_index,
     read_docs_index_cache,
     write_docs_index_cache,
 )
-from kimi_cli.plan.models import DocStatus, UpdatePolicy
+from consilium.plan.models import DocStatus, UpdatePolicy
 
 
 README_SAMPLE = """\

@@ -5,7 +5,7 @@ import time
 
 import pytest
 
-from kimi_cli.notifications import NotificationEvent
+from consilium.notifications import NotificationEvent
 
 
 def test_publish_dedupes_and_tracks_sink_state(runtime) -> None:

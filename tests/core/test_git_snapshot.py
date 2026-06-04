@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from kimi_cli.do.git_snapshot import GitSnapshot, GitSnapshotError
+from consilium.do.git_snapshot import GitSnapshot, GitSnapshotError
 
 
 @pytest.fixture

@@ -9,10 +9,10 @@ import pytest
 from kaos.path import KaosPath
 from kosong.message import Message
 
-from kimi_cli.session import Session
-from kimi_cli.wire.file import WireFileMetadata, WireMessageRecord
-from kimi_cli.wire.protocol import WIRE_PROTOCOL_VERSION
-from kimi_cli.wire.types import TextPart, TurnBegin
+from consilium.session import Session
+from consilium.wire.file import WireFileMetadata, WireMessageRecord
+from consilium.wire.protocol import WIRE_PROTOCOL_VERSION
+from consilium.wire.types import TextPart, TurnBegin
 
 
 @pytest.fixture
@@ -26,8 +26,8 @@ def isolated_share_dir(monkeypatch, tmp_path: Path) -> Path:
         share_dir.mkdir(parents=True, exist_ok=True)
         return share_dir
 
-    monkeypatch.setattr("kimi_cli.share.get_share_dir", _get_share_dir)
-    monkeypatch.setattr("kimi_cli.metadata.get_share_dir", _get_share_dir)
+    monkeypatch.setattr("consilium.share.get_share_dir", _get_share_dir)
+    monkeypatch.setattr("consilium.metadata.get_share_dir", _get_share_dir)
     return share_dir
 
 
@@ -177,7 +177,7 @@ async def test_create_named_session(isolated_share_dir: Path, work_dir: KaosPath
 
 async def test_custom_title_overrides_wire_title(isolated_share_dir: Path, work_dir: KaosPath):
     """custom_title in SessionState takes precedence over wire-derived title."""
-    from kimi_cli.session_state import save_session_state
+    from consilium.session_state import save_session_state
 
     session = await Session.create(work_dir)
     _write_wire_turn(session.dir, "wire derived title")
@@ -191,7 +191,7 @@ async def test_custom_title_overrides_wire_title(isolated_share_dir: Path, work_
 
 async def test_custom_title_makes_session_non_empty(isolated_share_dir: Path, work_dir: KaosPath):
     """A session with custom_title but no messages should not be considered empty."""
-    from kimi_cli.session_state import save_session_state
+    from consilium.session_state import save_session_state
 
     session = await Session.create(work_dir)
     assert session.is_empty()
@@ -204,7 +204,7 @@ async def test_custom_title_makes_session_non_empty(isolated_share_dir: Path, wo
 
 async def test_custom_title_persists_across_find(isolated_share_dir: Path, work_dir: KaosPath):
     """custom_title should persist when session is loaded via Session.find()."""
-    from kimi_cli.session_state import save_session_state
+    from consilium.session_state import save_session_state
 
     session = await Session.create(work_dir)
     _write_context_message(session.context_file, "a message")
@@ -219,7 +219,7 @@ async def test_custom_title_persists_across_find(isolated_share_dir: Path, work_
 
 async def test_save_state_preserves_external_title(isolated_share_dir: Path, work_dir: KaosPath):
     """save_state() should not overwrite title changes made externally (e.g., web PATCH)."""
-    from kimi_cli.session_state import load_session_state, save_session_state
+    from consilium.session_state import load_session_state, save_session_state
 
     session = await Session.create(work_dir)
 
@@ -245,7 +245,7 @@ async def test_save_state_preserves_external_title(isolated_share_dir: Path, wor
 
 async def test_save_state_preserves_external_archive(isolated_share_dir: Path, work_dir: KaosPath):
     """save_state() should not overwrite archive changes made externally."""
-    from kimi_cli.session_state import load_session_state, save_session_state
+    from consilium.session_state import load_session_state, save_session_state
 
     session = await Session.create(work_dir)
 
@@ -283,7 +283,7 @@ async def test_title_never_contains_session_id(isolated_share_dir: Path, work_di
     assert session.title == "my wire title"
 
     # Custom title
-    from kimi_cli.session_state import save_session_state
+    from consilium.session_state import save_session_state
 
     session.state.custom_title = "My Custom Title"
     save_session_state(session.state, session.dir)
@@ -319,7 +319,7 @@ async def test_refresh_custom_title_takes_priority_over_wire(
     isolated_share_dir: Path, work_dir: KaosPath
 ):
     """Even with wire content, custom_title wins."""
-    from kimi_cli.session_state import save_session_state
+    from consilium.session_state import save_session_state
 
     session = await Session.create(work_dir)
     _write_wire_turn(session.dir, "wire title should be ignored")
@@ -334,7 +334,7 @@ async def test_save_state_reload_does_not_lose_worker_fields(
     isolated_share_dir: Path, work_dir: KaosPath
 ):
     """save_state() reloads title/archive but preserves worker-owned fields."""
-    from kimi_cli.session_state import load_session_state, save_session_state
+    from consilium.session_state import load_session_state, save_session_state
 
     session = await Session.create(work_dir)
 
@@ -361,7 +361,7 @@ async def test_save_state_reload_does_not_lose_worker_fields(
 
 async def test_save_state_preserves_in_memory_todos(isolated_share_dir: Path, work_dir: KaosPath):
     """save_state() should persist in-memory todos (worker-owned) to disk."""
-    from kimi_cli.session_state import TodoItemState, load_session_state
+    from consilium.session_state import TodoItemState, load_session_state
 
     session = await Session.create(work_dir)
 
@@ -391,7 +391,7 @@ async def test_is_empty_with_only_metadata_records(
 
 async def test_new_does_not_delete_titled_session(isolated_share_dir: Path, work_dir: KaosPath):
     """A session with custom_title but no messages should survive /new cleanup logic."""
-    from kimi_cli.session_state import save_session_state
+    from consilium.session_state import save_session_state
 
     session = await Session.create(work_dir)
     session.state.custom_title = "Keep Me"
@@ -416,7 +416,7 @@ EXIT_FAILURE = 1
 
 async def _simulate_post_run(last_session: Session, exit_code: int) -> None:
     """Replicate the _post_run logic from cli/__init__.py for testing."""
-    from kimi_cli.metadata import load_metadata, save_metadata
+    from consilium.metadata import load_metadata, save_metadata
 
     metadata = load_metadata()
     work_dir_meta = metadata.get_work_dir_meta(last_session.work_dir)
@@ -441,7 +441,7 @@ async def test_post_run_empty_session_success(isolated_share_dir: Path, work_dir
     assert session.is_empty()
 
     # Pre-set last_session_id to this session
-    from kimi_cli.metadata import load_metadata, save_metadata
+    from consilium.metadata import load_metadata, save_metadata
 
     meta = load_metadata()
     wdm = meta.get_work_dir_meta(work_dir)
@@ -465,7 +465,7 @@ async def test_post_run_empty_session_failure(isolated_share_dir: Path, work_dir
     session_dir = session.dir
     assert session.is_empty()
 
-    from kimi_cli.metadata import load_metadata, save_metadata
+    from consilium.metadata import load_metadata, save_metadata
 
     meta = load_metadata()
     wdm = meta.get_work_dir_meta(work_dir)
@@ -491,7 +491,7 @@ async def test_post_run_nonempty_session_success(isolated_share_dir: Path, work_
 
     await _simulate_post_run(session, EXIT_SUCCESS)
 
-    from kimi_cli.metadata import load_metadata
+    from consilium.metadata import load_metadata
 
     meta = load_metadata()
     wdm = meta.get_work_dir_meta(work_dir)
@@ -507,7 +507,7 @@ async def test_post_run_nonempty_session_failure(isolated_share_dir: Path, work_
     _write_wire_turn(session.dir, "hello")
     assert not session.is_empty()
 
-    from kimi_cli.metadata import load_metadata
+    from consilium.metadata import load_metadata
 
     await _simulate_post_run(session, EXIT_FAILURE)
 
@@ -522,7 +522,7 @@ async def test_post_run_empty_session_does_not_clear_other_last_id(
     isolated_share_dir: Path, work_dir: KaosPath
 ):
     """Deleting an empty session must not clear last_session_id that points to another session."""
-    from kimi_cli.metadata import load_metadata, save_metadata
+    from consilium.metadata import load_metadata, save_metadata
 
     other = await Session.create(work_dir)
     _write_context_message(other.context_file, "real work")
@@ -558,7 +558,7 @@ async def test_post_run_empty_session_does_not_clear_other_last_id(
 
 async def test_reload_source_session_attribute(isolated_share_dir: Path, work_dir: KaosPath):
     """Reload.source_session defaults to None and can be set to a Session."""
-    from kimi_cli.cli import Reload
+    from consilium.cli import Reload
 
     r = Reload(session_id="abc")
     assert r.source_session is None

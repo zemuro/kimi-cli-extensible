@@ -8,13 +8,13 @@ from uuid import UUID
 import pytest
 from kaos.path import KaosPath
 
-from kimi_cli.session import Session
-from kimi_cli.session_state import load_session_state, save_session_state
-from kimi_cli.web.api import sessions as sessions_api
-from kimi_cli.web.models import GenerateTitleRequest
+from consilium.session import Session
+from consilium.session_state import load_session_state, save_session_state
+from consilium.web.api import sessions as sessions_api
+from consilium.web.models import GenerateTitleRequest
 
 if TYPE_CHECKING:
-    from kimi_cli.web.runner.process import KimiCLIRunner
+    from consilium.web.runner.process import KimiCLIRunner
 
 
 @pytest.fixture
@@ -26,8 +26,8 @@ def isolated_share_dir(monkeypatch, tmp_path: Path) -> Path:
         share_dir.mkdir(parents=True, exist_ok=True)
         return share_dir
 
-    monkeypatch.setattr("kimi_cli.share.get_share_dir", _get_share_dir)
-    monkeypatch.setattr("kimi_cli.metadata.get_share_dir", _get_share_dir)
+    monkeypatch.setattr("consilium.share.get_share_dir", _get_share_dir)
+    monkeypatch.setattr("consilium.metadata.get_share_dir", _get_share_dir)
     return share_dir
 
 
@@ -84,12 +84,12 @@ async def test_generate_title_preserves_concurrent_manual_title(
         providers={"test-provider": object()},
     )
 
-    monkeypatch.setattr("kimi_cli.config.load_config", lambda: config)
+    monkeypatch.setattr("consilium.config.load_config", lambda: config)
     monkeypatch.setattr(
-        "kimi_cli.llm.create_llm",
+        "consilium.llm.create_llm",
         lambda provider_config, model_config, oauth=None: _FakeLLM(),
     )
-    monkeypatch.setattr("kimi_cli.auth.oauth.OAuthManager", _FakeOAuthManager)
+    monkeypatch.setattr("consilium.auth.oauth.OAuthManager", _FakeOAuthManager)
 
     async def fake_generate(*, chat_provider, system_prompt, tools, history):
         state = load_session_state(session.dir)

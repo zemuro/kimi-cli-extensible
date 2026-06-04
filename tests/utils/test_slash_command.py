@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 from inline_snapshot import snapshot
 
-from kimi_cli.utils.slashcmd import (
+from consilium.utils.slashcmd import (
     SlashCommand,
     SlashCommandCall,
     SlashCommandRegistry,

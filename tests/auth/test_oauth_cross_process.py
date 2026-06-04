@@ -77,7 +77,7 @@ def test_cross_process_lock_mutual_exclusion(tmp_path: Path) -> None:
     script = textwrap.dedent(f"""\
         import asyncio, sys
         from pathlib import Path
-        from kimi_cli.auth.oauth import _CrossProcessLock
+        from consilium.auth.oauth import _CrossProcessLock
 
         COUNTER = Path({str(counter)!r})
         KEY = "oauth/kimi-code"
@@ -108,7 +108,7 @@ def test_atomic_save_no_corruption(tmp_path: Path) -> None:
     script = textwrap.dedent(f"""\
         import sys, time, json
         from pathlib import Path
-        from kimi_cli.auth.oauth import OAuthToken, _save_to_file
+        from consilium.auth.oauth import OAuthToken, _save_to_file
 
         worker_id = int(sys.argv[1])
 
@@ -145,7 +145,7 @@ def test_atomic_save_no_corruption(tmp_path: Path) -> None:
 @pytest.mark.asyncio
 async def test_lock_file_created_with_safe_permissions(tmp_path: Path) -> None:
     """Lock file is created with 0o600 permissions (owner-only)."""
-    from kimi_cli.auth.oauth import _CrossProcessLock
+    from consilium.auth.oauth import _CrossProcessLock
 
     share = tmp_path / "share"
     (share / "credentials").mkdir(parents=True, exist_ok=True)

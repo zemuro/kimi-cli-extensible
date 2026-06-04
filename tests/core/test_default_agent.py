@@ -7,8 +7,8 @@ import platform
 import pytest
 from inline_snapshot import snapshot
 
-from kimi_cli.agentspec import DEFAULT_AGENT_FILE
-from kimi_cli.soul.agent import Runtime, load_agent
+from consilium.agentspec import DEFAULT_AGENT_FILE
+from consilium.soul.agent import Runtime, load_agent
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="Skipping test on Windows")
@@ -201,15 +201,15 @@ At any time, you should be HELPFUL, CONCISE, and ACCURATE. Be thorough in your a
                 None,
                 "allowlist",
                 (
-                    "kimi_cli.tools.shell:Shell",
-                    "kimi_cli.tools.file:ReadFile",
-                    "kimi_cli.tools.file:ReadMediaFile",
-                    "kimi_cli.tools.file:Glob",
-                    "kimi_cli.tools.file:Grep",
-                    "kimi_cli.tools.file:WriteFile",
-                    "kimi_cli.tools.file:StrReplaceFile",
-                    "kimi_cli.tools.web:SearchWeb",
-                    "kimi_cli.tools.web:FetchURL",
+                    "consilium.tools.shell:Shell",
+                    "consilium.tools.file:ReadFile",
+                    "consilium.tools.file:ReadMediaFile",
+                    "consilium.tools.file:Glob",
+                    "consilium.tools.file:Grep",
+                    "consilium.tools.file:WriteFile",
+                    "consilium.tools.file:StrReplaceFile",
+                    "consilium.tools.web:SearchWeb",
+                    "consilium.tools.web:FetchURL",
                 ),
             ),
             (
@@ -219,13 +219,13 @@ At any time, you should be HELPFUL, CONCISE, and ACCURATE. Be thorough in your a
                 None,
                 "allowlist",
                 (
-                    "kimi_cli.tools.shell:Shell",
-                    "kimi_cli.tools.file:ReadFile",
-                    "kimi_cli.tools.file:ReadMediaFile",
-                    "kimi_cli.tools.file:Glob",
-                    "kimi_cli.tools.file:Grep",
-                    "kimi_cli.tools.web:SearchWeb",
-                    "kimi_cli.tools.web:FetchURL",
+                    "consilium.tools.shell:Shell",
+                    "consilium.tools.file:ReadFile",
+                    "consilium.tools.file:ReadMediaFile",
+                    "consilium.tools.file:Glob",
+                    "consilium.tools.file:Grep",
+                    "consilium.tools.web:SearchWeb",
+                    "consilium.tools.web:FetchURL",
                 ),
             ),
             (
@@ -235,12 +235,12 @@ At any time, you should be HELPFUL, CONCISE, and ACCURATE. Be thorough in your a
                 None,
                 "allowlist",
                 (
-                    "kimi_cli.tools.file:ReadFile",
-                    "kimi_cli.tools.file:ReadMediaFile",
-                    "kimi_cli.tools.file:Glob",
-                    "kimi_cli.tools.file:Grep",
-                    "kimi_cli.tools.web:SearchWeb",
-                    "kimi_cli.tools.web:FetchURL",
+                    "consilium.tools.file:ReadFile",
+                    "consilium.tools.file:ReadMediaFile",
+                    "consilium.tools.file:Glob",
+                    "consilium.tools.file:Grep",
+                    "consilium.tools.web:SearchWeb",
+                    "consilium.tools.web:FetchURL",
                 ),
             ),
         ]

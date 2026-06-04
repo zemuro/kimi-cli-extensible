@@ -14,8 +14,8 @@ from kosong.message import ToolCall
 from kosong.tooling import ToolResult, ToolReturnValue
 from rich.console import Console
 
-from kimi_cli.ui.shell.visualize import _LiveView
-from kimi_cli.wire.types import (
+from consilium.ui.shell.visualize import _LiveView
+from consilium.wire.types import (
     CompactionBegin,
     StatusUpdate,
     StepBegin,
@@ -80,7 +80,7 @@ def test_empty_text_part_still_skipped():
 
 def test_empty_think_then_real_think_no_artifact(monkeypatch):
     """Empty ThinkPart followed by real ThinkPart should not print spurious lines."""
-    from kimi_cli.ui.shell.console import console as shell_console
+    from consilium.ui.shell.console import console as shell_console
 
     view = _LiveView(StatusUpdate())
     printed = []
@@ -100,7 +100,7 @@ def test_empty_think_then_real_think_no_artifact(monkeypatch):
 
 def test_empty_think_then_text_no_spurious_thought_line(monkeypatch):
     """Empty ThinkPart followed by TextPart should not print 'Thought for 0s'."""
-    from kimi_cli.ui.shell.console import console as shell_console
+    from consilium.ui.shell.console import console as shell_console
 
     view = _LiveView(StatusUpdate())
     printed = []
@@ -122,7 +122,7 @@ def test_empty_think_then_text_no_spurious_thought_line(monkeypatch):
 def test_step_retry_clears_partial_content_and_updates_live_status(monkeypatch):
     import importlib
 
-    live_view_mod = importlib.import_module("kimi_cli.ui.shell.visualize._live_view")
+    live_view_mod = importlib.import_module("consilium.ui.shell.visualize._live_view")
     view = _LiveView(StatusUpdate())
     printed = []
     monkeypatch.setattr(
@@ -220,7 +220,7 @@ def test_moon_hidden_when_content_block_visible():
 
 def test_moon_fallback_after_all_tools_flushed(monkeypatch):
     """After all tool calls finish, moon fallback reappears automatically."""
-    from kimi_cli.ui.shell.console import console as shell_console
+    from consilium.ui.shell.console import console as shell_console
 
     view = _LiveView(StatusUpdate())
     monkeypatch.setattr(shell_console, "print", lambda *args, **kwargs: None)
@@ -244,7 +244,7 @@ def test_moon_fallback_after_all_tools_flushed(monkeypatch):
 
 def test_moon_hidden_while_parallel_tool_still_running(monkeypatch):
     """Moon fallback does not appear when tool blocks are still visible."""
-    from kimi_cli.ui.shell.console import console as shell_console
+    from consilium.ui.shell.console import console as shell_console
 
     view = _LiveView(StatusUpdate())
     monkeypatch.setattr(shell_console, "print", lambda *args, **kwargs: None)
@@ -266,7 +266,7 @@ def test_moon_hidden_while_parallel_tool_still_running(monkeypatch):
 
 def test_moon_survives_status_update(monkeypatch):
     """StatusUpdate does not affect moon fallback visibility."""
-    from kimi_cli.ui.shell.console import console as shell_console
+    from consilium.ui.shell.console import console as shell_console
 
     view = _LiveView(StatusUpdate())
     monkeypatch.setattr(shell_console, "print", lambda *args, **kwargs: None)
@@ -288,7 +288,7 @@ def test_moon_survives_status_update(monkeypatch):
 
 def test_moon_hidden_after_turn_end(monkeypatch):
     """Moon fallback disappears when the turn ends."""
-    from kimi_cli.ui.shell.console import console as shell_console
+    from consilium.ui.shell.console import console as shell_console
 
     view = _LiveView(StatusUpdate())
     monkeypatch.setattr(shell_console, "print", lambda *args, **kwargs: None)

@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 from kaos.path import KaosPath
 
-from kimi_cli.skill import (
+from consilium.skill import (
     Skill,
     format_skills_for_prompt,
 )
@@ -132,7 +132,7 @@ def test_format_skills_for_prompt_sorts_within_scope():
 @pytest.mark.asyncio
 async def test_discovered_skills_carry_scope(tmp_path, monkeypatch):
     """End-to-end: scoped discovery stamps each skill with its origin scope."""
-    from kimi_cli.skill import (
+    from consilium.skill import (
         discover_skills_from_roots,
         resolve_skills_roots,
     )
@@ -181,8 +181,8 @@ async def test_end_to_end_project_override_renders_correctly(tmp_path, monkeypat
     skill shares a name with skills at other scopes, the project version is
     the one injected into the system prompt, grouped under ``### Project``.
     """
-    import kimi_cli.skill as skill_mod
-    from kimi_cli.skill import (
+    import consilium.skill as skill_mod
+    from consilium.skill import (
         discover_skills_from_roots,
         resolve_skills_roots,
     )

@@ -9,8 +9,8 @@ from typing import Any
 import pytest
 from inline_snapshot import snapshot
 
-from kimi_cli.agentspec import DEFAULT_AGENT_FILE, load_agent_spec
-from kimi_cli.exception import AgentSpecError
+from consilium.agentspec import DEFAULT_AGENT_FILE, load_agent_spec
+from consilium.exception import AgentSpecError
 
 
 def test_load_default_agent_spec():
@@ -26,23 +26,23 @@ def test_load_default_agent_spec():
     assert spec.exclude_tools == snapshot([])
     assert spec.tools == snapshot(
         [
-            "kimi_cli.tools.agent:Agent",
-            "kimi_cli.tools.ask_user:AskUserQuestion",
-            "kimi_cli.tools.todo:SetTodoList",
-            "kimi_cli.tools.shell:Shell",
-            "kimi_cli.tools.background:TaskList",
-            "kimi_cli.tools.background:TaskOutput",
-            "kimi_cli.tools.background:TaskStop",
-            "kimi_cli.tools.file:ReadFile",
-            "kimi_cli.tools.file:ReadMediaFile",
-            "kimi_cli.tools.file:Glob",
-            "kimi_cli.tools.file:Grep",
-            "kimi_cli.tools.file:WriteFile",
-            "kimi_cli.tools.file:StrReplaceFile",
-            "kimi_cli.tools.web:SearchWeb",
-            "kimi_cli.tools.web:FetchURL",
-            "kimi_cli.tools.plan:ExitPlanMode",
-            "kimi_cli.tools.plan.enter:EnterPlanMode",
+            "consilium.tools.agent:Agent",
+            "consilium.tools.ask_user:AskUserQuestion",
+            "consilium.tools.todo:SetTodoList",
+            "consilium.tools.shell:Shell",
+            "consilium.tools.background:TaskList",
+            "consilium.tools.background:TaskOutput",
+            "consilium.tools.background:TaskStop",
+            "consilium.tools.file:ReadFile",
+            "consilium.tools.file:ReadMediaFile",
+            "consilium.tools.file:Glob",
+            "consilium.tools.file:Grep",
+            "consilium.tools.file:WriteFile",
+            "consilium.tools.file:StrReplaceFile",
+            "consilium.tools.web:SearchWeb",
+            "consilium.tools.web:FetchURL",
+            "consilium.tools.plan:ExitPlanMode",
+            "consilium.tools.plan.enter:EnterPlanMode",
         ]
     )
     subagents = {
@@ -75,45 +75,45 @@ def test_load_default_agent_spec():
     assert subagent_specs["coder"].model == snapshot(None)
     assert subagent_specs["coder"].allowed_tools == snapshot(
         [
-            "kimi_cli.tools.shell:Shell",
-            "kimi_cli.tools.file:ReadFile",
-            "kimi_cli.tools.file:ReadMediaFile",
-            "kimi_cli.tools.file:Glob",
-            "kimi_cli.tools.file:Grep",
-            "kimi_cli.tools.file:WriteFile",
-            "kimi_cli.tools.file:StrReplaceFile",
-            "kimi_cli.tools.web:SearchWeb",
-            "kimi_cli.tools.web:FetchURL",
+            "consilium.tools.shell:Shell",
+            "consilium.tools.file:ReadFile",
+            "consilium.tools.file:ReadMediaFile",
+            "consilium.tools.file:Glob",
+            "consilium.tools.file:Grep",
+            "consilium.tools.file:WriteFile",
+            "consilium.tools.file:StrReplaceFile",
+            "consilium.tools.web:SearchWeb",
+            "consilium.tools.web:FetchURL",
         ]
     )
     assert subagent_specs["coder"].exclude_tools == snapshot(
         [
-            "kimi_cli.tools.agent:Agent",
-            "kimi_cli.tools.ask_user:AskUserQuestion",
-            "kimi_cli.tools.todo:SetTodoList",
-            "kimi_cli.tools.plan:ExitPlanMode",
-            "kimi_cli.tools.plan.enter:EnterPlanMode",
+            "consilium.tools.agent:Agent",
+            "consilium.tools.ask_user:AskUserQuestion",
+            "consilium.tools.todo:SetTodoList",
+            "consilium.tools.plan:ExitPlanMode",
+            "consilium.tools.plan.enter:EnterPlanMode",
         ]
     )
     assert subagent_specs["coder"].tools == snapshot(
         [
-            "kimi_cli.tools.agent:Agent",
-            "kimi_cli.tools.ask_user:AskUserQuestion",
-            "kimi_cli.tools.todo:SetTodoList",
-            "kimi_cli.tools.shell:Shell",
-            "kimi_cli.tools.background:TaskList",
-            "kimi_cli.tools.background:TaskOutput",
-            "kimi_cli.tools.background:TaskStop",
-            "kimi_cli.tools.file:ReadFile",
-            "kimi_cli.tools.file:ReadMediaFile",
-            "kimi_cli.tools.file:Glob",
-            "kimi_cli.tools.file:Grep",
-            "kimi_cli.tools.file:WriteFile",
-            "kimi_cli.tools.file:StrReplaceFile",
-            "kimi_cli.tools.web:SearchWeb",
-            "kimi_cli.tools.web:FetchURL",
-            "kimi_cli.tools.plan:ExitPlanMode",
-            "kimi_cli.tools.plan.enter:EnterPlanMode",
+            "consilium.tools.agent:Agent",
+            "consilium.tools.ask_user:AskUserQuestion",
+            "consilium.tools.todo:SetTodoList",
+            "consilium.tools.shell:Shell",
+            "consilium.tools.background:TaskList",
+            "consilium.tools.background:TaskOutput",
+            "consilium.tools.background:TaskStop",
+            "consilium.tools.file:ReadFile",
+            "consilium.tools.file:ReadMediaFile",
+            "consilium.tools.file:Glob",
+            "consilium.tools.file:Grep",
+            "consilium.tools.file:WriteFile",
+            "consilium.tools.file:StrReplaceFile",
+            "consilium.tools.web:SearchWeb",
+            "consilium.tools.web:FetchURL",
+            "consilium.tools.plan:ExitPlanMode",
+            "consilium.tools.plan.enter:EnterPlanMode",
         ]
     )
     sub_subagents = {
@@ -158,45 +158,45 @@ You are meant to be a fast agent. Complete the search request efficiently and re
     assert subagent_specs["explore"].model == snapshot(None)
     assert subagent_specs["explore"].allowed_tools == snapshot(
         [
-            "kimi_cli.tools.shell:Shell",
-            "kimi_cli.tools.file:ReadFile",
-            "kimi_cli.tools.file:ReadMediaFile",
-            "kimi_cli.tools.file:Glob",
-            "kimi_cli.tools.file:Grep",
-            "kimi_cli.tools.web:SearchWeb",
-            "kimi_cli.tools.web:FetchURL",
+            "consilium.tools.shell:Shell",
+            "consilium.tools.file:ReadFile",
+            "consilium.tools.file:ReadMediaFile",
+            "consilium.tools.file:Glob",
+            "consilium.tools.file:Grep",
+            "consilium.tools.web:SearchWeb",
+            "consilium.tools.web:FetchURL",
         ]
     )
     assert subagent_specs["explore"].exclude_tools == snapshot(
         [
-            "kimi_cli.tools.agent:Agent",
-            "kimi_cli.tools.ask_user:AskUserQuestion",
-            "kimi_cli.tools.todo:SetTodoList",
-            "kimi_cli.tools.plan:ExitPlanMode",
-            "kimi_cli.tools.plan.enter:EnterPlanMode",
-            "kimi_cli.tools.file:WriteFile",
-            "kimi_cli.tools.file:StrReplaceFile",
+            "consilium.tools.agent:Agent",
+            "consilium.tools.ask_user:AskUserQuestion",
+            "consilium.tools.todo:SetTodoList",
+            "consilium.tools.plan:ExitPlanMode",
+            "consilium.tools.plan.enter:EnterPlanMode",
+            "consilium.tools.file:WriteFile",
+            "consilium.tools.file:StrReplaceFile",
         ]
     )
     assert subagent_specs["explore"].tools == snapshot(
         [
-            "kimi_cli.tools.agent:Agent",
-            "kimi_cli.tools.ask_user:AskUserQuestion",
-            "kimi_cli.tools.todo:SetTodoList",
-            "kimi_cli.tools.shell:Shell",
-            "kimi_cli.tools.background:TaskList",
-            "kimi_cli.tools.background:TaskOutput",
-            "kimi_cli.tools.background:TaskStop",
-            "kimi_cli.tools.file:ReadFile",
-            "kimi_cli.tools.file:ReadMediaFile",
-            "kimi_cli.tools.file:Glob",
-            "kimi_cli.tools.file:Grep",
-            "kimi_cli.tools.file:WriteFile",
-            "kimi_cli.tools.file:StrReplaceFile",
-            "kimi_cli.tools.web:SearchWeb",
-            "kimi_cli.tools.web:FetchURL",
-            "kimi_cli.tools.plan:ExitPlanMode",
-            "kimi_cli.tools.plan.enter:EnterPlanMode",
+            "consilium.tools.agent:Agent",
+            "consilium.tools.ask_user:AskUserQuestion",
+            "consilium.tools.todo:SetTodoList",
+            "consilium.tools.shell:Shell",
+            "consilium.tools.background:TaskList",
+            "consilium.tools.background:TaskOutput",
+            "consilium.tools.background:TaskStop",
+            "consilium.tools.file:ReadFile",
+            "consilium.tools.file:ReadMediaFile",
+            "consilium.tools.file:Glob",
+            "consilium.tools.file:Grep",
+            "consilium.tools.file:WriteFile",
+            "consilium.tools.file:StrReplaceFile",
+            "consilium.tools.web:SearchWeb",
+            "consilium.tools.web:FetchURL",
+            "consilium.tools.plan:ExitPlanMode",
+            "consilium.tools.plan.enter:EnterPlanMode",
         ]
     )
     sub_subagents = {
@@ -225,45 +225,45 @@ Before designing your implementation plan, consider whether you fully understand
     assert subagent_specs["plan"].model == snapshot(None)
     assert subagent_specs["plan"].allowed_tools == snapshot(
         [
-            "kimi_cli.tools.file:ReadFile",
-            "kimi_cli.tools.file:ReadMediaFile",
-            "kimi_cli.tools.file:Glob",
-            "kimi_cli.tools.file:Grep",
-            "kimi_cli.tools.web:SearchWeb",
-            "kimi_cli.tools.web:FetchURL",
+            "consilium.tools.file:ReadFile",
+            "consilium.tools.file:ReadMediaFile",
+            "consilium.tools.file:Glob",
+            "consilium.tools.file:Grep",
+            "consilium.tools.web:SearchWeb",
+            "consilium.tools.web:FetchURL",
         ]
     )
     assert subagent_specs["plan"].exclude_tools == snapshot(
         [
-            "kimi_cli.tools.agent:Agent",
-            "kimi_cli.tools.ask_user:AskUserQuestion",
-            "kimi_cli.tools.todo:SetTodoList",
-            "kimi_cli.tools.plan:ExitPlanMode",
-            "kimi_cli.tools.plan.enter:EnterPlanMode",
-            "kimi_cli.tools.shell:Shell",
-            "kimi_cli.tools.file:WriteFile",
-            "kimi_cli.tools.file:StrReplaceFile",
+            "consilium.tools.agent:Agent",
+            "consilium.tools.ask_user:AskUserQuestion",
+            "consilium.tools.todo:SetTodoList",
+            "consilium.tools.plan:ExitPlanMode",
+            "consilium.tools.plan.enter:EnterPlanMode",
+            "consilium.tools.shell:Shell",
+            "consilium.tools.file:WriteFile",
+            "consilium.tools.file:StrReplaceFile",
         ]
     )
     assert subagent_specs["plan"].tools == snapshot(
         [
-            "kimi_cli.tools.agent:Agent",
-            "kimi_cli.tools.ask_user:AskUserQuestion",
-            "kimi_cli.tools.todo:SetTodoList",
-            "kimi_cli.tools.shell:Shell",
-            "kimi_cli.tools.background:TaskList",
-            "kimi_cli.tools.background:TaskOutput",
-            "kimi_cli.tools.background:TaskStop",
-            "kimi_cli.tools.file:ReadFile",
-            "kimi_cli.tools.file:ReadMediaFile",
-            "kimi_cli.tools.file:Glob",
-            "kimi_cli.tools.file:Grep",
-            "kimi_cli.tools.file:WriteFile",
-            "kimi_cli.tools.file:StrReplaceFile",
-            "kimi_cli.tools.web:SearchWeb",
-            "kimi_cli.tools.web:FetchURL",
-            "kimi_cli.tools.plan:ExitPlanMode",
-            "kimi_cli.tools.plan.enter:EnterPlanMode",
+            "consilium.tools.agent:Agent",
+            "consilium.tools.ask_user:AskUserQuestion",
+            "consilium.tools.todo:SetTodoList",
+            "consilium.tools.shell:Shell",
+            "consilium.tools.background:TaskList",
+            "consilium.tools.background:TaskOutput",
+            "consilium.tools.background:TaskStop",
+            "consilium.tools.file:ReadFile",
+            "consilium.tools.file:ReadMediaFile",
+            "consilium.tools.file:Glob",
+            "consilium.tools.file:Grep",
+            "consilium.tools.file:WriteFile",
+            "consilium.tools.file:StrReplaceFile",
+            "consilium.tools.web:SearchWeb",
+            "consilium.tools.web:FetchURL",
+            "consilium.tools.plan:ExitPlanMode",
+            "consilium.tools.plan.enter:EnterPlanMode",
         ]
     )
     sub_subagents = {
@@ -279,7 +279,7 @@ def test_load_agent_spec_basic(agent_file: Path):
 
     assert spec.name == snapshot("Test Agent")
     assert spec.system_prompt_path == agent_file.parent / "system.md"
-    assert spec.tools == snapshot(["kimi_cli.tools.think:Think"])
+    assert spec.tools == snapshot(["consilium.tools.think:Think"])
 
 
 def test_load_agent_spec_missing_name(agent_file_no_name: Path):
@@ -304,8 +304,8 @@ def test_load_agent_spec_with_exclude_tools(agent_file_with_tools: Path):
     """Test loading agent spec with excluded tools."""
     spec = load_agent_spec(agent_file_with_tools)
 
-    assert spec.tools == snapshot(["kimi_cli.tools.think:Think", "kimi_cli.tools.shell:Shell"])
-    assert spec.exclude_tools == snapshot(["kimi_cli.tools.shell:Shell"])
+    assert spec.tools == snapshot(["consilium.tools.think:Think", "consilium.tools.shell:Shell"])
+    assert spec.exclude_tools == snapshot(["consilium.tools.shell:Shell"])
 
 
 def test_load_agent_spec_extension(agent_file_extending: Path):
@@ -313,7 +313,7 @@ def test_load_agent_spec_extension(agent_file_extending: Path):
     spec = load_agent_spec(agent_file_extending)
 
     assert spec.name == snapshot("Extended Agent")
-    assert spec.tools == snapshot(["kimi_cli.tools.think:Think"])
+    assert spec.tools == snapshot(["consilium.tools.think:Think"])
 
 
 def test_load_agent_spec_default_extension():
@@ -330,8 +330,8 @@ agent:
   system_prompt_args:
     CUSTOM_ARG: "custom_value"
   exclude_tools:
-    - "kimi_cli.tools.web:SearchWeb"
-    - "kimi_cli.tools.web:FetchURL"
+    - "consilium.tools.web:SearchWeb"
+    - "consilium.tools.web:FetchURL"
 """)
 
         spec = load_agent_spec(extending_agent)
@@ -343,27 +343,27 @@ agent:
         )
         assert spec.tools == snapshot(
             [
-                "kimi_cli.tools.agent:Agent",
-                "kimi_cli.tools.ask_user:AskUserQuestion",
-                "kimi_cli.tools.todo:SetTodoList",
-                "kimi_cli.tools.shell:Shell",
-                "kimi_cli.tools.background:TaskList",
-                "kimi_cli.tools.background:TaskOutput",
-                "kimi_cli.tools.background:TaskStop",
-                "kimi_cli.tools.file:ReadFile",
-                "kimi_cli.tools.file:ReadMediaFile",
-                "kimi_cli.tools.file:Glob",
-                "kimi_cli.tools.file:Grep",
-                "kimi_cli.tools.file:WriteFile",
-                "kimi_cli.tools.file:StrReplaceFile",
-                "kimi_cli.tools.web:SearchWeb",
-                "kimi_cli.tools.web:FetchURL",
-                "kimi_cli.tools.plan:ExitPlanMode",
-                "kimi_cli.tools.plan.enter:EnterPlanMode",
+                "consilium.tools.agent:Agent",
+                "consilium.tools.ask_user:AskUserQuestion",
+                "consilium.tools.todo:SetTodoList",
+                "consilium.tools.shell:Shell",
+                "consilium.tools.background:TaskList",
+                "consilium.tools.background:TaskOutput",
+                "consilium.tools.background:TaskStop",
+                "consilium.tools.file:ReadFile",
+                "consilium.tools.file:ReadMediaFile",
+                "consilium.tools.file:Glob",
+                "consilium.tools.file:Grep",
+                "consilium.tools.file:WriteFile",
+                "consilium.tools.file:StrReplaceFile",
+                "consilium.tools.web:SearchWeb",
+                "consilium.tools.web:FetchURL",
+                "consilium.tools.plan:ExitPlanMode",
+                "consilium.tools.plan.enter:EnterPlanMode",
             ]
         )
         assert spec.exclude_tools == snapshot(
-            ["kimi_cli.tools.web:SearchWeb", "kimi_cli.tools.web:FetchURL"]
+            ["consilium.tools.web:SearchWeb", "consilium.tools.web:FetchURL"]
         )
         assert "coder" in spec.subagents
 
@@ -379,7 +379,7 @@ version: 2
 agent:
   name: "Test Agent"
   system_prompt_path: ./system.md
-  tools: ["kimi_cli.tools.think:Think"]
+  tools: ["consilium.tools.think:Think"]
 """)
 
         with pytest.raises(AgentSpecError, match="Unsupported agent spec version: 2"):
@@ -416,7 +416,7 @@ version: 1
 agent:
   name: "Test Agent"
   system_prompt_path: ./system.md
-  tools: ["kimi_cli.tools.think:Think"]
+  tools: ["consilium.tools.think:Think"]
 """)
 
         yield agent_yaml
@@ -438,7 +438,7 @@ def agent_file_no_name() -> Generator[Path, Any, Any]:
 version: 1
 agent:
   system_prompt_path: ./system.md
-  tools: ["kimi_cli.tools.think:Think"]
+  tools: ["consilium.tools.think:Think"]
 """)
 
         yield agent_yaml
@@ -456,7 +456,7 @@ def agent_file_no_prompt() -> Generator[Path, Any, Any]:
 version: 1
 agent:
   name: "Test Agent"
-  tools: ["kimi_cli.tools.think:Think"]
+  tools: ["consilium.tools.think:Think"]
 """)
 
         yield agent_yaml
@@ -501,8 +501,8 @@ version: 1
 agent:
   name: "Test Agent"
   system_prompt_path: ./system.md
-  tools: ["kimi_cli.tools.think:Think", "kimi_cli.tools.shell:Shell"]
-  exclude_tools: ["kimi_cli.tools.shell:Shell"]
+  tools: ["consilium.tools.think:Think", "consilium.tools.shell:Shell"]
+  exclude_tools: ["consilium.tools.shell:Shell"]
 """)
 
         yield agent_yaml
@@ -521,7 +521,7 @@ version: 1
 agent:
   name: "Base Agent"
   system_prompt_path: ./system.md
-  tools: ["kimi_cli.tools.think:Think"]
+  tools: ["consilium.tools.think:Think"]
 """)
 
         # Create system.md

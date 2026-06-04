@@ -4,20 +4,20 @@ from __future__ import annotations
 
 from inline_snapshot import snapshot
 
-from kimi_cli.tools.agent import Agent as AgentTool
-from kimi_cli.tools.background import TaskList, TaskOutput, TaskStop
-from kimi_cli.tools.dmail import SendDMail
-from kimi_cli.tools.file.glob import Glob
-from kimi_cli.tools.file.grep_local import Grep
-from kimi_cli.tools.file.read import ReadFile
-from kimi_cli.tools.file.read_media import ReadMediaFile
-from kimi_cli.tools.file.replace import StrReplaceFile
-from kimi_cli.tools.file.write import WriteFile
-from kimi_cli.tools.shell import Shell
-from kimi_cli.tools.think import Think
-from kimi_cli.tools.todo import SetTodoList
-from kimi_cli.tools.web.fetch import FetchURL
-from kimi_cli.tools.web.search import SearchWeb
+from consilium.tools.agent import Agent as AgentTool
+from consilium.tools.background import TaskList, TaskOutput, TaskStop
+from consilium.tools.dmail import SendDMail
+from consilium.tools.file.glob import Glob
+from consilium.tools.file.grep_local import Grep
+from consilium.tools.file.read import ReadFile
+from consilium.tools.file.read_media import ReadMediaFile
+from consilium.tools.file.replace import StrReplaceFile
+from consilium.tools.file.write import WriteFile
+from consilium.tools.shell import Shell
+from consilium.tools.think import Think
+from consilium.tools.todo import SetTodoList
+from consilium.tools.web.fetch import FetchURL
+from consilium.tools.web.search import SearchWeb
 
 
 def test_agent_params_schema(agent_tool: AgentTool):

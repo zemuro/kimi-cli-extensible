@@ -8,7 +8,7 @@ import subprocess
 import pytest
 from kaos.path import KaosPath
 
-from kimi_cli.utils.environment import (
+from consilium.utils.environment import (
     Environment,
     GitBashNotFoundError,
     _find_git_bash_path,

@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from kimi_cli.think.context import assemble_context, estimate_context_tokens
-from kimi_cli.think.history import HistoryManager
-from kimi_cli.think.models import ThinkMessage, ThinkSession
-from kimi_cli.think.slash import think_registry
-from kimi_cli.think.storage import (
+from consilium.think.context import assemble_context, estimate_context_tokens
+from consilium.think.history import HistoryManager
+from consilium.think.models import ThinkMessage, ThinkSession
+from consilium.think.slash import think_registry
+from consilium.think.storage import (
     list_checkpoints,
     list_sessions,
     load_checkpoint,
@@ -33,7 +33,7 @@ class TestThinkStorage:
         )
 
         # Patch storage directory
-        import kimi_cli.think.storage as storage
+        import consilium.think.storage as storage
 
         old_dir = storage.THINK_DIR
         storage.THINK_DIR = tmp_path
@@ -54,7 +54,7 @@ class TestThinkStorage:
 
     def test_list_sessions(self, tmp_path: Path) -> None:
         """List sessions returns sorted (id, mtime) tuples."""
-        import kimi_cli.think.storage as storage
+        import consilium.think.storage as storage
 
         old_dir = storage.THINK_DIR
         storage.THINK_DIR = tmp_path
@@ -107,7 +107,7 @@ class TestThinkHistory:
         assert session.messages[0].content == "a"
 
     def test_fork_from(self, tmp_path: Path) -> None:
-        import kimi_cli.think.storage as storage
+        import consilium.think.storage as storage
 
         old_dir = storage.THINK_DIR
         storage.THINK_DIR = tmp_path
@@ -184,7 +184,7 @@ class TestThinkSlashCommands:
         assert len(session.messages) == 1
 
     def test_checkpoint_command(self, tmp_path: Path) -> None:
-        import kimi_cli.think.storage as storage
+        import consilium.think.storage as storage
 
         old_dir = storage.THINK_DIR
         storage.THINK_DIR = tmp_path
@@ -201,7 +201,7 @@ class TestThinkSlashCommands:
             storage.THINK_DIR = old_dir
 
     def test_load_command(self, tmp_path: Path) -> None:
-        import kimi_cli.think.storage as storage
+        import consilium.think.storage as storage
 
         old_dir = storage.THINK_DIR
         storage.THINK_DIR = tmp_path
@@ -220,7 +220,7 @@ class TestThinkSlashCommands:
 
 class TestThinkCheckpoint:
     def test_checkpoint_save_restore(self, tmp_path: Path) -> None:
-        import kimi_cli.think.storage as storage
+        import consilium.think.storage as storage
 
         old_dir = storage.THINK_DIR
         storage.THINK_DIR = tmp_path

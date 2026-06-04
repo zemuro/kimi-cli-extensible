@@ -5,12 +5,12 @@ from unittest.mock import AsyncMock, Mock
 
 from kosong.message import Message
 
-from kimi_cli.soul import slash as soul_slash
-from kimi_cli.wire.types import TextPart
+from consilium.soul import slash as soul_slash
+from consilium.wire.types import TextPart
 
 
 def _make_soul(work_dir: Path) -> Mock:
-    from kimi_cli.soul.kimisoul import KimiSoul
+    from consilium.soul.kimisoul import KimiSoul
 
     soul = Mock(spec=KimiSoul)
     soul.runtime.session.work_dir = work_dir

@@ -233,7 +233,7 @@ async def _run_kimi_print_json(
     process = await asyncio.create_subprocess_exec(
         sys.executable,
         "-m",
-        "kimi_cli.cli",
+        "consilium.cli",
         "--print",
         "--output-format",
         "stream-json",

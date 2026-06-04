@@ -6,7 +6,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from kimi_cli.utils.clipboard import (
+from consilium.utils.clipboard import (
     _VIDEO_SUFFIXES,
     _classify_file_paths,
     _grab_image_linux,
@@ -261,7 +261,7 @@ def test_grab_image_linux_xclip_falls_back_to_wlpaste(monkeypatch, tmp_path: Pat
         r.stderr = b""
         return r
 
-    monkeypatch.setattr("kimi_cli.utils.clipboard.subprocess.run", fake_run)
+    monkeypatch.setattr("consilium.utils.clipboard.subprocess.run", fake_run)
 
     result = _grab_image_linux()
     assert result is not None
@@ -303,7 +303,7 @@ def test_grab_image_linux_xclip_real_error_then_wlpaste_succeeds(
         r.stderr = b""
         return r
 
-    monkeypatch.setattr("kimi_cli.utils.clipboard.subprocess.run", fake_run)
+    monkeypatch.setattr("consilium.utils.clipboard.subprocess.run", fake_run)
 
     result = _grab_image_linux()
     assert result is not None
@@ -329,7 +329,7 @@ def test_grab_image_linux_both_tools_silent_error(monkeypatch) -> None:
 
         return FakeResult()
 
-    monkeypatch.setattr("kimi_cli.utils.clipboard.subprocess.run", fake_run)
+    monkeypatch.setattr("consilium.utils.clipboard.subprocess.run", fake_run)
 
     result = _grab_image_linux()
     assert result is None
@@ -360,7 +360,7 @@ def test_grab_image_linux_xclip_missing_wlpaste_succeeds(monkeypatch, tmp_path: 
 
         return FakeResult()
 
-    monkeypatch.setattr("kimi_cli.utils.clipboard.subprocess.run", fake_run)
+    monkeypatch.setattr("consilium.utils.clipboard.subprocess.run", fake_run)
 
     result = _grab_image_linux()
     assert result is not None
@@ -400,7 +400,7 @@ def test_grab_image_linux_xclip_succeeds(monkeypatch, tmp_path: Path) -> None:
 
         return FakeResult()
 
-    monkeypatch.setattr("kimi_cli.utils.clipboard.subprocess.run", fake_run)
+    monkeypatch.setattr("consilium.utils.clipboard.subprocess.run", fake_run)
 
     result = _grab_image_linux()
     assert result is not None
@@ -430,7 +430,7 @@ def test_grab_image_linux_wayland_prefers_wlpaste(monkeypatch, tmp_path: Path) -
 
         return FakeResult()
 
-    monkeypatch.setattr("kimi_cli.utils.clipboard.subprocess.run", fake_run)
+    monkeypatch.setattr("consilium.utils.clipboard.subprocess.run", fake_run)
 
     result = _grab_image_linux()
     assert result is not None
@@ -470,7 +470,7 @@ def test_grab_image_linux_wayland_wlpaste_falls_back_to_xclip(monkeypatch, tmp_p
         r.stderr = b""
         return r
 
-    monkeypatch.setattr("kimi_cli.utils.clipboard.subprocess.run", fake_run)
+    monkeypatch.setattr("consilium.utils.clipboard.subprocess.run", fake_run)
 
     result = _grab_image_linux()
     assert result is not None
@@ -501,7 +501,7 @@ def test_grab_image_linux_x11_prefers_xclip(monkeypatch, tmp_path: Path) -> None
 
         return FakeResult()
 
-    monkeypatch.setattr("kimi_cli.utils.clipboard.subprocess.run", fake_run)
+    monkeypatch.setattr("consilium.utils.clipboard.subprocess.run", fake_run)
 
     result = _grab_image_linux()
     assert result is not None
@@ -529,7 +529,7 @@ def test_grab_image_linux_wayland_wlpaste_silent_error_no_fallback(
 
         return FakeResult()
 
-    monkeypatch.setattr("kimi_cli.utils.clipboard.subprocess.run", fake_run)
+    monkeypatch.setattr("consilium.utils.clipboard.subprocess.run", fake_run)
 
     result = _grab_image_linux()
     assert result is None
@@ -550,7 +550,7 @@ def test_grab_image_linux_timeout(monkeypatch) -> None:
 
         raise subprocess.TimeoutExpired(cmd=args[0], timeout=3)
 
-    monkeypatch.setattr("kimi_cli.utils.clipboard.subprocess.run", fake_run)
+    monkeypatch.setattr("consilium.utils.clipboard.subprocess.run", fake_run)
 
     result = _grab_image_linux()
     assert result is None

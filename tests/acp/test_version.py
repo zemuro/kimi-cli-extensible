@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 
-from kimi_cli.acp.version import (
+from consilium.acp.version import (
     CURRENT_VERSION,
     MIN_PROTOCOL_VERSION,
     SUPPORTED_VERSIONS,

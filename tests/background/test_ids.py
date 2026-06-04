@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from kimi_cli.background.ids import generate_task_id
-from kimi_cli.background.store import _VALID_TASK_ID
+from consilium.background.ids import generate_task_id
+from consilium.background.store import _VALID_TASK_ID
 
 
 class TestTaskIdValidation:

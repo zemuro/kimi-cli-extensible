@@ -11,7 +11,7 @@ from kosong.message import ImageURLPart, TextPart
 from kosong.tooling import ToolError, ToolOk
 from pydantic import AnyUrl
 
-from kimi_cli.soul.toolset import MCP_MAX_OUTPUT_CHARS, convert_mcp_tool_result
+from consilium.soul.toolset import MCP_MAX_OUTPUT_CHARS, convert_mcp_tool_result
 
 
 def _make_result(content: Sequence[mcp.types.ContentBlock], *, is_error: bool = False) -> MagicMock:

@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 from rich.pager import Pager
 
-from kimi_cli.ui.shell.console import _KimiPager, console
+from consilium.ui.shell.console import _KimiPager, console
 
 
 class TestConsolePagerIgnoresManpager:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from kosong.message import ContentPart, Message, TextPart
 
-from kimi_cli.soul.dynamic_injection import normalize_history
+from consilium.soul.dynamic_injection import normalize_history
 
 
 def _text(part: ContentPart) -> str:

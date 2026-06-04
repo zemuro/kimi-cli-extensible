@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, PropertyMock
 
 from kosong.message import Message, TextPart
 
-from kimi_cli.soul.dynamic_injections.plan_mode import PlanModeInjectionProvider, _full_reminder
+from consilium.soul.dynamic_injections.plan_mode import PlanModeInjectionProvider, _full_reminder
 
 
 def _make_soul_mock(

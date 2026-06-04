@@ -15,9 +15,9 @@ from kosong.chat_provider import (
     ChatProviderError,
 )
 
-from kimi_cli.cli import ExitCode
-from kimi_cli.soul import LLMNotSet, LLMNotSupported, MaxStepsReached, RunCancelled
-from kimi_cli.ui.print import Print
+from consilium.cli import ExitCode
+from consilium.soul import LLMNotSet, LLMNotSupported, MaxStepsReached, RunCancelled
+from consilium.ui.print import Print
 
 # ---------------------------------------------------------------------------
 # _classify_provider_error unit tests
@@ -119,7 +119,7 @@ class TestPrintRunExitCode:
         async def _raise(*args, **kwargs):
             raise LLMNotSet()
 
-        monkeypatch.setattr("kimi_cli.ui.print.run_soul", _raise)
+        monkeypatch.setattr("consilium.ui.print.run_soul", _raise)
         code = asyncio.run(p.run(command="hello"))
         assert code == ExitCode.FAILURE
 
@@ -130,7 +130,7 @@ class TestPrintRunExitCode:
         async def _raise(*args, **kwargs):
             raise _make_llm_not_supported()
 
-        monkeypatch.setattr("kimi_cli.ui.print.run_soul", _raise)
+        monkeypatch.setattr("consilium.ui.print.run_soul", _raise)
         code = asyncio.run(p.run(command="hello"))
         assert code == ExitCode.FAILURE
 
@@ -141,7 +141,7 @@ class TestPrintRunExitCode:
         async def _raise(*args, **kwargs):
             raise MaxStepsReached(10)
 
-        monkeypatch.setattr("kimi_cli.ui.print.run_soul", _raise)
+        monkeypatch.setattr("consilium.ui.print.run_soul", _raise)
         code = asyncio.run(p.run(command="hello"))
         assert code == ExitCode.FAILURE
 
@@ -152,7 +152,7 @@ class TestPrintRunExitCode:
         async def _raise(*args, **kwargs):
             raise RunCancelled()
 
-        monkeypatch.setattr("kimi_cli.ui.print.run_soul", _raise)
+        monkeypatch.setattr("consilium.ui.print.run_soul", _raise)
         code = asyncio.run(p.run(command="hello"))
         assert code == ExitCode.FAILURE
 
@@ -163,7 +163,7 @@ class TestPrintRunExitCode:
         async def _raise(*args, **kwargs):
             raise APIStatusError(429, "rate limit exceeded")
 
-        monkeypatch.setattr("kimi_cli.ui.print.run_soul", _raise)
+        monkeypatch.setattr("consilium.ui.print.run_soul", _raise)
         code = asyncio.run(p.run(command="hello"))
         assert code == ExitCode.RETRYABLE
 
@@ -174,7 +174,7 @@ class TestPrintRunExitCode:
         async def _raise(*args, **kwargs):
             raise APIStatusError(500, "internal server error")
 
-        monkeypatch.setattr("kimi_cli.ui.print.run_soul", _raise)
+        monkeypatch.setattr("consilium.ui.print.run_soul", _raise)
         code = asyncio.run(p.run(command="hello"))
         assert code == ExitCode.RETRYABLE
 
@@ -185,7 +185,7 @@ class TestPrintRunExitCode:
         async def _raise(*args, **kwargs):
             raise APIConnectionError("connection refused")
 
-        monkeypatch.setattr("kimi_cli.ui.print.run_soul", _raise)
+        monkeypatch.setattr("consilium.ui.print.run_soul", _raise)
         code = asyncio.run(p.run(command="hello"))
         assert code == ExitCode.RETRYABLE
 
@@ -196,7 +196,7 @@ class TestPrintRunExitCode:
         async def _raise(*args, **kwargs):
             raise APIStatusError(401, "unauthorized")
 
-        monkeypatch.setattr("kimi_cli.ui.print.run_soul", _raise)
+        monkeypatch.setattr("consilium.ui.print.run_soul", _raise)
         code = asyncio.run(p.run(command="hello"))
         assert code == ExitCode.FAILURE
 
@@ -207,6 +207,6 @@ class TestPrintRunExitCode:
         async def _raise(*args, **kwargs):
             raise RuntimeError("unexpected")
 
-        monkeypatch.setattr("kimi_cli.ui.print.run_soul", _raise)
+        monkeypatch.setattr("consilium.ui.print.run_soul", _raise)
         with pytest.raises(RuntimeError, match="unexpected"):
             asyncio.run(p.run(command="hello"))

@@ -4,9 +4,9 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from kimi_cli.metadata import Metadata, WorkDirMeta, save_metadata
-from kimi_cli.vis.api import system as vis_system_api
-from kimi_cli.vis.app import create_app
+from consilium.metadata import Metadata, WorkDirMeta, save_metadata
+from consilium.vis.api import system as vis_system_api
+from consilium.vis.app import create_app
 
 
 def test_vis_sessions_include_session_dir(

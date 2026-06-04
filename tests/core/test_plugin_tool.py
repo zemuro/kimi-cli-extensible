@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from kimi_cli.config import Config
-from kimi_cli.plugin import PluginToolSpec
-from kimi_cli.plugin.tool import PluginTool, load_plugin_tools
+from consilium.config import Config
+from consilium.plugin import PluginToolSpec
+from consilium.plugin.tool import PluginTool, load_plugin_tools
 
 
 def _dummy_config() -> Config:
@@ -114,7 +114,7 @@ async def test_plugin_tool_injects_env_vars(tmp_path: Path):
     """Host credentials should be injected as env vars at runtime."""
     from pydantic import SecretStr
 
-    from kimi_cli.config import Config, LLMModel, LLMProvider
+    from consilium.config import Config, LLMModel, LLMProvider
 
     plugin_dir = _make_plugin_with_tool(
         tmp_path,

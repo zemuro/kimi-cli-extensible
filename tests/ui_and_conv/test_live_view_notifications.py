@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from rich.console import Console
 
-from kimi_cli.ui.shell.console import console as shell_console
-from kimi_cli.ui.shell.visualize import _LiveView
-from kimi_cli.wire.types import Notification, StatusUpdate
+from consilium.ui.shell.console import console as shell_console
+from consilium.ui.shell.visualize import _LiveView
+from consilium.wire.types import Notification, StatusUpdate
 
 
 def _render(renderable) -> str:

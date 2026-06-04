@@ -1,4 +1,4 @@
-# Kimi Code CLI
+# Consilium
 
 ## Quick commands (use uv)
 
@@ -13,7 +13,7 @@ If running tools directly, use `uv run ...`.
 
 ## Project overview
 
-Kimi Code CLI is a Python CLI agent for software engineering workflows. It supports an interactive
+Consilium is a Python CLI agent for software engineering workflows. It supports an interactive
 shell UI, ACP server mode for IDE integrations, and MCP tool loading.
 
 ## Tech stack
@@ -29,93 +29,93 @@ shell UI, ACP server mode for IDE integrations, and MCP tool loading.
 
 ## Architecture overview
 
-- **CLI entry**: `src/kimi_cli/cli/__init__.py` (Typer) parses flags (UI mode, agent spec, config, MCP)
-  and routes into `KimiCLI` in `src/kimi_cli/app.py`.
-- **App/runtime setup**: `KimiCLI.create` loads config (`src/kimi_cli/config.py`), chooses a
-  model/provider (`src/kimi_cli/llm.py`), builds a `Runtime` (`src/kimi_cli/soul/agent.py`),
+- **CLI entry**: `src/consilium/cli/__init__.py` (Typer) parses flags (UI mode, agent spec, config, MCP)
+  and routes into `KimiCLI` in `src/consilium/app.py`.
+- **App/runtime setup**: `KimiCLI.create` loads config (`src/consilium/config.py`), chooses a
+  model/provider (`src/consilium/llm.py`), builds a `Runtime` (`src/consilium/soul/agent.py`),
   loads an agent spec, restores `Context`, then constructs `KimiSoul`.
-- **Agent specs**: YAML under `src/kimi_cli/agents/` loaded by `src/kimi_cli/agentspec.py`.
+- **Agent specs**: YAML under `src/consilium/agents/` loaded by `src/consilium/agentspec.py`.
   Specs can `extend` base agents, select tools by import path, and register builtin subagent
   types via the `subagents` field. Subagent instances are persisted separately under the session
   directory and can be resumed by `agent_id`. System prompts live alongside specs; builtin args
   include `KIMI_NOW`, `KIMI_WORK_DIR`, `KIMI_WORK_DIR_LS`, `KIMI_AGENTS_MD`, `KIMI_SKILLS`, `KIMI_OS`, `KIMI_SHELL`
   (this file is injected via `KIMI_AGENTS_MD`).
 - **Prompt system**: The main system prompt is decomposed into sections under
-  `src/kimi_cli/prompts/system/`. The default `system.md` contains an assembly marker
+  `src/consilium/prompts/system/`. The default `system.md` contains an assembly marker
   (`<!-- assembled-from-sections -->`) that causes `_load_system_prompt()` to load and join
   the sections. Users can override individual sections via `system_prompt_overrides` in config.
   Secondary prompts (compaction, plan mode, AFK, side questions, slash commands) also live as
-  `.md` files under `src/kimi_cli/prompts/`. Subagent `ROLE_ADDITIONAL` and `when_to_use` prompts
+  `.md` files under `src/consilium/prompts/`. Subagent `ROLE_ADDITIONAL` and `when_to_use` prompts
   are loaded from external `.md` files via `system_prompt_args_files` and `when_to_use_file`.
-- **Tooling**: `src/kimi_cli/soul/toolset.py` loads tools by import path, injects dependencies,
-  and runs tool calls. Built-in tools live in `src/kimi_cli/tools/` (agent, shell, file, web,
+- **Tooling**: `src/consilium/soul/toolset.py` loads tools by import path, injects dependencies,
+  and runs tool calls. Built-in tools live in `src/consilium/tools/` (agent, shell, file, web,
   todo, background, dmail, think, plan). MCP tools are loaded via `fastmcp`; CLI management is
-  in `src/kimi_cli/mcp.py` and stored in the share dir.
-- **Subagents**: `LaborMarket` in `src/kimi_cli/soul/agent.py` registers builtin subagent types.
-  The `Agent` tool (`src/kimi_cli/tools/agent/`) creates or resumes subagent instances, while
+  in `src/consilium/mcp.py` and stored in the share dir.
+- **Subagents**: `LaborMarket` in `src/consilium/soul/agent.py` registers builtin subagent types.
+  The `Agent` tool (`src/consilium/tools/agent/`) creates or resumes subagent instances, while
   `SubagentStore` persists instance metadata, prompts, wire logs, and context under
   `session/subagents/<agent_id>/`.
-- **Core loop**: `src/kimi_cli/soul/kimisoul.py` is the main agent loop. It accepts user input,
-  handles slash commands (`src/kimi_cli/soul/slash.py`), appends to `Context`
-  (`src/kimi_cli/soul/context.py`), calls the LLM (kosong), runs tools, and performs compaction
-  (`src/kimi_cli/soul/compaction.py`) when needed.
-- **Approvals**: `src/kimi_cli/soul/approval.py` is the tool-facing facade. `ApprovalRuntime`
-  in `src/kimi_cli/approval_runtime/` is the session-level source of truth for pending approvals,
+- **Core loop**: `src/consilium/soul/kimisoul.py` is the main agent loop. It accepts user input,
+  handles slash commands (`src/consilium/soul/slash.py`), appends to `Context`
+  (`src/consilium/soul/context.py`), calls the LLM (kosong), runs tools, and performs compaction
+  (`src/consilium/soul/compaction.py`) when needed.
+- **Approvals**: `src/consilium/soul/approval.py` is the tool-facing facade. `ApprovalRuntime`
+  in `src/consilium/approval_runtime/` is the session-level source of truth for pending approvals,
   and approval requests are projected onto the root wire stream for Shell/Web style UIs.
-- **Think mode**: `src/kimi_cli/think/` provides a mutable-history research REPL with JSONL
+- **Think mode**: `src/consilium/think/` provides a mutable-history research REPL with JSONL
   storage, editable messages, checkpoints, compaction, and Python execution. Think is for
   speculative reasoning and plan authoring.
-- **Do mode**: `src/kimi_cli/do/` provides an immutable execution environment with git
+- **Do mode**: `src/consilium/do/` provides an immutable execution environment with git
   snapshotting, change journaling, unified diffs, and plan review gates. Do is for implementing
   plans generated in Think.
-- **Plan orchestration**: `src/kimi_cli/plan/` parses, validates, and audits plan documents.
+- **Plan orchestration**: `src/consilium/plan/` parses, validates, and audits plan documents.
   Supports both monolithic `plan.md` and decomposed `docs/plan/` directories. Handles dispatch
   (`dispatch.json`), handover documents, and docs indexing.
-- **Subagent budget gate**: `src/kimi_cli/subagents/budget_tracker.py` enforces token and
+- **Subagent budget gate**: `src/consilium/subagents/budget_tracker.py` enforces token and
   tool-call limits on subagent tasks. Integrated into both foreground and background runners.
-- **UI/Wire**: `src/kimi_cli/soul/run_soul` connects `KimiSoul` to a `Wire`
-  (`src/kimi_cli/wire/`) so UI loops can stream events. UIs live in `src/kimi_cli/ui/`
+- **UI/Wire**: `src/consilium/soul/run_soul` connects `KimiSoul` to a `Wire`
+  (`src/consilium/wire/`) so UI loops can stream events. UIs live in `src/consilium/ui/`
   (shell/print/acp/wire).
-- **Shell UI**: `src/kimi_cli/ui/shell/` handles interactive TUI input, shell command mode,
+- **Shell UI**: `src/consilium/ui/shell/` handles interactive TUI input, shell command mode,
   and slash command autocomplete; it is the default interactive experience.
-- **Slash commands**: Soul-level commands live in `src/kimi_cli/soul/slash.py`; shell-level
-  commands live in `src/kimi_cli/ui/shell/slash.py`. The shell UI exposes both and dispatches
+- **Slash commands**: Soul-level commands live in `src/consilium/soul/slash.py`; shell-level
+  commands live in `src/consilium/ui/shell/slash.py`. The shell UI exposes both and dispatches
   based on the registry. Standard skills register `/skill:<skill-name>` and load `SKILL.md`
   as a user prompt; flow skills register `/flow:<skill-name>` and execute the embedded flow.
 
 ## Major modules and interfaces
 
-- `src/kimi_cli/app.py`: `KimiCLI.create(...)` and `KimiCLI.run(...)` are the main programmatic
+- `src/consilium/app.py`: `KimiCLI.create(...)` and `KimiCLI.run(...)` are the main programmatic
   entrypoints; this is what UI layers use.
-- `src/kimi_cli/soul/agent.py`: `Runtime` (config, session, builtins), `Agent` (system prompt +
+- `src/consilium/soul/agent.py`: `Runtime` (config, session, builtins), `Agent` (system prompt +
   toolset), and `LaborMarket` (builtin subagent type registry).
-- `src/kimi_cli/soul/kimisoul.py`: `KimiSoul.run(...)` is the loop boundary; it emits Wire
+- `src/consilium/soul/kimisoul.py`: `KimiSoul.run(...)` is the loop boundary; it emits Wire
   messages and executes tools via `KimiToolset`.
-- `src/kimi_cli/soul/context.py`: conversation history + checkpoints; used by DMail for
+- `src/consilium/soul/context.py`: conversation history + checkpoints; used by DMail for
   checkpointed replies.
-- `src/kimi_cli/soul/toolset.py`: load tools, run tool calls, bridge to MCP tools.
-- `src/kimi_cli/think/`: mutable-history research mode (ThinkSoul, history, storage, push).
-- `src/kimi_cli/do/`: immutable execution mode (DoSession, git snapshot, journal, diff computer,
+- `src/consilium/soul/toolset.py`: load tools, run tool calls, bridge to MCP tools.
+- `src/consilium/think/`: mutable-history research mode (ThinkSoul, history, storage, push).
+- `src/consilium/do/`: immutable execution mode (DoSession, git snapshot, journal, diff computer,
   plan review).
-- `src/kimi_cli/plan/`: plan parsing, validation, audit, dispatch, handover, docs index.
-- `src/kimi_cli/subagents/`: subagent runner integration with budget tracking.
-- `src/kimi_cli/ui/*`: shell/print/acp frontends; they consume `Wire` messages.
-- `src/kimi_cli/wire/*`: event types and transport used between soul and UI.
+- `src/consilium/plan/`: plan parsing, validation, audit, dispatch, handover, docs index.
+- `src/consilium/subagents/`: subagent runner integration with budget tracking.
+- `src/consilium/ui/*`: shell/print/acp frontends; they consume `Wire` messages.
+- `src/consilium/wire/*`: event types and transport used between soul and UI.
 
 ## Repo map
 
-- `src/kimi_cli/agents/`: built-in agent YAML specs and prompts
-- `src/kimi_cli/prompts/`: shared prompt templates (secondary prompts, compaction, etc.)
-- `src/kimi_cli/prompts/system/`: decomposed main system prompt sections (identity, coding,
+- `src/consilium/agents/`: built-in agent YAML specs and prompts
+- `src/consilium/prompts/`: shared prompt templates (secondary prompts, compaction, etc.)
+- `src/consilium/prompts/system/`: decomposed main system prompt sections (identity, coding,
   research, working environment, project info, skills, ultimate reminders)
-- `src/kimi_cli/soul/`: core runtime/loop, context, compaction, approvals
-- `src/kimi_cli/think/`: Think mode — mutable history, checkpoints, compaction, Python exec
-- `src/kimi_cli/do/`: Do mode — git snapshotting, change journal, diff computer, plan review
-- `src/kimi_cli/plan/`: plan parser, validator, audit, dispatch, handover, docs index
-- `src/kimi_cli/subagents/`: subagent runner + budget tracker
-- `src/kimi_cli/tools/`: built-in tools
-- `src/kimi_cli/ui/`: UI frontends (shell/print/acp/wire)
-- `src/kimi_cli/acp/`: ACP server components
+- `src/consilium/soul/`: core runtime/loop, context, compaction, approvals
+- `src/consilium/think/`: Think mode — mutable history, checkpoints, compaction, Python exec
+- `src/consilium/do/`: Do mode — git snapshotting, change journal, diff computer, plan review
+- `src/consilium/plan/`: plan parser, validator, audit, dispatch, handover, docs index
+- `src/consilium/subagents/`: subagent runner + budget tracker
+- `src/consilium/tools/`: built-in tools
+- `src/consilium/ui/`: UI frontends (shell/print/acp/wire)
+- `src/consilium/acp/`: ACP server components
 - `packages/kosong/`, `packages/kaos/`: workspace deps
   + Kosong is an LLM abstraction layer designed for modern AI agent applications.
     It unifies message structures, asynchronous tool orchestration, and pluggable
@@ -124,22 +124,22 @@ shell UI, ACP server mode for IDE integrations, and MCP tool loading.
     to interact with operating systems. File operations and command executions via KAOS
     can be easily switched between local environment and remote systems over SSH.
 - `tests/`, `tests_ai/`: test suites
-- `klips`: Kimi Code CLI Improvement Proposals
+- `klips`: Consilium Improvement Proposals
 
 ## Prompt extensibility (fork-specific)
 
 This fork extracts all hardcoded prompts into `.md` files:
 
-- **Main system prompt**: `src/kimi_cli/prompts/system/*.md` — 8 sections assembled by
-  `src/kimi_cli/prompts/system/__init__.py::assemble_system_prompt()`.
-- **Secondary prompts**: `src/kimi_cli/prompts/*.md` — compaction, plan mode, AFK, side questions,
+- **Main system prompt**: `src/consilium/prompts/system/*.md` — 8 sections assembled by
+  `src/consilium/prompts/system/__init__.py::assemble_system_prompt()`.
+- **Secondary prompts**: `src/consilium/prompts/*.md` — compaction, plan mode, AFK, side questions,
   slash command messages.
-- **Subagent prompts**: `src/kimi_cli/agents/default/*_role.md` and `*_when_to_use.md` — loaded
+- **Subagent prompts**: `src/consilium/agents/default/*_role.md` and `*_when_to_use.md` — loaded
   via `AgentSpec.system_prompt_args_files` and `AgentSpec.when_to_use_file`.
 
 When modifying prompt content, edit the `.md` files directly — no Python changes needed for
 wording adjustments. When adding new dynamic injection points or prompt hooks, you may need to
-update the loader code in `src/kimi_cli/soul/agent.py` or `src/kimi_cli/soul/dynamic_injections/`.
+update the loader code in `src/consilium/soul/agent.py` or `src/consilium/soul/dynamic_injections/`.
 
 See `PROMPT_EXTENSIBILITY.md` for the full user-facing customization guide.
 
@@ -148,7 +148,7 @@ See `PROMPT_EXTENSIBILITY.md` for the full user-facing customization guide.
 - Python >=3.12 (ty config uses 3.14); line length 100.
 - Ruff handles lint + format (rules: E, F, UP, B, SIM, I); pyright + ty for type checks.
 - Tests use pytest + pytest-asyncio; files are `tests/test_*.py`.
-- CLI entry points: `kimi` / `kimi-cli` -> `src/kimi_cli/__main__.py` (routes to `src/kimi_cli/cli/__init__.py`).
+- CLI entry points: `consilium` / `consilium` -> `src/consilium/__main__.py` (routes to `src/consilium/cli/__init__.py`).
 - User config: `~/.kimi/config.toml`; logs, sessions, and MCP config live in `~/.kimi/`.
 
 ## Git commit messages

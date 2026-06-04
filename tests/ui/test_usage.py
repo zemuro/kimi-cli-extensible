@@ -4,7 +4,7 @@ import pytest
 from rich.console import Console
 from rich.segment import Segment
 
-from kimi_cli.ui.shell.usage import UsageRow, _format_row, _ratio_color, _remaining_quota, _to_int
+from consilium.ui.shell.usage import UsageRow, _format_row, _ratio_color, _remaining_quota, _to_int
 
 
 def _render_segments(row: UsageRow, label_width: int = 6) -> list[Segment]:

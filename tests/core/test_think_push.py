@@ -3,20 +3,19 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
-from kimi_cli.think.models import ThinkMessage, ThinkSession
-from kimi_cli.think.push import OUTBOX_DIR, clear_outbox, export_to_outbox, load_outbox
-from kimi_cli.think.slash import slash_push_to_do
+from consilium.think.models import ThinkMessage, ThinkSession
+from consilium.think.push import clear_outbox, export_to_outbox, load_outbox
+from consilium.think.slash import slash_push_to_do
 
 
 class TestExportToOutbox:
     def test_export_creates_json_file(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr("kimi_cli.think.push.OUTBOX_DIR", tmp_path)
+        monkeypatch.setattr("consilium.think.push.OUTBOX_DIR", tmp_path)
 
         session = ThinkSession(id="sess-123")
         session.messages = [
@@ -40,7 +39,7 @@ class TestExportToOutbox:
         assert data["messages"][1]["content"] == "hi there"
 
     def test_load_outbox_returns_messages(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr("kimi_cli.think.push.OUTBOX_DIR", tmp_path)
+        monkeypatch.setattr("consilium.think.push.OUTBOX_DIR", tmp_path)
 
         payload = {
             "source_session_id": "sess-456",
@@ -58,11 +57,11 @@ class TestExportToOutbox:
         assert msgs[0]["content"] == "q"
 
     def test_load_outbox_missing_returns_none(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr("kimi_cli.think.push.OUTBOX_DIR", tmp_path)
+        monkeypatch.setattr("consilium.think.push.OUTBOX_DIR", tmp_path)
         assert load_outbox("nonexistent") is None
 
     def test_clear_outbox_removes_file(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr("kimi_cli.think.push.OUTBOX_DIR", tmp_path)
+        monkeypatch.setattr("consilium.think.push.OUTBOX_DIR", tmp_path)
 
         out_path = tmp_path / "sess-789.json"
         out_path.write_text("{}", encoding="utf-8")
@@ -71,18 +70,56 @@ class TestExportToOutbox:
 
 
 class TestSlashPushToDo:
-    def test_slash_push_to_do_exports(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr("kimi_cli.think.push.OUTBOX_DIR", tmp_path)
+    def test_slash_push_to_do_dispatches_plan(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        import os
 
-        session = ThinkSession(id="sess-abc")
-        session.messages = [ThinkMessage(role="user", content="hello")]
-        history = MagicMock()
-        history.session = session
+        # Create a plan directory in tmp_path
+        plan_dir = tmp_path / "plan"
+        plan_dir.mkdir()
+        index = plan_dir / "index.md"
+        index.write_text(
+            "---\nplan_id: test-plan\n---\n\n"
+            "# Plan: test-plan\n\n"
+            "## Phase Status Table\n"
+            "| Phase | Title | Status | Locked |\n"
+            "|-------|-------|--------|--------|\n"
+            "| [phase-01](phase-01.md) | Setup | pending | ❌ |\n",
+            encoding="utf-8",
+        )
+        (plan_dir / "phase-01.md").write_text(
+            "---\nphase_id: phase-01\ntitle: Setup\nstatus: pending\n---\n",
+            encoding="utf-8",
+        )
 
-        result = slash_push_to_do(history, session, "")
-        assert "Exported 1 message(s)" in result
-        assert "sess-abc" in result
-        assert (tmp_path / "sess-abc.json").exists()
+        orig_cwd = os.getcwd()
+        os.chdir(tmp_path)
+        try:
+            session = ThinkSession(id="sess-abc")
+            session.messages = [ThinkMessage(role="user", content="hello")]
+            history = MagicMock()
+            history.session = session
+
+            result = slash_push_to_do(history, session, "")
+            assert "Dispatched plan to Do mode" in result
+            assert "phase-01" in result
+            assert "--plan-file" in result
+        finally:
+            os.chdir(orig_cwd)
+
+    def test_slash_push_to_do_no_plan_error(self, tmp_path: Path) -> None:
+        import os
+
+        orig_cwd = os.getcwd()
+        os.chdir(tmp_path)
+        try:
+            session = ThinkSession(id="sess-abc")
+            history = MagicMock()
+            history.session = session
+
+            result = slash_push_to_do(history, session, "")
+            assert "No plan found" in result
+        finally:
+            os.chdir(orig_cwd)
 
 
 class TestSeedFromThink:
@@ -90,11 +127,12 @@ class TestSeedFromThink:
     async def test_seed_from_think_injects_messages(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        from kimi_cli.soul.context import Context
         from kosong.message import Message, TextPart
 
+        from consilium.soul.context import Context
+
         outbox = tmp_path / "outbox"
-        monkeypatch.setattr("kimi_cli.think.push.OUTBOX_DIR", outbox)
+        monkeypatch.setattr("consilium.think.push.OUTBOX_DIR", outbox)
         outbox.mkdir(parents=True, exist_ok=True)
 
         payload = {
@@ -114,7 +152,7 @@ class TestSeedFromThink:
         await context.write_system_prompt("You are a helpful assistant.")
 
         # Simulate what app.py does
-        from kimi_cli.think.push import load_outbox
+        from consilium.think.push import load_outbox
         seed_messages = load_outbox("seed-sess")
         assert seed_messages is not None
         for msg in seed_messages:
@@ -128,3 +166,50 @@ class TestSeedFromThink:
         assert context._history[0].content[0].text == "hello from think"
         assert context._history[1].role == "assistant"
         assert context._history[1].content[0].text == "hello from do"
+
+    @pytest.mark.asyncio
+    async def test_import_from_session_reads_context_jsonl(
+        self, tmp_path: Path
+    ) -> None:
+        from consilium.soul.context import Context
+        from kosong.message import Message
+
+        # Create a fake Think session context file
+        think_ctx_file = tmp_path / "think_context.jsonl"
+        think_ctx_file.write_text(
+            json.dumps({"role": "user", "content": "hello think"}) + "\n"
+            + json.dumps({"role": "assistant", "content": "hi there"}) + "\n"
+            + json.dumps({"role": "user", "content": "plan this"}) + "\n",
+            encoding="utf-8",
+        )
+
+        do_ctx_file = tmp_path / "do_context.jsonl"
+        do_ctx_file.write_text("", encoding="utf-8")
+        do_ctx = Context(do_ctx_file)
+        await do_ctx.restore()
+
+        imported = await do_ctx.import_from_session(think_ctx_file, max_messages=100)
+        assert imported == 3
+        assert len(do_ctx.history) == 3
+        assert do_ctx.history[0].role == "user"
+        assert do_ctx.history[1].role == "assistant"
+        assert do_ctx.history[2].role == "user"
+
+    @pytest.mark.asyncio
+    async def test_import_from_session_respects_max_messages(
+        self, tmp_path: Path
+    ) -> None:
+        from consilium.soul.context import Context
+
+        think_ctx_file = tmp_path / "think_context.jsonl"
+        lines = [json.dumps({"role": "user", "content": f"msg {i}"}) for i in range(150)]
+        think_ctx_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        do_ctx_file = tmp_path / "do_context.jsonl"
+        do_ctx_file.write_text("", encoding="utf-8")
+        do_ctx = Context(do_ctx_file)
+        await do_ctx.restore()
+
+        imported = await do_ctx.import_from_session(think_ctx_file, max_messages=50)
+        assert imported == 50
+        assert len(do_ctx.history) == 50

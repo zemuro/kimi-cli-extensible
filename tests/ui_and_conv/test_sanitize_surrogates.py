@@ -2,7 +2,7 @@
 
 import pytest
 
-from kimi_cli.ui.shell.prompt import sanitize_surrogates
+from consilium.ui.shell.prompt import sanitize_surrogates
 
 
 class TestSanitizeSurrogates:

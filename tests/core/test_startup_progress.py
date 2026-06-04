@@ -5,10 +5,10 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-import kimi_cli.app as app_module
-import kimi_cli.ui.shell.startup as startup_module
-from kimi_cli.app import KimiCLI
-from kimi_cli.ui.shell.startup import ShellStartupProgress
+import consilium.app as app_module
+import consilium.ui.shell.startup as startup_module
+from consilium.app import KimiCLI
+from consilium.ui.shell.startup import ShellStartupProgress
 
 
 def test_shell_startup_progress_starts_once_and_updates_messages(monkeypatch) -> None:
@@ -62,7 +62,7 @@ def test_shell_startup_progress_is_noop_when_disabled(monkeypatch) -> None:
 
 
 @pytest.mark.asyncio
-async def test_kimi_cli_create_reports_startup_phases(session, config, monkeypatch) -> None:
+async def test_consilium_create_reports_startup_phases(session, config, monkeypatch) -> None:
     phases: list[str] = []
     fake_runtime = SimpleNamespace(
         session=session,
@@ -117,7 +117,7 @@ async def test_kimi_cli_create_reports_startup_phases(session, config, monkeypat
 
 
 @pytest.mark.asyncio
-async def test_kimi_cli_create_cleans_stale_running_foreground_subagents(
+async def test_consilium_create_cleans_stale_running_foreground_subagents(
     session, config, monkeypatch
 ) -> None:
     update_instance = Mock()

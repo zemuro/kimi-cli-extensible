@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from kimi_cli.soul.agent import Runtime
-from kimi_cli.tools.todo import Params, SetTodoList, Todo
+from consilium.soul.agent import Runtime
+from consilium.tools.todo import Params, SetTodoList, Todo
 
 
 @pytest.fixture
@@ -91,7 +91,7 @@ class TestSetTodoListOutputNotEmpty:
         self, set_todo_list_tool: SetTodoList, runtime: Runtime
     ):
         """Write mode should persist todos to disk via SessionState."""
-        from kimi_cli.session_state import load_session_state
+        from consilium.session_state import load_session_state
 
         params = Params(
             todos=[
@@ -111,7 +111,7 @@ class TestSetTodoListOutputNotEmpty:
 
     async def test_write_mode_display_block(self, set_todo_list_tool: SetTodoList):
         """Write mode should still produce TodoDisplayBlock for UI rendering."""
-        from kimi_cli.tools.display import TodoDisplayBlock
+        from consilium.tools.display import TodoDisplayBlock
 
         params = Params(todos=[Todo(title="UI task", status="pending")])
         result = await set_todo_list_tool(params)

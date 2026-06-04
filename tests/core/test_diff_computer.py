@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from kimi_cli.do.diff_computer import compute_unified_diff
+from consilium.do.diff_computer import compute_unified_diff
 
 
 def test_diff_computer_unified_diff() -> None:

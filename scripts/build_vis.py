@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 VIS_DIR = ROOT / "vis"
 DIST_DIR = VIS_DIR / "dist"
 NODE_MODULES = VIS_DIR / "node_modules"
-STATIC_DIR = ROOT / "src" / "kimi_cli" / "vis" / "static"
+STATIC_DIR = ROOT / "src" / "consilium" / "vis" / "static"
 
 
 REQUIRED_VIS_TYPE_FILES = (

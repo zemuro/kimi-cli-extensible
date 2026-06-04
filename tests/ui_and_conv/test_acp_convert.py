@@ -1,7 +1,7 @@
 import acp
 
-from kimi_cli.acp.convert import acp_blocks_to_content_parts, tool_result_to_acp_content
-from kimi_cli.wire.types import DiffDisplayBlock, TextPart, ToolReturnValue
+from consilium.acp.convert import acp_blocks_to_content_parts, tool_result_to_acp_content
+from consilium.wire.types import DiffDisplayBlock, TextPart, ToolReturnValue
 
 
 def test_tool_result_to_acp_content_handles_diff_display():

@@ -4,9 +4,9 @@ from inline_snapshot import snapshot
 from kosong.chat_provider import TokenUsage
 from kosong.message import AudioURLPart, ImageURLPart, Message, VideoURLPart
 
-import kimi_cli.prompts as prompts
-from kimi_cli.soul.compaction import CompactionResult, SimpleCompaction, should_auto_compact
-from kimi_cli.wire.types import TextPart, ThinkPart
+import consilium.prompts as prompts
+from consilium.soul.compaction import CompactionResult, SimpleCompaction, should_auto_compact
+from consilium.wire.types import TextPart, ThinkPart
 
 
 def test_prepare_returns_original_when_not_enough_messages():

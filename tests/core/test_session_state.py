@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from kimi_cli.session_state import (
+from consilium.session_state import (
     ApprovalStateData,
     SessionState,
     load_session_state,
@@ -360,7 +360,7 @@ class TestSessionState:
 
 class TestApprovalStateCallback:
     def test_notify_change_called_on_set_yolo(self):
-        from kimi_cli.soul.approval import Approval, ApprovalState
+        from consilium.soul.approval import Approval, ApprovalState
 
         changes: list[bool] = []
 
@@ -382,9 +382,9 @@ class TestApprovalStateCallback:
     async def test_notify_change_called_on_approve_for_session(self):
         import asyncio
 
-        from kimi_cli.soul.approval import Approval, ApprovalState
-        from kimi_cli.soul.toolset import current_tool_call
-        from kimi_cli.wire.types import ToolCall
+        from consilium.soul.approval import Approval, ApprovalState
+        from consilium.soul.toolset import current_tool_call
+        from consilium.wire.types import ToolCall
 
         changes: list[bool] = []
 
@@ -419,9 +419,9 @@ class TestApprovalStateCallback:
     async def test_approve_for_session_resolves_already_pending_same_action(self):
         import asyncio
 
-        from kimi_cli.soul.approval import Approval, ApprovalState
-        from kimi_cli.soul.toolset import current_tool_call
-        from kimi_cli.wire.types import ToolCall
+        from consilium.soul.approval import Approval, ApprovalState
+        from consilium.soul.toolset import current_tool_call
+        from consilium.wire.types import ToolCall
 
         state = ApprovalState()
         approval = Approval(state=state)
@@ -451,7 +451,7 @@ class TestApprovalStateCallback:
         assert approval.runtime.list_pending() == []
 
     def test_no_callback_does_not_raise(self):
-        from kimi_cli.soul.approval import Approval, ApprovalState
+        from consilium.soul.approval import Approval, ApprovalState
 
         state = ApprovalState()  # no on_change
         approval = Approval(state=state)

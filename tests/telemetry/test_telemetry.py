@@ -11,10 +11,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-import kimi_cli.telemetry as telemetry_mod
-from kimi_cli.telemetry import attach_sink, disable, set_context, track
-from kimi_cli.telemetry.sink import EventSink
-from kimi_cli.telemetry.transport import AsyncTransport
+import consilium.telemetry as telemetry_mod
+from consilium.telemetry import attach_sink, disable, set_context, track
+from consilium.telemetry.sink import EventSink
+from consilium.telemetry.transport import AsyncTransport
 
 
 @pytest.fixture(autouse=True)
@@ -235,7 +235,7 @@ class TestEventSink:
 class TestAsyncTransport:
     def test_save_to_disk(self, tmp_path: Path):
         """Events are saved as JSONL files."""
-        with patch("kimi_cli.telemetry.transport._telemetry_dir", return_value=tmp_path):
+        with patch("consilium.telemetry.transport._telemetry_dir", return_value=tmp_path):
             transport = AsyncTransport()
             events = [
                 {"event": "e1", "timestamp": 1.0},
@@ -252,7 +252,7 @@ class TestAsyncTransport:
 
     def test_save_to_disk_empty(self, tmp_path: Path):
         """No file is created for empty event list."""
-        with patch("kimi_cli.telemetry.transport._telemetry_dir", return_value=tmp_path):
+        with patch("consilium.telemetry.transport._telemetry_dir", return_value=tmp_path):
             transport = AsyncTransport()
             transport.save_to_disk([])
 
@@ -265,7 +265,7 @@ class TestAsyncTransport:
         transport = AsyncTransport(endpoint="https://mock.test/events", retry_backoffs_s=())
 
         # Make _send_http raise a transient error
-        from kimi_cli.telemetry.transport import _TransientError
+        from consilium.telemetry.transport import _TransientError
 
         with (
             patch.object(
@@ -278,19 +278,19 @@ class TestAsyncTransport:
 
     def test_default_retry_schedule(self):
         """Lock down the production backoff schedule so it isn't silently changed."""
-        from kimi_cli.telemetry.transport import RETRY_BACKOFFS_S
+        from consilium.telemetry.transport import RETRY_BACKOFFS_S
 
         assert RETRY_BACKOFFS_S == (1.0, 4.0, 16.0)
 
     def test_server_prefix_constant(self):
         """Lock down the production server prefix so it isn't silently changed."""
-        from kimi_cli.telemetry.transport import SERVER_EVENT_PREFIX
+        from consilium.telemetry.transport import SERVER_EVENT_PREFIX
 
         assert SERVER_EVENT_PREFIX == "kfc_"
 
     def test_apply_server_prefix_one_does_not_mutate_input(self):
         """_apply_server_prefix_one builds a new dict with prefix, input untouched."""
-        from kimi_cli.telemetry.transport import _apply_server_prefix_one
+        from consilium.telemetry.transport import _apply_server_prefix_one
 
         event = {"event": "started", "timestamp": 1.0, "properties": {"a": 1}}
         snapshot = dict(event)
@@ -302,7 +302,7 @@ class TestAsyncTransport:
 
     def test_apply_server_prefix_one_idempotent(self):
         """Events already carrying the prefix pass through unchanged (no copy)."""
-        from kimi_cli.telemetry.transport import _apply_server_prefix_one
+        from consilium.telemetry.transport import _apply_server_prefix_one
 
         event = {"event": "kfc_already", "timestamp": 2.0, "properties": {}}
         out = _apply_server_prefix_one(event)
@@ -311,7 +311,7 @@ class TestAsyncTransport:
 
     def test_apply_server_prefix_one_passthrough_edge_cases(self):
         """Missing / empty / non-string event values pass through unchanged."""
-        from kimi_cli.telemetry.transport import _apply_server_prefix_one
+        from consilium.telemetry.transport import _apply_server_prefix_one
 
         missing = {"timestamp": 1.0}
         empty = {"event": "", "timestamp": 2.0}
@@ -377,7 +377,7 @@ class TestAsyncTransport:
     async def test_disk_fallback_keeps_bare_names(self):
         """Transient failure saves events to disk with the bare (unprefixed) name."""
         transport = AsyncTransport(endpoint="https://mock.test/events", retry_backoffs_s=())
-        from kimi_cli.telemetry.transport import _TransientError
+        from consilium.telemetry.transport import _TransientError
 
         events_in = [{"event": "exit", "timestamp": 1.0, "properties": {}}]
         with (
@@ -398,7 +398,7 @@ class TestAsyncTransport:
             # 3 attempts total: initial + 2 retries (zero sleep for test speed)
             retry_backoffs_s=(0.0, 0.0),
         )
-        from kimi_cli.telemetry.transport import _TransientError
+        from consilium.telemetry.transport import _TransientError
 
         send_mock = AsyncMock(side_effect=_TransientError("503"))
         with (
@@ -416,7 +416,7 @@ class TestAsyncTransport:
             endpoint="https://mock.test/events",
             retry_backoffs_s=(0.0, 0.0),
         )
-        from kimi_cli.telemetry.transport import _TransientError
+        from consilium.telemetry.transport import _TransientError
 
         # Fail once, succeed on second attempt
         send_mock = AsyncMock(side_effect=[_TransientError("503"), None])
@@ -436,7 +436,7 @@ class TestAsyncTransport:
             # Non-zero backoff so there's a real sleep point to cancel
             retry_backoffs_s=(60.0,),
         )
-        from kimi_cli.telemetry.transport import _TransientError
+        from consilium.telemetry.transport import _TransientError
 
         # _send_http always raises _TransientError; first attempt fails,
         # then asyncio.sleep(60) gives us a window to cancel the task.
@@ -483,7 +483,7 @@ class TestAsyncTransport:
         transport = AsyncTransport(device_id="dev-retry", endpoint="https://mock.test/events")
 
         with (
-            patch("kimi_cli.telemetry.transport._telemetry_dir", return_value=tmp_path),
+            patch("consilium.telemetry.transport._telemetry_dir", return_value=tmp_path),
             patch.object(transport, "_send_http", new_callable=AsyncMock) as mock_send,
         ):
             await transport.retry_disk_events()
@@ -509,7 +509,7 @@ class TestAsyncTransport:
         transport = AsyncTransport(endpoint="https://mock.test/events")
 
         with (
-            patch("kimi_cli.telemetry.transport._telemetry_dir", return_value=tmp_path),
+            patch("consilium.telemetry.transport._telemetry_dir", return_value=tmp_path),
             patch.object(transport, "_send_http", new_callable=AsyncMock) as mock_send,
         ):
             await transport.retry_disk_events()
@@ -525,7 +525,7 @@ class TestAsyncTransport:
         transport = AsyncTransport(endpoint="https://mock.test/events")
 
         with (
-            patch("kimi_cli.telemetry.transport._telemetry_dir", return_value=tmp_path),
+            patch("consilium.telemetry.transport._telemetry_dir", return_value=tmp_path),
             patch.object(
                 transport,
                 "_send_http",
@@ -546,7 +546,7 @@ class TestAsyncTransport:
         transport = AsyncTransport(endpoint="https://mock.test/events")
 
         with (
-            patch("kimi_cli.telemetry.transport._telemetry_dir", return_value=tmp_path),
+            patch("consilium.telemetry.transport._telemetry_dir", return_value=tmp_path),
             patch.object(transport, "_send_http", new_callable=AsyncMock) as mock_send,
         ):
             await transport.retry_disk_events()
@@ -576,8 +576,8 @@ class TestAsyncTransport:
         mock_session.__aexit__ = AsyncMock(return_value=False)
 
         with (
-            patch("kimi_cli.telemetry.transport._telemetry_dir", return_value=tmp_path),
-            patch("kimi_cli.utils.aiohttp.new_client_session", return_value=mock_session),
+            patch("consilium.telemetry.transport._telemetry_dir", return_value=tmp_path),
+            patch("consilium.utils.aiohttp.new_client_session", return_value=mock_session),
         ):
             await transport.send([{"event": "test", "timestamp": 1.0}])
 
@@ -610,7 +610,7 @@ class TestAsyncTransport:
         mock_session.__aexit__ = AsyncMock(return_value=False)
 
         with (
-            patch("kimi_cli.utils.aiohttp.new_client_session", return_value=mock_session),
+            patch("consilium.utils.aiohttp.new_client_session", return_value=mock_session),
             patch.object(transport, "save_to_disk") as mock_save,
         ):
             await transport.send([{"event": "test", "timestamp": 1.0}])
@@ -640,7 +640,7 @@ class TestAsyncTransport:
         mock_session.__aexit__ = AsyncMock(return_value=False)
 
         with (
-            patch("kimi_cli.utils.aiohttp.new_client_session", return_value=mock_session),
+            patch("consilium.utils.aiohttp.new_client_session", return_value=mock_session),
             patch.object(transport, "save_to_disk") as mock_save,
         ):
             await transport.send([{"event": "test", "timestamp": 1.0}])
@@ -671,8 +671,8 @@ class TestAsyncTransport:
         mock_session.__aexit__ = AsyncMock(return_value=False)
 
         with (
-            patch("kimi_cli.utils.aiohttp.new_client_session", return_value=mock_session),
-            patch("kimi_cli.telemetry.transport._telemetry_dir", return_value=tmp_path),
+            patch("consilium.utils.aiohttp.new_client_session", return_value=mock_session),
+            patch("consilium.telemetry.transport._telemetry_dir", return_value=tmp_path),
         ):
             await transport.send([{"event": "test", "timestamp": 1.0}])
 
@@ -702,8 +702,8 @@ class TestAsyncTransport:
         mock_session.__aexit__ = AsyncMock(return_value=False)
 
         with (
-            patch("kimi_cli.telemetry.transport._telemetry_dir", return_value=tmp_path),
-            patch("kimi_cli.utils.aiohttp.new_client_session", return_value=mock_session),
+            patch("consilium.telemetry.transport._telemetry_dir", return_value=tmp_path),
+            patch("consilium.utils.aiohttp.new_client_session", return_value=mock_session),
         ):
             await transport.send([{"event": "test", "timestamp": 1.0}])
 
@@ -729,8 +729,8 @@ class TestAsyncTransport:
         mock_session.__aexit__ = AsyncMock(return_value=False)
 
         with (
-            patch("kimi_cli.telemetry.transport._telemetry_dir", return_value=tmp_path),
-            patch("kimi_cli.utils.aiohttp.new_client_session", return_value=mock_session),
+            patch("consilium.telemetry.transport._telemetry_dir", return_value=tmp_path),
+            patch("consilium.utils.aiohttp.new_client_session", return_value=mock_session),
         ):
             await transport.send([{"event": "test", "timestamp": 1.0}])
 
@@ -748,7 +748,7 @@ class TestAsyncTransport:
                 new_callable=AsyncMock,
                 side_effect=RuntimeError("unexpected"),
             ),
-            patch("kimi_cli.telemetry.transport._telemetry_dir", return_value=tmp_path),
+            patch("consilium.telemetry.transport._telemetry_dir", return_value=tmp_path),
         ):
             await transport.send([{"event": "test", "timestamp": 1.0}])
 
@@ -762,23 +762,23 @@ class TestPayloadAssembly:
 
     def test_user_id_prefix_constant(self):
         """Lock down the production user_id prefix so it isn't silently changed."""
-        from kimi_cli.telemetry.transport import USER_ID_PREFIX
+        from consilium.telemetry.transport import USER_ID_PREFIX
 
         assert USER_ID_PREFIX == "kfc_device_id_"
 
     def test_build_user_id(self):
-        from kimi_cli.telemetry.transport import _build_user_id
+        from consilium.telemetry.transport import _build_user_id
 
         assert _build_user_id("abc123") == "kfc_device_id_abc123"
 
     def test_build_user_id_empty_device_id(self):
         """Empty device_id still returns the prefix (no crash)."""
-        from kimi_cli.telemetry.transport import _build_user_id
+        from consilium.telemetry.transport import _build_user_id
 
         assert _build_user_id("") == "kfc_device_id_"
 
     def test_flatten_event_properties_prefix(self):
-        from kimi_cli.telemetry.transport import _flatten_event
+        from consilium.telemetry.transport import _flatten_event
 
         out = _flatten_event(
             {
@@ -792,7 +792,7 @@ class TestPayloadAssembly:
         assert "properties" not in out
 
     def test_flatten_event_context_prefix(self):
-        from kimi_cli.telemetry.transport import _flatten_event
+        from consilium.telemetry.transport import _flatten_event
 
         out = _flatten_event(
             {
@@ -808,7 +808,7 @@ class TestPayloadAssembly:
 
     def test_flatten_event_preserves_top_level(self):
         """event_id / event / timestamp / device_id / session_id pass through."""
-        from kimi_cli.telemetry.transport import _flatten_event
+        from consilium.telemetry.transport import _flatten_event
 
         event = {
             "event_id": "eid",
@@ -827,7 +827,7 @@ class TestPayloadAssembly:
         assert out["session_id"] == "s"
 
     def test_flatten_event_does_not_mutate_input(self):
-        from kimi_cli.telemetry.transport import _flatten_event
+        from consilium.telemetry.transport import _flatten_event
 
         event = {
             "event": "tool_call",
@@ -845,14 +845,14 @@ class TestPayloadAssembly:
         assert event == snapshot
 
     def test_flatten_event_allows_none_values(self):
-        from kimi_cli.telemetry.transport import _flatten_event
+        from consilium.telemetry.transport import _flatten_event
 
         out = _flatten_event({"event": "x", "timestamp": 1.0, "properties": {"reason": None}})
         assert out["property_reason"] is None
 
     def test_flatten_event_empty_properties_and_context(self):
         """Empty or missing sub-dicts produce no property_/context_ keys."""
-        from kimi_cli.telemetry.transport import _flatten_event
+        from consilium.telemetry.transport import _flatten_event
 
         out = _flatten_event({"event": "x", "timestamp": 1.0, "properties": {}, "context": {}})
         assert all(not k.startswith("property_") for k in out)
@@ -864,7 +864,7 @@ class TestPayloadAssembly:
         assert all(not k.startswith("context_") for k in out2)
 
     def test_flatten_event_raises_on_nested_dict_in_properties(self):
-        from kimi_cli.telemetry.transport import _flatten_event
+        from consilium.telemetry.transport import _flatten_event
 
         with pytest.raises(TypeError, match="property.nested"):
             _flatten_event(
@@ -876,13 +876,13 @@ class TestPayloadAssembly:
             )
 
     def test_flatten_event_raises_on_list_in_properties(self):
-        from kimi_cli.telemetry.transport import _flatten_event
+        from consilium.telemetry.transport import _flatten_event
 
         with pytest.raises(TypeError, match="property.items"):
             _flatten_event({"event": "x", "timestamp": 1.0, "properties": {"items": [1, 2, 3]}})
 
     def test_flatten_event_raises_on_nested_dict_in_context(self):
-        from kimi_cli.telemetry.transport import _flatten_event
+        from consilium.telemetry.transport import _flatten_event
 
         with pytest.raises(TypeError, match="context.meta"):
             _flatten_event(
@@ -894,7 +894,7 @@ class TestPayloadAssembly:
             )
 
     def test_build_payload_user_id_at_top(self):
-        from kimi_cli.telemetry.transport import _build_payload
+        from consilium.telemetry.transport import _build_payload
 
         payload = _build_payload(
             [{"event": "started", "timestamp": 1.0, "properties": {}}],
@@ -904,7 +904,7 @@ class TestPayloadAssembly:
         assert "events" in payload
 
     def test_build_payload_events_are_flat_and_prefixed(self):
-        from kimi_cli.telemetry.transport import _build_payload
+        from consilium.telemetry.transport import _build_payload
 
         payload = _build_payload(
             [
@@ -933,7 +933,7 @@ class TestPayloadAssembly:
         assert "context" not in event
 
     def test_build_payload_does_not_mutate_input(self):
-        from kimi_cli.telemetry.transport import _build_payload
+        from consilium.telemetry.transport import _build_payload
 
         events = [{"event": "started", "timestamp": 1.0, "properties": {"x": 1}}]
         _build_payload(events, device_id="dev-1")
@@ -959,7 +959,7 @@ class TestPayloadAssembly:
 
         sent = AsyncMock()
         with (
-            patch("kimi_cli.telemetry.transport._telemetry_dir", return_value=tmp_path),
+            patch("consilium.telemetry.transport._telemetry_dir", return_value=tmp_path),
             patch.object(transport, "_send_http", new=sent),
         ):
             # Must not raise — schema error is caught and events dropped.
@@ -973,7 +973,7 @@ class TestPayloadAssembly:
     @pytest.mark.asyncio
     async def test_send_persists_nested_shape_on_failure(self, tmp_path: Path):
         """save_to_disk must write the original nested events, not the flat payload."""
-        from kimi_cli.telemetry.transport import _TransientError
+        from consilium.telemetry.transport import _TransientError
 
         transport = AsyncTransport(
             device_id="dev-disk",
@@ -990,7 +990,7 @@ class TestPayloadAssembly:
         ]
 
         with (
-            patch("kimi_cli.telemetry.transport._telemetry_dir", return_value=tmp_path),
+            patch("consilium.telemetry.transport._telemetry_dir", return_value=tmp_path),
             patch.object(
                 transport,
                 "_send_http",

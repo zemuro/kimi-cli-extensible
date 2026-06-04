@@ -6,7 +6,7 @@ import asyncio
 
 import pytest
 
-from kimi_cli.utils.aiohttp import new_client_session
+from consilium.utils.aiohttp import new_client_session
 
 
 async def test_default_session_has_timeout():

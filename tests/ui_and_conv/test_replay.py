@@ -5,16 +5,16 @@ from pathlib import Path
 import pytest
 from kosong.message import Message
 
-import kimi_cli.ui.shell.replay as replay_module
-from kimi_cli.soul.message import system_reminder
-from kimi_cli.ui.shell.replay import (
+import consilium.ui.shell.replay as replay_module
+from consilium.soul.message import system_reminder
+from consilium.ui.shell.replay import (
     _build_replay_turns_from_history,
     _build_replay_turns_from_wire,
     replay_recent_history,
 )
-from kimi_cli.utils.aioqueue import QueueShutDown
-from kimi_cli.wire.file import WireFile
-from kimi_cli.wire.types import SteerInput, StepBegin, TextPart, TurnBegin
+from consilium.utils.aioqueue import QueueShutDown
+from consilium.wire.file import WireFile
+from consilium.wire.types import SteerInput, StepBegin, TextPart, TurnBegin
 
 
 def _make_notification_message(notification_id: str = "n1") -> Message:

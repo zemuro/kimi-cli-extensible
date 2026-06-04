@@ -13,7 +13,7 @@ from aiohttp import web
 from inline_snapshot import snapshot
 from kosong.tooling import ToolReturnValue
 
-from kimi_cli.tools.web.fetch import FetchURL, Params
+from consilium.tools.web.fetch import FetchURL, Params
 
 
 class MockServerFactory(Protocol):
@@ -221,7 +221,7 @@ This is a markdown document.
 
 async def test_fetch_url_with_service(runtime) -> None:
     """Test fetching using the moonshot_fetch service."""
-    from kimi_cli.config import Config, MoonshotFetchConfig, Services
+    from consilium.config import Config, MoonshotFetchConfig, Services
     from pydantic import SecretStr
 
     # Setup mock service response
@@ -264,8 +264,8 @@ async def test_fetch_url_with_service(runtime) -> None:
         fetch_tool = FetchURL(config=config, runtime=runtime)
 
         # Execute fetch with tool call context
-        from kimi_cli.wire.types import ToolCall
-        from kimi_cli.soul.toolset import current_tool_call
+        from consilium.wire.types import ToolCall
+        from consilium.soul.toolset import current_tool_call
 
         token = current_tool_call.set(
             ToolCall(

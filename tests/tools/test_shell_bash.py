@@ -9,8 +9,8 @@ import pytest
 from inline_snapshot import snapshot
 from kaos.path import KaosPath
 
-from kimi_cli.tools.shell import Params, Shell
-from kimi_cli.tools.utils import DEFAULT_MAX_CHARS
+from consilium.tools.shell import Params, Shell
+from consilium.tools.utils import DEFAULT_MAX_CHARS
 
 pytestmark = pytest.mark.skipif(
     platform.system() == "Windows", reason="Bash tests run only on non-Windows."
@@ -198,7 +198,7 @@ async def test_timeout_parameter_validation_bounds(shell_tool: Shell):
         Params(command="echo test", timeout=-1)
 
     # Test timeout > MAX_BACKGROUND_TIMEOUT (should fail validation)
-    from kimi_cli.tools.shell import MAX_BACKGROUND_TIMEOUT, MAX_FOREGROUND_TIMEOUT
+    from consilium.tools.shell import MAX_BACKGROUND_TIMEOUT, MAX_FOREGROUND_TIMEOUT
 
     with pytest.raises(ValueError, match="timeout"):
         Params(command="echo test", timeout=MAX_BACKGROUND_TIMEOUT + 1)
@@ -266,7 +266,7 @@ def _capture_exec(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         captured.append(args[-1])
         return _FakeProc()
 
-    monkeypatch.setattr("kimi_cli.tools.shell.kaos.exec", fake_exec)
+    monkeypatch.setattr("consilium.tools.shell.kaos.exec", fake_exec)
     return captured
 
 
@@ -278,12 +278,12 @@ def _capture_exec_kwargs(monkeypatch: pytest.MonkeyPatch) -> list[dict]:
         captured.append(kwargs)
         return _FakeProc()
 
-    monkeypatch.setattr("kimi_cli.tools.shell.kaos.exec", fake_exec)
+    monkeypatch.setattr("consilium.tools.shell.kaos.exec", fake_exec)
     return captured
 
 
 def _make_shell(approval, runtime, *, os_kind: str) -> Shell:
-    from kimi_cli.utils.environment import Environment
+    from consilium.utils.environment import Environment
 
     env = Environment(
         os_kind=os_kind,
@@ -301,7 +301,7 @@ async def test_shell_overrides_shell_env_to_bash_path(
     """The Shell tool must set $SHELL to the bash binary it is executing, so
     commands that read $SHELL see the actual shell — not whatever the parent
     process inherited (often empty or PowerShell on Windows)."""
-    from kimi_cli.utils.environment import Environment
+    from consilium.utils.environment import Environment
     from tests.conftest import tool_call_context
 
     env_spec = Environment(
@@ -387,7 +387,7 @@ async def test_cancelled_command_kills_process(shell_tool: Shell, monkeypatch: p
     async def fake_exec(*_args, **_kwargs) -> FakeProcess:
         return fake_process
 
-    monkeypatch.setattr("kimi_cli.tools.shell.kaos.exec", fake_exec)
+    monkeypatch.setattr("consilium.tools.shell.kaos.exec", fake_exec)
 
     task = asyncio.create_task(
         shell_tool._run_shell_command("sleep 10", lambda _line: None, lambda _line: None, 60)

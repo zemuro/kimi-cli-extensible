@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from kimi_cli.utils.shell_quoting import rewrite_windows_null_redirect
+from consilium.utils.shell_quoting import rewrite_windows_null_redirect
 
 
 @pytest.mark.parametrize(

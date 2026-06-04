@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from kimi_cli.utils.windows_paths import posix_path_to_windows
+from consilium.utils.windows_paths import posix_path_to_windows
 
 
 @pytest.mark.parametrize(

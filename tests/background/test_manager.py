@@ -9,14 +9,14 @@ import pytest
 from kosong.message import Message
 from kosong.tooling.empty import EmptyToolset
 
-from kimi_cli.approval_runtime import ApprovalRequestRecord, ApprovalRuntimeEvent, ApprovalSource
-from kimi_cli.background import TaskRuntime, TaskSpec
-from kimi_cli.background.agent_runner import BackgroundAgentRunner
-from kimi_cli.notifications import NotificationDelivery, NotificationEvent, NotificationView
-from kimi_cli.soul.agent import Agent as SoulAgent
-from kimi_cli.soul.context import Context
-from kimi_cli.subagents import AgentLaunchSpec, AgentTypeDefinition, ToolPolicy
-from kimi_cli.wire.types import TextPart
+from consilium.approval_runtime import ApprovalRequestRecord, ApprovalRuntimeEvent, ApprovalSource
+from consilium.background import TaskRuntime, TaskSpec
+from consilium.background.agent_runner import BackgroundAgentRunner
+from consilium.notifications import NotificationDelivery, NotificationEvent, NotificationView
+from consilium.soul.agent import Agent as SoulAgent
+from consilium.soul.context import Context
+from consilium.subagents import AgentLaunchSpec, AgentTypeDefinition, ToolPolicy
+from consilium.wire.types import TextPart
 
 
 def test_create_bash_task_persists_starting_state(runtime, monkeypatch):
@@ -152,7 +152,7 @@ async def test_create_agent_task_persists_timeout_s_on_spec(runtime, monkeypatch
     async def _noop(self):
         return None
 
-    monkeypatch.setattr("kimi_cli.background.agent_runner.BackgroundAgentRunner.run", _noop)
+    monkeypatch.setattr("consilium.background.agent_runner.BackgroundAgentRunner.run", _noop)
 
     # Explicit per-task timeout — must land on the persisted spec.
     view = manager.create_agent_task(
@@ -192,7 +192,7 @@ async def test_create_agent_task_persists_default_timeout_on_spec(runtime, monke
     async def _noop(self):
         return None
 
-    monkeypatch.setattr("kimi_cli.background.agent_runner.BackgroundAgentRunner.run", _noop)
+    monkeypatch.setattr("consilium.background.agent_runner.BackgroundAgentRunner.run", _noop)
 
     view = manager.create_agent_task(
         agent_id="a8888888",
@@ -228,7 +228,7 @@ async def test_create_agent_task_zero_timeout_s_stays_zero(runtime, monkeypatch)
     async def _noop(self):
         return None
 
-    monkeypatch.setattr("kimi_cli.background.agent_runner.BackgroundAgentRunner.run", _noop)
+    monkeypatch.setattr("consilium.background.agent_runner.BackgroundAgentRunner.run", _noop)
 
     view = manager.create_agent_task(
         agent_id="a9999999",
@@ -262,7 +262,7 @@ async def test_create_agent_task_persists_starting_state(runtime, monkeypatch):
     async def _noop(self):
         return None
 
-    monkeypatch.setattr("kimi_cli.background.agent_runner.BackgroundAgentRunner.run", _noop)
+    monkeypatch.setattr("consilium.background.agent_runner.BackgroundAgentRunner.run", _noop)
 
     view = manager.create_agent_task(
         agent_id="a1234567",
@@ -330,8 +330,8 @@ async def test_background_agent_resume_restores_system_prompt_from_context(runti
             Message(role="assistant", content=[TextPart(text="x" * 250)])
         )
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
-    monkeypatch.setattr("kimi_cli.subagents.runner.run_soul", fake_run_soul)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.runner.run_soul", fake_run_soul)
 
     view = runtime.background_tasks.create_agent_task(
         agent_id="aexisting",
@@ -393,8 +393,8 @@ async def test_background_agent_runner_records_wire_file_and_stage_markers(runti
             Message(role="assistant", content=[TextPart(text="x" * 250)])
         )
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
-    monkeypatch.setattr("kimi_cli.subagents.runner.run_soul", fake_run_soul)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.runner.run_soul", fake_run_soul)
 
     view = runtime.background_tasks.create_agent_task(
         agent_id="awiretest",
@@ -459,8 +459,8 @@ async def test_background_agent_runner_reports_rejected_tool_calls_clearly(runti
             Message(role="assistant", content=[TextPart(text="x" * 250)])
         )
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
-    monkeypatch.setattr("kimi_cli.subagents.runner.run_soul", fake_run_soul)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.runner.run_soul", fake_run_soul)
 
     view = runtime.background_tasks.create_agent_task(
         agent_id="arejectedbg",

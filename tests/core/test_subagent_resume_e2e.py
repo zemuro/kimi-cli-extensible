@@ -19,9 +19,9 @@ import pytest
 from kosong.message import Message
 from kosong.tooling.empty import EmptyToolset
 
-from kimi_cli.soul.agent import Agent as SoulAgent
-from kimi_cli.subagents import AgentLaunchSpec, AgentTypeDefinition, ToolPolicy
-from kimi_cli.wire.types import TextPart
+from consilium.soul.agent import Agent as SoulAgent
+from consilium.subagents import AgentLaunchSpec, AgentTypeDefinition, ToolPolicy
+from consilium.wire.types import TextPart
 
 
 def _extract(output: str, key: str) -> str | None:
@@ -68,8 +68,8 @@ def _patch_soul(monkeypatch, *, responses: list[str]) -> list[str]:
         call_idx += 1
         await soul.context.append_message(Message(role="assistant", content=[TextPart(text=text)]))
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
-    monkeypatch.setattr("kimi_cli.subagents.runner.run_soul", fake_run_soul)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.runner.run_soul", fake_run_soul)
     return seen_prompts
 
 

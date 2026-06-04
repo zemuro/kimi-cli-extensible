@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from kimi_cli.utils.proxy import normalize_proxy_env
+from consilium.utils.proxy import normalize_proxy_env
 
 
 class TestNormalizeProxyEnv:

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from kimi_cli.session_state import SessionState, load_session_state, save_session_state
+from consilium.session_state import SessionState, load_session_state, save_session_state
 
 
 def test_session_state_default_additional_dirs():

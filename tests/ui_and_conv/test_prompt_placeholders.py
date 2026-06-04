@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from PIL import Image
 
-from kimi_cli.ui.shell import placeholders
-from kimi_cli.ui.shell.placeholders import (
+from consilium.ui.shell import placeholders
+from consilium.ui.shell.placeholders import (
     AttachmentCache,
     PromptPlaceholderManager,
     should_placeholderize_pasted_text,
 )
-from kimi_cli.wire.types import ImageURLPart, TextPart
+from consilium.wire.types import ImageURLPart, TextPart
 
 
 def test_placeholder_manager_serializes_text_tokens_for_history(tmp_path) -> None:
@@ -187,21 +187,21 @@ def test_placeholderize_thresholds_are_configurable(monkeypatch) -> None:
 
 
 def test_get_env_int_parses_valid_values(monkeypatch) -> None:
-    from kimi_cli.utils.envvar import get_env_int
+    from consilium.utils.envvar import get_env_int
 
     monkeypatch.setenv("_TEST_INT_VAR", "42")
     assert get_env_int("_TEST_INT_VAR", 0) == 42
 
 
 def test_get_env_int_falls_back_on_invalid_values(monkeypatch) -> None:
-    from kimi_cli.utils.envvar import get_env_int
+    from consilium.utils.envvar import get_env_int
 
     monkeypatch.setenv("_TEST_INT_VAR", "not_a_number")
     assert get_env_int("_TEST_INT_VAR", 99) == 99
 
 
 def test_get_env_int_returns_default_when_unset() -> None:
-    from kimi_cli.utils.envvar import get_env_int
+    from consilium.utils.envvar import get_env_int
 
     assert get_env_int("_TEST_NONEXISTENT_VAR_12345", 77) == 77
 

@@ -6,7 +6,7 @@ import contextlib
 import pytest
 from kosong.tooling.empty import EmptyToolset
 
-from kimi_cli.approval_runtime import (
+from consilium.approval_runtime import (
     ApprovalCancelledError,
     ApprovalRuntime,
     ApprovalSource,
@@ -14,14 +14,14 @@ from kimi_cli.approval_runtime import (
     reset_current_approval_source,
     set_current_approval_source,
 )
-from kimi_cli.soul import RunCancelled, run_soul
-from kimi_cli.soul.agent import Agent as SoulAgent
-from kimi_cli.soul.context import Context
-from kimi_cli.soul.kimisoul import KimiSoul
-from kimi_cli.utils.aioqueue import QueueShutDown
-from kimi_cli.wire import Wire
-from kimi_cli.wire.root_hub import RootWireHub
-from kimi_cli.wire.types import ApprovalRequest, ApprovalResponse
+from consilium.soul import RunCancelled, run_soul
+from consilium.soul.agent import Agent as SoulAgent
+from consilium.soul.context import Context
+from consilium.soul.kimisoul import KimiSoul
+from consilium.utils.aioqueue import QueueShutDown
+from consilium.wire import Wire
+from consilium.wire.root_hub import RootWireHub
+from consilium.wire.types import ApprovalRequest, ApprovalResponse
 
 
 @pytest.mark.asyncio

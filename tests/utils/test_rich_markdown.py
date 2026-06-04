@@ -1,6 +1,6 @@
 from rich.console import Console
 
-from kimi_cli.utils.rich.markdown import Markdown
+from consilium.utils.rich.markdown import Markdown
 
 
 def test_markdown_html_block_renders_without_stack_error() -> None:

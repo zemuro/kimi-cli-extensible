@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 import pytest
 
-from kimi_cli.utils.editor import (
+from consilium.utils.editor import (
     edit_text_in_editor,
     get_editor_command,
 )
@@ -73,7 +73,7 @@ class TestGetEditorCommand:
         def fake_which(binary: str) -> str | None:
             return "/usr/bin/vim" if binary == "vim" else None
 
-        with patch("kimi_cli.utils.editor.shutil.which", side_effect=fake_which):
+        with patch("consilium.utils.editor.shutil.which", side_effect=fake_which):
             assert get_editor_command() == ["vim"]
 
     def test_auto_detect_prefers_code(self, monkeypatch: pytest.MonkeyPatch):
@@ -84,7 +84,7 @@ class TestGetEditorCommand:
         def fake_which(binary: str) -> str | None:
             return f"/usr/bin/{binary}" if binary in ("code", "vim") else None
 
-        with patch("kimi_cli.utils.editor.shutil.which", side_effect=fake_which):
+        with patch("consilium.utils.editor.shutil.which", side_effect=fake_which):
             assert get_editor_command() == ["code", "--wait"]
 
     def test_returns_none_when_nothing_available(self, monkeypatch: pytest.MonkeyPatch):
@@ -92,7 +92,7 @@ class TestGetEditorCommand:
         monkeypatch.delenv("VISUAL", raising=False)
         monkeypatch.delenv("EDITOR", raising=False)
 
-        with patch("kimi_cli.utils.editor.shutil.which", return_value=None):
+        with patch("consilium.utils.editor.shutil.which", return_value=None):
             assert get_editor_command() is None
 
     def test_empty_configured_is_ignored(self, monkeypatch: pytest.MonkeyPatch):
@@ -105,7 +105,7 @@ class TestGetEditorCommand:
         monkeypatch.setenv("VISUAL", "")
         monkeypatch.setenv("EDITOR", "")
 
-        with patch("kimi_cli.utils.editor.shutil.which", return_value=None):
+        with patch("consilium.utils.editor.shutil.which", return_value=None):
             assert get_editor_command() is None
 
 
@@ -167,7 +167,7 @@ class TestEditTextInEditor:
         """No editor available at all — should return None."""
         monkeypatch.delenv("VISUAL", raising=False)
         monkeypatch.delenv("EDITOR", raising=False)
-        with patch("kimi_cli.utils.editor.shutil.which", return_value=None):
+        with patch("consilium.utils.editor.shutil.which", return_value=None):
             result = edit_text_in_editor("text")
             assert result is None
 
@@ -239,7 +239,7 @@ class TestEditTextInEditor:
         """subprocess.call should be invoked with get_clean_env()."""
         editor = self._make_fake_editor(tmp_path, modify=True)
 
-        with patch("kimi_cli.utils.editor.subprocess.call", return_value=0) as mock_call:
+        with patch("consilium.utils.editor.subprocess.call", return_value=0) as mock_call:
             # Need to also patch get_editor_command to return our editor
             # since subprocess.call is mocked, mtime won't change
             edit_text_in_editor("text", configured=editor)
@@ -259,7 +259,7 @@ class TestEditTextInEditor:
             return original_call(cmd, **kwargs)
 
         editor = self._make_fake_editor(tmp_path, modify=True)
-        with patch("kimi_cli.utils.editor.subprocess.call", side_effect=spy_call):
+        with patch("consilium.utils.editor.subprocess.call", side_effect=spy_call):
             edit_text_in_editor("text", configured=editor)
 
         assert len(captured_path) == 1
@@ -276,28 +276,28 @@ class TestConfigIntegration:
 
     def test_default_editor_empty_by_default(self):
         """default_editor should default to empty string."""
-        from kimi_cli.config import get_default_config
+        from consilium.config import get_default_config
 
         config = get_default_config()
         assert config.default_editor == ""
 
     def test_load_config_with_editor(self):
         """Config with default_editor should load correctly."""
-        from kimi_cli.config import load_config_from_string
+        from consilium.config import load_config_from_string
 
         config = load_config_from_string('default_editor = "vim"\n')
         assert config.default_editor == "vim"
 
     def test_load_config_with_editor_args(self):
         """Config with editor command containing args should load correctly."""
-        from kimi_cli.config import load_config_from_string
+        from consilium.config import load_config_from_string
 
         config = load_config_from_string('default_editor = "code --wait"\n')
         assert config.default_editor == "code --wait"
 
     def test_existing_config_without_editor_field(self):
         """Existing config without default_editor should default to empty."""
-        from kimi_cli.config import load_config_from_string
+        from consilium.config import load_config_from_string
 
         config = load_config_from_string('default_model = ""\n')
         assert config.default_editor == ""

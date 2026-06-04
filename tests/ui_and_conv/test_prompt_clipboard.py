@@ -11,11 +11,11 @@ from prompt_toolkit.key_binding import KeyPressEvent
 if TYPE_CHECKING:
     from prompt_toolkit.buffer import Buffer
 
-from kimi_cli.llm import ModelCapability
-from kimi_cli.ui.shell import prompt as shell_prompt
-from kimi_cli.ui.shell.prompt import PromptMode
-from kimi_cli.utils.clipboard import ClipboardResult
-from kimi_cli.wire.types import TextPart
+from consilium.llm import ModelCapability
+from consilium.ui.shell import prompt as shell_prompt
+from consilium.ui.shell.prompt import PromptMode
+from consilium.utils.clipboard import ClipboardResult
+from consilium.wire.types import TextPart
 
 
 class _DummyBuffer:
@@ -349,8 +349,8 @@ async def test_question_delegate_expands_placeholders_on_submit() -> None:
     placeholders should be expanded to full text via text_expander."""
     from unittest.mock import patch
 
-    from kimi_cli.ui.shell.visualize import QuestionPromptDelegate, QuestionRequestPanel
-    from kimi_cli.wire.types import QuestionItem, QuestionRequest
+    from consilium.ui.shell.visualize import QuestionPromptDelegate, QuestionRequestPanel
+    from consilium.wire.types import QuestionItem, QuestionRequest
 
     full_text = "\n".join([f"line{i}" for i in range(1, 20)])
     expand_calls: list[str] = []

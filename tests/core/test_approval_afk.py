@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from kimi_cli.soul.approval import Approval, ApprovalState
+from consilium.soul.approval import Approval, ApprovalState
 
 
 def test_yolo_only() -> None:

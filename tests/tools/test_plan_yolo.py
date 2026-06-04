@@ -6,11 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from kimi_cli.soul import _current_wire
-from kimi_cli.tools.plan import ExitPlanMode, PlanOption
-from kimi_cli.tools.plan import Params as ExitParams
-from kimi_cli.tools.plan.enter import EnterPlanMode
-from kimi_cli.tools.plan.enter import Params as EnterParams
+from consilium.soul import _current_wire
+from consilium.tools.plan import ExitPlanMode, PlanOption
+from consilium.tools.plan import Params as ExitParams
+from consilium.tools.plan.enter import EnterPlanMode
+from consilium.tools.plan.enter import Params as EnterParams
 
 # ---------------------------------------------------------------------------
 # helpers

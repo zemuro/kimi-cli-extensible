@@ -8,7 +8,7 @@ connection errors.
 
 from unittest.mock import patch
 
-from kimi_cli.auth.oauth import _ascii_header_value, _common_headers
+from consilium.auth.oauth import _ascii_header_value, _common_headers
 
 
 class TestAsciiHeaderValue:
@@ -31,8 +31,8 @@ class TestAsciiHeaderValue:
 class TestCommonHeaders:
     """Test that _common_headers returns clean header values."""
 
-    @patch("kimi_cli.auth.oauth.platform")
-    @patch("kimi_cli.auth.oauth.get_device_id", return_value="abc123")
+    @patch("consilium.auth.oauth.platform")
+    @patch("consilium.auth.oauth.get_device_id", return_value="abc123")
     def test_no_whitespace_in_header_values(self, _mock_device_id, mock_platform) -> None:
         """All header values must be free of leading/trailing whitespace."""
         mock_platform.node.return_value = "myhost"

@@ -17,14 +17,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from kimi_cli.background.manager import BackgroundTaskManager
-from kimi_cli.background.models import TaskRuntime, TaskSpec
-from kimi_cli.cli import ExitCode
-from kimi_cli.config import BackgroundConfig, NotificationConfig
-from kimi_cli.notifications.manager import NotificationManager
-from kimi_cli.soul.kimisoul import KimiSoul
-from kimi_cli.ui.print import Print
-from kimi_cli.wire.file import WireFile
+from consilium.background.manager import BackgroundTaskManager
+from consilium.background.models import TaskRuntime, TaskSpec
+from consilium.cli import ExitCode
+from consilium.config import BackgroundConfig, NotificationConfig
+from consilium.notifications.manager import NotificationManager
+from consilium.soul.kimisoul import KimiSoul
+from consilium.ui.print import Print
+from consilium.wire.file import WireFile
 
 
 def _make_session(tmp_path: Path) -> MagicMock:
@@ -137,7 +137,7 @@ async def test_real_reconcile_publishes_notification_and_triggers_reentry(
             for view in notifications.claim_for_sink("llm"):
                 notifications.ack("llm", view.event.id)
 
-    with patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul):
+    with patch("consilium.ui.print.run_soul", side_effect=fake_run_soul):
         code = await asyncio.wait_for(p.run(command="do work"), timeout=10.0)
 
     assert code == ExitCode.SUCCESS
@@ -199,7 +199,7 @@ async def test_real_reconcile_no_reentry_when_task_completes_without_notificatio
             for view in notifications.claim_for_sink("llm"):
                 notifications.ack("llm", view.event.id)
 
-    with patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul):
+    with patch("consilium.ui.print.run_soul", side_effect=fake_run_soul):
         code = await asyncio.wait_for(p.run(command="drain test"), timeout=10.0)
 
     assert code == ExitCode.SUCCESS
@@ -253,7 +253,7 @@ async def test_real_reconcile_multiple_tasks(
             # Re-entry after task 003's notification: complete task 004
             _complete_task(manager, "b-int-00004")
 
-    with patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul):
+    with patch("consilium.ui.print.run_soul", side_effect=fake_run_soul):
         code = await asyncio.wait_for(p.run(command="two tasks"), timeout=15.0)
 
     assert code == ExitCode.SUCCESS
@@ -329,7 +329,7 @@ async def test_race_window_worker_finishes_between_reconcile_and_active_check(
             for view in notifications.claim_for_sink("llm"):
                 notifications.ack("llm", view.event.id)
 
-    with patch("kimi_cli.ui.print.run_soul", side_effect=fake_run_soul):
+    with patch("consilium.ui.print.run_soul", side_effect=fake_run_soul):
         code = await asyncio.wait_for(p.run(command="race"), timeout=10.0)
 
     assert code == ExitCode.SUCCESS

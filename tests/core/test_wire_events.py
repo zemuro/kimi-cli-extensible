@@ -8,9 +8,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kimi_cli.do.session import DoSession
-from kimi_cli.soul import get_wire_or_none
-from kimi_cli.wire.types import ToolFileModifiedEvent
+from consilium.do.session import DoSession
+from consilium.soul import get_wire_or_none
+from consilium.wire.types import ToolFileModifiedEvent
 
 
 class MockToolCall:
@@ -36,7 +36,7 @@ def mock_soul() -> MagicMock:
 
 @pytest.fixture
 def do_session(mock_soul: MagicMock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> DoSession:
-    from kimi_cli.do import journal as journal_mod
+    from consilium.do import journal as journal_mod
     monkeypatch.setattr(journal_mod, "JOURNAL_DIR", tmp_path / "do_sessions")
     return DoSession(mock_soul, work_dir=tmp_path)
 
@@ -59,7 +59,7 @@ async def test_wire_tool_file_modified_event(do_session: DoSession, tmp_path: Pa
     captured_events = []
     mock_wire.soul_side.send = captured_events.append
 
-    with patch("kimi_cli.soul.get_wire_or_none", return_value=mock_wire):
+    with patch("consilium.soul.get_wire_or_none", return_value=mock_wire):
         await do_session.on_tool_result(tool_call, tool_result)
 
     assert len(captured_events) == 1

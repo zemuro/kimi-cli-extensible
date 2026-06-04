@@ -10,15 +10,15 @@ from prompt_toolkit.document import Document
 from prompt_toolkit.layout.containers import ConditionalContainer, FloatContainer, HSplit, Window
 from prompt_toolkit.utils import get_cwidth
 
-import kimi_cli.ui.shell.prompt as prompt_mod
-from kimi_cli.ui.shell.prompt import (
+import consilium.ui.shell.prompt as prompt_mod
+from consilium.ui.shell.prompt import (
     SlashCommandCompleter,
     SlashCommandMenuControl,
     _find_prompt_float_container,
     _wrap_to_width,
 )
-from kimi_cli.ui.shell.slash import registry as shell_slash_registry
-from kimi_cli.utils.slashcmd import SlashCommand
+from consilium.ui.shell.slash import registry as shell_slash_registry
+from consilium.utils.slashcmd import SlashCommand
 
 
 def _noop(app: object, args: str) -> None:

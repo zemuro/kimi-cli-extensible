@@ -1,4 +1,4 @@
-"""Tests for kimi_cli.session_fork module."""
+"""Tests for consilium.session_fork module."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import pytest
 from kaos.path import KaosPath
 from kosong.message import Message
 
-from kimi_cli.session_fork import (
+from consilium.session_fork import (
     TurnInfo,
     _extract_user_text,
     _is_checkpoint_user_message,
@@ -19,9 +19,9 @@ from kimi_cli.session_fork import (
     truncate_context_at_turn,
     truncate_wire_at_turn,
 )
-from kimi_cli.wire.file import WireFileMetadata, WireMessageRecord  # noqa: I001
-from kimi_cli.wire.protocol import WIRE_PROTOCOL_VERSION
-from kimi_cli.wire.types import TextPart, TurnBegin, TurnEnd
+from consilium.wire.file import WireFileMetadata, WireMessageRecord  # noqa: I001
+from consilium.wire.protocol import WIRE_PROTOCOL_VERSION
+from consilium.wire.types import TextPart, TurnBegin, TurnEnd
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -37,8 +37,8 @@ def isolated_share_dir(monkeypatch, tmp_path: Path) -> Path:
         share_dir.mkdir(parents=True, exist_ok=True)
         return share_dir
 
-    monkeypatch.setattr("kimi_cli.share.get_share_dir", _get_share_dir)
-    monkeypatch.setattr("kimi_cli.metadata.get_share_dir", _get_share_dir)
+    monkeypatch.setattr("consilium.share.get_share_dir", _get_share_dir)
+    monkeypatch.setattr("consilium.metadata.get_share_dir", _get_share_dir)
     return share_dir
 
 
@@ -277,7 +277,7 @@ class TestTruncateContextAtTurn:
 
 class TestForkSession:
     async def test_fork_at_turn(self, isolated_share_dir: Path, work_dir: KaosPath):
-        from kimi_cli.session import Session
+        from consilium.session import Session
 
         source = await Session.create(work_dir)
         _write_wire_file(source.dir, ["turn 0", "turn 1", "turn 2"])
@@ -310,7 +310,7 @@ class TestForkSession:
         assert len(ctx_lines) == 4
 
     async def test_fork_all_turns(self, isolated_share_dir: Path, work_dir: KaosPath):
-        from kimi_cli.session import Session
+        from consilium.session import Session
 
         source = await Session.create(work_dir)
         _write_wire_file(source.dir, ["turn 0", "turn 1"])
@@ -334,8 +334,8 @@ class TestForkSession:
         assert len(wire_lines) == 5
 
     async def test_fork_sets_title(self, isolated_share_dir: Path, work_dir: KaosPath):
-        from kimi_cli.session import Session
-        from kimi_cli.session_state import load_session_state
+        from consilium.session import Session
+        from consilium.session_state import load_session_state
 
         source = await Session.create(work_dir)
         _write_wire_file(source.dir, ["hello"])
@@ -356,8 +356,8 @@ class TestForkSession:
 
     async def test_fork_reads_title_from_state(self, isolated_share_dir: Path, work_dir: KaosPath):
         """When source_title is None, fork_session reads title from session state."""
-        from kimi_cli.session import Session
-        from kimi_cli.session_state import load_session_state, save_session_state
+        from consilium.session import Session
+        from consilium.session_state import load_session_state, save_session_state
 
         source = await Session.create(work_dir)
         _write_wire_file(source.dir, ["hello"])
@@ -384,7 +384,7 @@ class TestForkSession:
     async def test_fork_copies_referenced_videos(
         self, isolated_share_dir: Path, work_dir: KaosPath
     ):
-        from kimi_cli.session import Session
+        from consilium.session import Session
 
         source = await Session.create(work_dir)
 

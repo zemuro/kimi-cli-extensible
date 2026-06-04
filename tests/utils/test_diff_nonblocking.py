@@ -7,12 +7,12 @@ from unittest.mock import AsyncMock, patch
 
 from kosong.tooling import DisplayBlock
 
-from kimi_cli.utils.diff import (
+from consilium.utils.diff import (
     _HUGE_FILE_THRESHOLD,
     _build_diff_blocks_sync,
     build_diff_blocks,
 )
-from kimi_cli.wire.types import DiffDisplayBlock
+from consilium.wire.types import DiffDisplayBlock
 
 
 def _make_lines(n: int, prefix: str = "Line") -> str:
@@ -40,7 +40,7 @@ async def test_build_diff_blocks_delegates_to_thread() -> None:
 
     sentinel = [DiffDisplayBlock(path="x", old_text="a", new_text="b")]
 
-    with patch("kimi_cli.utils.diff.asyncio") as mock_asyncio:
+    with patch("consilium.utils.diff.asyncio") as mock_asyncio:
         mock_asyncio.to_thread = AsyncMock(return_value=sentinel)
         result = await build_diff_blocks("/tmp/test.txt", old, new)
 
@@ -144,7 +144,7 @@ def test_summary_panel_renders_modification() -> None:
     """Summary panel for modifying a huge file should show line count transition."""
     from rich.panel import Panel
 
-    from kimi_cli.utils.rich.diff_render import render_diff_summary_panel
+    from consilium.utils.rich.diff_render import render_diff_summary_panel
 
     block = DiffDisplayBlock(
         path="huge.py",
@@ -158,7 +158,7 @@ def test_summary_panel_renders_modification() -> None:
 
 def test_summary_panel_renders_new_file() -> None:
     """Summary panel for creating a huge file should say 'New file'."""
-    from kimi_cli.utils.rich.diff_render import _summary_description
+    from consilium.utils.rich.diff_render import _summary_description
 
     block = DiffDisplayBlock(
         path="huge.py",
@@ -173,7 +173,7 @@ def test_summary_panel_renders_new_file() -> None:
 
 def test_summary_preview_returns_renderables() -> None:
     """Summary preview should return compact renderables for approval panel."""
-    from kimi_cli.utils.rich.diff_render import render_diff_summary_preview
+    from consilium.utils.rich.diff_render import render_diff_summary_preview
 
     block = DiffDisplayBlock(
         path="huge.py",

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import asyncio
 
-from kimi_cli.think.context import assemble_context, estimate_context_tokens
-from kimi_cli.think.history import HistoryManager
-from kimi_cli.think.models import ThinkMessage, ThinkSession
+from consilium.think.context import assemble_context, estimate_context_tokens
+from consilium.think.history import HistoryManager
+from consilium.think.models import ThinkMessage, ThinkSession
 
 
 def _make_session(messages: list[tuple[str, str]]) -> ThinkSession:

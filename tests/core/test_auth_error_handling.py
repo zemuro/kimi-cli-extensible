@@ -28,22 +28,22 @@ from kosong.tooling import Tool
 from kosong.tooling.simple import SimpleToolset
 from pydantic import SecretStr
 
-from kimi_cli.acp.session import ACPSession
-from kimi_cli.config import LLMProvider, OAuthRef
-from kimi_cli.llm import LLM
-from kimi_cli.soul import run_soul
-from kimi_cli.soul.agent import Agent, Runtime
-from kimi_cli.soul.context import Context
-from kimi_cli.soul.kimisoul import KimiSoul
-from kimi_cli.utils.aioqueue import QueueShutDown
-from kimi_cli.wire import Wire
-from kimi_cli.wire.jsonrpc import (
+from consilium.acp.session import ACPSession
+from consilium.config import LLMProvider, OAuthRef
+from consilium.llm import LLM
+from consilium.soul import run_soul
+from consilium.soul.agent import Agent, Runtime
+from consilium.soul.context import Context
+from consilium.soul.kimisoul import KimiSoul
+from consilium.utils.aioqueue import QueueShutDown
+from consilium.wire import Wire
+from consilium.wire.jsonrpc import (
     ErrorCodes,
     JSONRPCErrorResponse,
     JSONRPCPromptMessage,
     JSONRPCSuccessResponse,
 )
-from kimi_cli.wire.server import WireServer
+from consilium.wire.server import WireServer
 
 # ---------------------------------------------------------------------------
 # Fake chat providers

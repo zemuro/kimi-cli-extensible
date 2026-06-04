@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from kimi_cli.plan.models import PhaseStatus, PlanDirectory
-from kimi_cli.plan.parser import (
+from consilium.plan.models import PhaseStatus, PlanDirectory
+from consilium.plan.parser import (
     PlanParseError,
     _parse_yaml_frontmatter,
     is_plan_directory,

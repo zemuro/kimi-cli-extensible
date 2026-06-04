@@ -1,4 +1,4 @@
-"""Tests for kimi_cli.subagents.git_context."""
+"""Tests for consilium.subagents.git_context."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from kaos import reset_current_kaos, set_current_kaos
 from kaos.local import LocalKaos
 from kaos.path import KaosPath
 
-from kimi_cli.subagents.git_context import (
+from consilium.subagents.git_context import (
     _parse_project_name,
     _run_git,
     _sanitize_remote_url,
@@ -253,7 +253,7 @@ class TestCollectGitContext:
     async def test_all_commands_fail_returns_empty(self, tmp_path: Path) -> None:
         """If every git command fails, return empty string."""
         with patch(
-            "kimi_cli.subagents.git_context._run_git",
+            "consilium.subagents.git_context._run_git",
             new_callable=AsyncMock,
             return_value=None,
         ):

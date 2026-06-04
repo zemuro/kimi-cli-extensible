@@ -1,4 +1,4 @@
-"""Tests for kimi_cli.utils.rich.diff_render — unified diff rendering."""
+"""Tests for consilium.utils.rich.diff_render — unified diff rendering."""
 
 from __future__ import annotations
 
@@ -6,9 +6,9 @@ import pytest
 from rich.console import Console
 from rich.text import Text
 
-from kimi_cli.tools.display import DiffDisplayBlock
-from kimi_cli.utils.diff import _build_diff_blocks_sync as build_diff_blocks
-from kimi_cli.utils.rich.diff_render import (
+from consilium.tools.display import DiffDisplayBlock
+from consilium.utils.diff import _build_diff_blocks_sync as build_diff_blocks
+from consilium.utils.rich.diff_render import (
     DiffLineKind,
     _build_diff_header,
     _build_diff_lines,
@@ -182,7 +182,7 @@ class TestHighlightHunk:
         assert "new_value" in add_plain
         # Verify the highlight spans cover the actual changed words,
         # not characters shifted by unexpanded-tab offsets.
-        from kimi_cli.utils.rich.diff_render import get_diff_colors
+        from consilium.utils.rich.diff_render import get_diff_colors
 
         colors = get_diff_colors()
         assert deletes[0].content is not None
@@ -210,7 +210,7 @@ class TestHighlightHunk:
         assert adds[0].is_inline_paired
         # The inline highlight should cover the indentation region where
         # tab vs spaces differ.
-        from kimi_cli.utils.rich.diff_render import get_diff_colors
+        from consilium.utils.rich.diff_render import get_diff_colors
 
         colors = get_diff_colors()
         assert deletes[0].content is not None
@@ -234,7 +234,7 @@ class TestHighlightHunk:
         adds = [dl for dl in hunks[0] if dl.kind == DiffLineKind.ADD]
         assert deletes[0].is_inline_paired
         assert adds[0].is_inline_paired
-        from kimi_cli.utils.rich.diff_render import get_diff_colors
+        from consilium.utils.rich.diff_render import get_diff_colors
 
         colors = get_diff_colors()
         assert deletes[0].content is not None
@@ -265,7 +265,7 @@ class TestHighlightHunk:
         adds = [dl for dl in hunks[0] if dl.kind == DiffLineKind.ADD]
         assert deletes[0].is_inline_paired
         assert adds[0].is_inline_paired
-        from kimi_cli.utils.rich.diff_render import get_diff_colors
+        from consilium.utils.rich.diff_render import get_diff_colors
 
         colors = get_diff_colors()
         assert deletes[0].content is not None
@@ -302,7 +302,7 @@ class TestHighlightHunk:
         deletes = [dl for dl in hunks[0] if dl.kind == DiffLineKind.DELETE]
         assert deletes[0].is_inline_paired
         assert deletes[0].content is not None
-        from kimi_cli.utils.rich.diff_render import get_diff_colors
+        from consilium.utils.rich.diff_render import get_diff_colors
 
         colors = get_diff_colors()
         del_hl_spans = [
@@ -332,7 +332,7 @@ class TestHighlightHunk:
         # not stripped away — they are a meaningful part of the diff.
         assert deletes[0].content is not None
         assert deletes[0].content.plain == "hello   "
-        from kimi_cli.utils.rich.diff_render import get_diff_colors
+        from consilium.utils.rich.diff_render import get_diff_colors
 
         colors = get_diff_colors()
         del_hl_spans = [

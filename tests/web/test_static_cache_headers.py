@@ -7,7 +7,7 @@ import os
 import pytest
 from starlette.testclient import TestClient
 
-from kimi_cli.web.app import STATIC_DIR, create_app
+from consilium.web.app import STATIC_DIR, create_app
 
 _needs_static = pytest.mark.skipif(not STATIC_DIR.exists(), reason="web static assets not built")
 

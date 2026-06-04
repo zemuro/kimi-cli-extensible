@@ -5,13 +5,13 @@ import time
 
 import pytest
 
-from kimi_cli.background import (
+from consilium.background import (
     BackgroundTaskStore,
     TaskControl,
     TaskSpec,
     run_background_task_worker,
 )
-from kimi_cli.background.worker import terminate_process_tree_windows
+from consilium.background.worker import terminate_process_tree_windows
 
 
 @pytest.mark.asyncio
@@ -119,7 +119,7 @@ def test_terminate_process_tree_windows_uses_taskkill_tree(monkeypatch):
         calls.append(args)
         return None
 
-    monkeypatch.setattr("kimi_cli.background.worker.subprocess.run", _run)
+    monkeypatch.setattr("consilium.background.worker.subprocess.run", _run)
 
     terminate_process_tree_windows(1234, force=False)
     terminate_process_tree_windows(1234, force=True)

@@ -11,7 +11,7 @@ from __future__ import annotations
 import pytest
 from kosong.chat_provider import APIEmptyResponseError
 
-from kimi_cli.soul.kimisoul import KimiSoul
+from consilium.soul.kimisoul import KimiSoul
 
 
 @pytest.mark.asyncio

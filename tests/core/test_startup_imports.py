@@ -23,12 +23,12 @@ def _run_python(code: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def test_import_kimi_cli_does_not_import_loguru() -> None:
+def test_import_consilium_does_not_import_loguru() -> None:
     proc = _run_python(
         """
 import sys
 sys.modules.pop("loguru", None)
-import kimi_cli
+import consilium
 assert "loguru" not in sys.modules
 print("ok")
 """
@@ -41,7 +41,7 @@ def test_logger_proxy_imports_loguru_on_first_use() -> None:
         """
 import sys
 sys.modules.pop("loguru", None)
-from kimi_cli import logger
+from consilium import logger
 assert "loguru" not in sys.modules
 logger.disable("unit.test")
 assert "loguru" in sys.modules
@@ -51,12 +51,12 @@ print("ok")
     assert proc.stdout.strip() == "ok"
 
 
-def test_import_kimi_cli_constant_defers_package_metadata() -> None:
+def test_import_consilium_constant_defers_package_metadata() -> None:
     proc = _run_python(
         """
 import sys
 sys.modules.pop("importlib.metadata", None)
-import kimi_cli.constant as constant
+import consilium.constant as constant
 assert "importlib.metadata" not in sys.modules
 assert constant.get_version()
 assert "importlib.metadata" in sys.modules
@@ -73,16 +73,16 @@ import sys
 from typer.testing import CliRunner
 
 lazy_modules = [
-    "kimi_cli.cli.info",
-    "kimi_cli.cli.export",
-    "kimi_cli.cli.mcp",
-    "kimi_cli.cli.vis",
-    "kimi_cli.cli.web",
+    "consilium.cli.info",
+    "consilium.cli.export",
+    "consilium.cli.mcp",
+    "consilium.cli.vis",
+    "consilium.cli.web",
 ]
 for name in lazy_modules:
     sys.modules.pop(name, None)
 
-from kimi_cli.cli import cli
+from consilium.cli import cli
 
 assert all(name not in sys.modules for name in lazy_modules)
 
@@ -104,25 +104,25 @@ import sys
 from typer.testing import CliRunner
 
 lazy_modules = [
-    "kimi_cli.cli.info",
-    "kimi_cli.cli.export",
-    "kimi_cli.cli.mcp",
-    "kimi_cli.cli.vis",
-    "kimi_cli.cli.web",
+    "consilium.cli.info",
+    "consilium.cli.export",
+    "consilium.cli.mcp",
+    "consilium.cli.vis",
+    "consilium.cli.web",
 ]
 for name in lazy_modules:
     sys.modules.pop(name, None)
 
-from kimi_cli.cli import cli
+from consilium.cli import cli
 
 result = CliRunner().invoke(cli, ["info", "--json"])
 assert result.exit_code == 0, result.output
-assert '"kimi_cli_version"' in result.output
-assert "kimi_cli.cli.info" in sys.modules
-assert "kimi_cli.cli.export" not in sys.modules
-assert "kimi_cli.cli.mcp" not in sys.modules
-assert "kimi_cli.cli.vis" not in sys.modules
-assert "kimi_cli.cli.web" not in sys.modules
+assert '"consilium_version"' in result.output
+assert "consilium.cli.info" in sys.modules
+assert "consilium.cli.export" not in sys.modules
+assert "consilium.cli.mcp" not in sys.modules
+assert "consilium.cli.vis" not in sys.modules
+assert "consilium.cli.web" not in sys.modules
 print("ok")
 """
     )
@@ -136,9 +136,9 @@ import io
 import sys
 from contextlib import redirect_stdout
 
-sys.modules.pop("kimi_cli.cli", None)
+sys.modules.pop("consilium.cli", None)
 
-from kimi_cli.__main__ import main
+from consilium.__main__ import main
 
 stdout = io.StringIO()
 with redirect_stdout(stdout):
@@ -146,7 +146,7 @@ with redirect_stdout(stdout):
 
 assert exit_code == 0
 assert stdout.getvalue().startswith("kimi, version ")
-assert "kimi_cli.cli" not in sys.modules
+assert "consilium.cli" not in sys.modules
 print("ok")
 """
     )
@@ -161,18 +161,18 @@ import json
 import sys
 from contextlib import redirect_stdout
 
-sys.modules.pop("kimi_cli.cli", None)
+sys.modules.pop("consilium.cli", None)
 
-from kimi_cli.__main__ import main
+from consilium.__main__ import main
 
 stdout = io.StringIO()
 with redirect_stdout(stdout):
     exit_code = main(["info", "--json"])
 
 assert exit_code in (None, 0)
-assert "kimi_cli.cli" in sys.modules
+assert "consilium.cli" in sys.modules
 payload = json.loads(stdout.getvalue())
-assert payload["kimi_cli_version"]
+assert payload["consilium_version"]
 print("ok")
 """
     )
@@ -186,8 +186,8 @@ import io
 import sys
 from contextlib import redirect_stderr
 
-import kimi_cli.cli.__main__ as cli_main
-from kimi_cli.utils.environment import GitBashNotFoundError
+import consilium.cli.__main__ as cli_main
+from consilium.utils.environment import GitBashNotFoundError
 
 def fake_cli(*_args, **_kwargs):
     raise GitBashNotFoundError("install Git for Windows")

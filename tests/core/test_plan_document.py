@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from kimi_cli.plan.models import PhaseStatus, PlanMetadata
-from kimi_cli.plan.parser import PlanParseError, parse_plan, parse_plan_file
-from kimi_cli.plan.validator import PlanValidationError, validate_plan
+from consilium.plan.models import PhaseStatus, PlanMetadata
+from consilium.plan.parser import PlanParseError, parse_plan, parse_plan_file
+from consilium.plan.validator import PlanValidationError, validate_plan
 
 
 # ---------------------------------------------------------------------------
@@ -104,7 +104,7 @@ class TestParsePlan:
         plan = parse_plan(sample_plan_text)
         assert plan.metadata.plan_id == "plan_auth_refactor"
         assert plan.metadata.created is not None
-        from kimi_cli.utils.timestamp import format_date
+        from consilium.utils.timestamp import format_date
         assert format_date(plan.metadata.created) == "2026-05-24"
         assert plan.metadata.last_updated is not None
 

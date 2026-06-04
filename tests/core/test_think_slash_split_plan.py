@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from kimi_cli.think.history import HistoryManager
-from kimi_cli.think.models import ThinkSession
-from kimi_cli.think.slash import slash_split_plan
+from consilium.think.history import HistoryManager
+from consilium.think.models import ThinkSession
+from consilium.think.slash import slash_split_plan
 
 
 @pytest.fixture

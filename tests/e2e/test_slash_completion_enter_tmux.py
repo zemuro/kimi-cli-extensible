@@ -67,7 +67,7 @@ def _start_tmux_shell(
     command_parts = [
         sys.executable,
         "-m",
-        "kimi_cli.cli",
+        "consilium.cli",
         "--yolo",
         "--config-file",
         str(config_path),

@@ -6,14 +6,14 @@ from pathlib import Path
 
 import pytest
 
-from kimi_cli.plan.dispatch import clear_dispatch, read_dispatch, write_dispatch
-from kimi_cli.plan.models import DispatchAction
+from consilium.plan.dispatch import clear_dispatch, read_dispatch, write_dispatch
+from consilium.plan.models import DispatchAction
 
 
 class TestDispatch:
     def test_write_and_read(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(
-            "kimi_cli.plan.dispatch.DISPATCH_PATH",
+            "consilium.plan.dispatch.DISPATCH_PATH",
             tmp_path / "dispatch.json",
         )
         dispatch = write_dispatch(
@@ -33,7 +33,7 @@ class TestDispatch:
 
     def test_clear_dispatch(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(
-            "kimi_cli.plan.dispatch.DISPATCH_PATH",
+            "consilium.plan.dispatch.DISPATCH_PATH",
             tmp_path / "dispatch.json",
         )
         write_dispatch(plan_id="plan_auth", target_phase="phase-1")
@@ -48,7 +48,7 @@ class TestDispatch:
 
     def test_afk_mode_dispatch(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(
-            "kimi_cli.plan.dispatch.DISPATCH_PATH",
+            "consilium.plan.dispatch.DISPATCH_PATH",
             tmp_path / "dispatch.json",
         )
         dispatch = write_dispatch(

@@ -7,12 +7,12 @@ from types import SimpleNamespace
 import pytest
 from kosong.tooling.empty import EmptyToolset
 
-import kimi_cli.soul.kimisoul as kimisoul_module
-from kimi_cli.soul.agent import Agent, Runtime
-from kimi_cli.soul.approval import Approval
-from kimi_cli.soul.context import Context
-from kimi_cli.soul.kimisoul import KimiSoul
-from kimi_cli.wire.types import StepBegin, StepInterrupted, TextPart, TurnBegin, TurnEnd
+import consilium.soul.kimisoul as kimisoul_module
+from consilium.soul.agent import Agent, Runtime
+from consilium.soul.approval import Approval
+from consilium.soul.context import Context
+from consilium.soul.kimisoul import KimiSoul
+from consilium.wire.types import StepBegin, StepInterrupted, TextPart, TurnBegin, TurnEnd
 
 
 @pytest.fixture

@@ -1173,7 +1173,7 @@ def test_custom_agent_exclude_tool(tmp_path) -> None:
                 "agent:",
                 "  extend: default",
                 "  exclude_tools:",
-                '    - "kimi_cli.tools.shell:Shell"',
+                '    - "consilium.tools.shell:Shell"',
             ]
         ),
         encoding="utf-8",

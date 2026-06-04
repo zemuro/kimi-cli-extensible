@@ -5,7 +5,7 @@ from __future__ import annotations
 import acp
 import pytest
 
-from kimi_cli.acp.version import CURRENT_VERSION
+from consilium.acp.version import CURRENT_VERSION
 
 from .conftest import ACPTestClient
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from kosong.message import Message, TextPart
 
-from kimi_cli.soul.dynamic_injections.plan_mode import (
+from consilium.soul.dynamic_injections.plan_mode import (
     _full_reminder,
     _has_plan_reminder,
     _reentry_reminder,

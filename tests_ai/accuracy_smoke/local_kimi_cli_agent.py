@@ -4,7 +4,7 @@ import os
 import shlex
 from pathlib import Path
 
-from harbor.agents.installed.kimi_cli import KimiCli
+from harbor.agents.installed.consilium import KimiCli
 from harbor.environments.base import BaseEnvironment
 
 

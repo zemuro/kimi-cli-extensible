@@ -9,9 +9,9 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from kosong.message import Message
 
-from kimi_cli.do.plan_review import PlanReviewer, PlanReviewReport
-from kimi_cli.do.registry import get_do_session, register_do_session, unregister_do_session
-from kimi_cli.do.session import DoSession
+from consilium.do.plan_review import PlanReviewer, PlanReviewReport
+from consilium.do.registry import get_do_session, register_do_session, unregister_do_session
+from consilium.do.session import DoSession
 
 
 class MockToolCall:
@@ -37,7 +37,7 @@ def mock_soul() -> MagicMock:
 
 @pytest.fixture
 def do_session(mock_soul: MagicMock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> DoSession:
-    from kimi_cli.do import journal as journal_mod
+    from consilium.do import journal as journal_mod
     monkeypatch.setattr(journal_mod, "JOURNAL_DIR", tmp_path / "do_sessions")
 
     # Create a temp git repo
@@ -359,7 +359,7 @@ async def test_trigger_manual_review_creates_lazy_reviewer(
 
     # Patch PlanReviewer so lazy creation returns our mock
     monkeypatch.setattr(
-        "kimi_cli.do.session.PlanReviewer", lambda _rt, _cfg: mock_reviewer
+        "consilium.do.session.PlanReviewer", lambda _rt, _cfg: mock_reviewer
     )
 
     # DoSession with NO reviewer — lazy creation
@@ -409,7 +409,7 @@ async def test_load_plan_context_single_file(
     mock_soul: MagicMock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """_load_plan_context parses a single-file plan and injects it."""
-    from kimi_cli.do import journal as journal_mod
+    from consilium.do import journal as journal_mod
     monkeypatch.setattr(journal_mod, "JOURNAL_DIR", tmp_path / "do_sessions")
 
     plan_file = tmp_path / "plan.md"
@@ -445,7 +445,7 @@ async def test_load_plan_context_directory(
     mock_soul: MagicMock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """_load_plan_context parses a directory-based plan and injects target phase."""
-    from kimi_cli.do import journal as journal_mod
+    from consilium.do import journal as journal_mod
     monkeypatch.setattr(journal_mod, "JOURNAL_DIR", tmp_path / "do_sessions")
 
     plan_dir = tmp_path / "plan"
@@ -497,7 +497,7 @@ async def test_load_plan_context_directory_no_phase(
     mock_soul: MagicMock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """_load_plan_context loads all phases when no target phase is specified."""
-    from kimi_cli.do import journal as journal_mod
+    from consilium.do import journal as journal_mod
     monkeypatch.setattr(journal_mod, "JOURNAL_DIR", tmp_path / "do_sessions")
 
     plan_dir = tmp_path / "plan"
@@ -524,7 +524,7 @@ async def test_load_plan_context_missing_phase_logs_warning(
     mock_soul: MagicMock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """_load_plan_context logs a warning when the requested phase is not found."""
-    from kimi_cli.do import journal as journal_mod
+    from consilium.do import journal as journal_mod
     monkeypatch.setattr(journal_mod, "JOURNAL_DIR", tmp_path / "do_sessions")
 
     plan_file = tmp_path / "plan.md"

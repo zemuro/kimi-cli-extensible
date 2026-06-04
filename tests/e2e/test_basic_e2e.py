@@ -193,7 +193,7 @@ def _run_wire_mode(
 
 
 @pytest.mark.parametrize("mode", ["print", "wire", "shell"])
-async def test_scripted_echo_kimi_cli_agent_e2e(
+async def test_scripted_echo_consilium_agent_e2e(
     temp_work_dir: KaosPath, tmp_path: Path, mode: str
 ) -> None:
     sample_js = "\n".join(

@@ -6,7 +6,7 @@ from pathlib import PurePosixPath, PureWindowsPath
 
 from kaos.path import KaosPath
 
-from kimi_cli.utils.path import is_within_directory, is_within_workspace
+from consilium.utils.path import is_within_directory, is_within_workspace
 
 
 def test_within_work_dir():

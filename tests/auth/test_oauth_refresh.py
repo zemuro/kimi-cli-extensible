@@ -8,7 +8,7 @@ import aiohttp
 import pytest
 from pydantic import SecretStr
 
-from kimi_cli.auth.oauth import (
+from consilium.auth.oauth import (
     _REJECTED_REFRESH_TOKENS,
     OAuthError,
     OAuthManager,
@@ -18,7 +18,7 @@ from kimi_cli.auth.oauth import (
     _save_to_file,
     refresh_token,
 )
-from kimi_cli.config import Config, LLMModel, LLMProvider, OAuthRef, Services
+from consilium.config import Config, LLMModel, LLMProvider, OAuthRef, Services
 
 # ── helpers ──────────────────────────────────────────────────────
 
@@ -63,7 +63,7 @@ def _make_config() -> Config:
 
 
 def _make_manager(token: OAuthToken | None = None) -> OAuthManager:
-    with patch("kimi_cli.auth.oauth.load_tokens", return_value=token):
+    with patch("consilium.auth.oauth.load_tokens", return_value=token):
         return OAuthManager(_make_config())
 
 
@@ -108,7 +108,7 @@ async def test_refresh_token_retries_on_network_error():
         async def __aexit__(self, *args):
             pass
 
-    with patch("kimi_cli.auth.oauth.new_client_session", return_value=FakeSession()):
+    with patch("consilium.auth.oauth.new_client_session", return_value=FakeSession()):
         result = await refresh_token("old-refresh", max_retries=3)
 
     assert result.access_token == "new-access"
@@ -140,7 +140,7 @@ async def test_refresh_token_does_not_retry_on_unauthorized():
             pass
 
     with (
-        patch("kimi_cli.auth.oauth.new_client_session", return_value=FakeSession()),
+        patch("consilium.auth.oauth.new_client_session", return_value=FakeSession()),
         pytest.raises(OAuthUnauthorized, match="Token revoked"),
     ):
         await refresh_token("bad-refresh", max_retries=3)
@@ -168,7 +168,7 @@ async def test_refresh_token_raises_after_all_retries_exhausted():
             pass
 
     with (
-        patch("kimi_cli.auth.oauth.new_client_session", return_value=FakeSession()),
+        patch("consilium.auth.oauth.new_client_session", return_value=FakeSession()),
         pytest.raises(OAuthError, match="after retries"),
     ):
         await refresh_token("some-refresh", max_retries=2)
@@ -215,7 +215,7 @@ async def test_refresh_token_retries_on_5xx():
         async def __aexit__(self, *args):
             pass
 
-    with patch("kimi_cli.auth.oauth.new_client_session", return_value=FakeSession()):
+    with patch("consilium.auth.oauth.new_client_session", return_value=FakeSession()):
         result = await refresh_token("old-refresh", max_retries=3)
 
     assert result.access_token == "recovered"
@@ -247,7 +247,7 @@ async def test_refresh_token_does_not_retry_on_400():
             pass
 
     with (
-        patch("kimi_cli.auth.oauth.new_client_session", return_value=FakeSession()),
+        patch("consilium.auth.oauth.new_client_session", return_value=FakeSession()),
         pytest.raises(OAuthError, match="invalid_grant"),
     ):
         await refresh_token("bad-refresh", max_retries=3)
@@ -265,9 +265,9 @@ async def test_ensure_fresh_force_bypasses_threshold():
     mock_refresh = AsyncMock(return_value=_make_token())
 
     with (
-        patch("kimi_cli.auth.oauth.load_tokens", return_value=token),
-        patch("kimi_cli.auth.oauth.refresh_token", mock_refresh),
-        patch("kimi_cli.auth.oauth.save_tokens"),
+        patch("consilium.auth.oauth.load_tokens", return_value=token),
+        patch("consilium.auth.oauth.refresh_token", mock_refresh),
+        patch("consilium.auth.oauth.save_tokens"),
     ):
         await manager.ensure_fresh(force=True)
 
@@ -289,9 +289,9 @@ async def test_ensure_fresh_uses_dynamic_threshold():
     mock_refresh = AsyncMock(return_value=_make_token())
 
     with (
-        patch("kimi_cli.auth.oauth.load_tokens", return_value=token),
-        patch("kimi_cli.auth.oauth.refresh_token", mock_refresh),
-        patch("kimi_cli.auth.oauth.save_tokens"),
+        patch("consilium.auth.oauth.load_tokens", return_value=token),
+        patch("consilium.auth.oauth.refresh_token", mock_refresh),
+        patch("consilium.auth.oauth.save_tokens"),
     ):
         await manager.ensure_fresh()
 
@@ -310,9 +310,9 @@ async def test_ensure_fresh_skips_when_plenty_of_time():
     mock_refresh = AsyncMock(return_value=_make_token())
 
     with (
-        patch("kimi_cli.auth.oauth.load_tokens", return_value=token),
-        patch("kimi_cli.auth.oauth.refresh_token", mock_refresh),
-        patch("kimi_cli.auth.oauth.save_tokens"),
+        patch("consilium.auth.oauth.load_tokens", return_value=token),
+        patch("consilium.auth.oauth.refresh_token", mock_refresh),
+        patch("consilium.auth.oauth.save_tokens"),
     ):
         await manager.ensure_fresh()
 
@@ -325,7 +325,7 @@ async def test_ensure_fresh_skips_when_plenty_of_time():
 def test_save_to_file_is_atomic(tmp_path):
     """_save_to_file should write atomically via rename, not in-place."""
     key = "test-atomic"
-    with patch("kimi_cli.auth.oauth._credentials_dir", return_value=tmp_path):
+    with patch("consilium.auth.oauth._credentials_dir", return_value=tmp_path):
         token = _make_token()
         _save_to_file(key, token)
         path = tmp_path / f"{key}.json"
@@ -340,7 +340,7 @@ def test_save_to_file_is_atomic(tmp_path):
 def test_save_to_file_expires_in_roundtrip(tmp_path):
     """expires_in should survive a save/load roundtrip."""
     key = "test-roundtrip"
-    with patch("kimi_cli.auth.oauth._credentials_dir", return_value=tmp_path):
+    with patch("consilium.auth.oauth._credentials_dir", return_value=tmp_path):
         token = _make_token(expires_in=7200)
         _save_to_file(key, token)
         path = tmp_path / f"{key}.json"
@@ -375,11 +375,11 @@ async def test_ensure_fresh_force_raises_on_unauthorized():
     manager = _make_manager(token)
 
     with (
-        patch("kimi_cli.auth.oauth.load_tokens", return_value=token),
+        patch("consilium.auth.oauth.load_tokens", return_value=token),
         patch(
-            "kimi_cli.auth.oauth.refresh_token", AsyncMock(side_effect=OAuthUnauthorized("revoked"))
+            "consilium.auth.oauth.refresh_token", AsyncMock(side_effect=OAuthUnauthorized("revoked"))
         ),
-        patch("kimi_cli.auth.oauth.asyncio.sleep", new=AsyncMock()),
+        patch("consilium.auth.oauth.asyncio.sleep", new=AsyncMock()),
         pytest.raises(OAuthUnauthorized, match="revoked"),
     ):
         await manager.ensure_fresh(force=True)
@@ -402,10 +402,10 @@ async def test_unauthorized_must_not_delete_credentials_file(tmp_path, monkeypat
 
     with (
         patch(
-            "kimi_cli.auth.oauth.refresh_token",
+            "consilium.auth.oauth.refresh_token",
             AsyncMock(side_effect=OAuthUnauthorized("invalid_grant")),
         ),
-        patch("kimi_cli.auth.oauth.asyncio.sleep", new=AsyncMock()),
+        patch("consilium.auth.oauth.asyncio.sleep", new=AsyncMock()),
         pytest.raises(OAuthUnauthorized),
     ):
         await manager.ensure_fresh(force=True)
@@ -435,10 +435,10 @@ async def test_unauthorized_non_force_must_not_delete_credentials_file(tmp_path,
 
     with (
         patch(
-            "kimi_cli.auth.oauth.refresh_token",
+            "consilium.auth.oauth.refresh_token",
             AsyncMock(side_effect=OAuthUnauthorized("invalid_grant")),
         ),
-        patch("kimi_cli.auth.oauth.asyncio.sleep", new=AsyncMock()),
+        patch("consilium.auth.oauth.asyncio.sleep", new=AsyncMock()),
     ):
         # force=False: should NOT raise, just log warning and return
         await manager.ensure_fresh(force=False)
@@ -464,8 +464,8 @@ async def test_rejected_refresh_token_cooldown_skips_background_retry(tmp_path, 
     refresh = AsyncMock(side_effect=OAuthUnauthorized("invalid_grant"))
 
     with (
-        patch("kimi_cli.auth.oauth.refresh_token", refresh),
-        patch("kimi_cli.auth.oauth.asyncio.sleep", new=AsyncMock()),
+        patch("consilium.auth.oauth.refresh_token", refresh),
+        patch("consilium.auth.oauth.asyncio.sleep", new=AsyncMock()),
     ):
         with pytest.raises(OAuthUnauthorized):
             await manager.ensure_fresh(force=True)
@@ -492,8 +492,8 @@ async def test_rejected_tombstone_cleared_when_concurrent_instance_rotated(tmp_p
 
     # Step 1: hit a 401 with R1 → marks R1 rejected
     with (
-        patch("kimi_cli.auth.oauth.refresh_token", refresh),
-        patch("kimi_cli.auth.oauth.asyncio.sleep", new=AsyncMock()),
+        patch("consilium.auth.oauth.refresh_token", refresh),
+        patch("consilium.auth.oauth.asyncio.sleep", new=AsyncMock()),
         pytest.raises(OAuthUnauthorized),
     ):
         await manager.ensure_fresh(force=True)
@@ -509,8 +509,8 @@ async def test_rejected_tombstone_cleared_when_concurrent_instance_rotated(tmp_p
     # Step 3: next ensure_fresh should detect the rotation, clear the
     # tombstone, and NOT call refresh_token again
     with (
-        patch("kimi_cli.auth.oauth.refresh_token", refresh),
-        patch("kimi_cli.auth.oauth.asyncio.sleep", new=AsyncMock()),
+        patch("consilium.auth.oauth.refresh_token", refresh),
+        patch("consilium.auth.oauth.asyncio.sleep", new=AsyncMock()),
     ):
         await manager.ensure_fresh(force=False)
 
@@ -530,9 +530,9 @@ async def test_ensure_fresh_force_raises_on_network_error():
     manager = _make_manager(token)
 
     with (
-        patch("kimi_cli.auth.oauth.load_tokens", return_value=token),
+        patch("consilium.auth.oauth.load_tokens", return_value=token),
         patch(
-            "kimi_cli.auth.oauth.refresh_token", AsyncMock(side_effect=OAuthError("after retries"))
+            "consilium.auth.oauth.refresh_token", AsyncMock(side_effect=OAuthError("after retries"))
         ),
         pytest.raises(OAuthError, match="after retries"),
     ):
@@ -547,8 +547,8 @@ async def test_ensure_fresh_non_force_swallows_errors():
     manager = _make_manager(token)
 
     with (
-        patch("kimi_cli.auth.oauth.load_tokens", return_value=token),
-        patch("kimi_cli.auth.oauth.refresh_token", AsyncMock(side_effect=OAuthError("fail"))),
+        patch("consilium.auth.oauth.load_tokens", return_value=token),
+        patch("consilium.auth.oauth.refresh_token", AsyncMock(side_effect=OAuthError("fail"))),
     ):
         # Should NOT raise — errors are swallowed in background mode
         await manager.ensure_fresh()

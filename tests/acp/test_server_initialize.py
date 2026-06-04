@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from kimi_cli.acp.server import ACPServer
+from consilium.acp.server import ACPServer
 
 pytestmark = pytest.mark.asyncio
 
@@ -33,7 +33,7 @@ async def test_initialize_argv_handling(
     """initialize() should not crash regardless of sys.argv content."""
     server = ACPServer()
 
-    with patch("kimi_cli.acp.server.sys") as mock_sys:
+    with patch("consilium.acp.server.sys") as mock_sys:
         mock_sys.argv = argv
         resp = await server.initialize(protocol_version=1)
 

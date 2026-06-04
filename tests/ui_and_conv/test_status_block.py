@@ -1,7 +1,7 @@
 """Tests for _StatusBlock partial-update logic."""
 
-from kimi_cli.ui.shell.visualize import _StatusBlock
-from kimi_cli.wire.types import StatusUpdate
+from consilium.ui.shell.visualize import _StatusBlock
+from consilium.wire.types import StatusUpdate
 
 
 def test_full_initial_status():

@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from kimi_cli.utils.file_filter import (
+from consilium.utils.file_filter import (
     is_ignored,
     list_files_git,
     list_files_walk,

@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from rich.console import Console
 
-from kimi_cli.ui.shell.mcp_status import (
+from consilium.ui.shell.mcp_status import (
     render_mcp_console,
     render_mcp_prompt,
 )
-from kimi_cli.wire.types import MCPServerSnapshot, MCPStatusSnapshot
+from consilium.wire.types import MCPServerSnapshot, MCPStatusSnapshot
 
 
 def test_render_mcp_servers_shows_live_loading_summary() -> None:

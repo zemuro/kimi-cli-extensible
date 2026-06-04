@@ -230,7 +230,7 @@ def start_shell_pty(
     env["PROMPT_TOOLKIT_NO_CPR"] = "1"
     env.pop("NO_COLOR", None)
 
-    cmd = [sys.executable, "-m", "kimi_cli.cli"]
+    cmd = [sys.executable, "-m", "consilium.cli"]
     if yolo:
         cmd.append("--yolo")
     cmd.extend(["--config-file", str(config_path), "--work-dir", str(work_dir)])

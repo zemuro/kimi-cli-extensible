@@ -7,7 +7,7 @@ from pathlib import Path
 from kaos.path import KaosPath
 from kosong.tooling import ToolError
 
-from kimi_cli.tools.file.plan_mode import PlanEditTarget, inspect_plan_edit_target
+from consilium.tools.file.plan_mode import PlanEditTarget, inspect_plan_edit_target
 
 
 class TestInspectPlanEditTarget:

@@ -7,14 +7,14 @@ import pytest
 from kosong.message import ContentPart
 from kosong.tooling.empty import EmptyToolset
 
-import kimi_cli.telemetry as telemetry_mod
-from kimi_cli.approval_runtime import ApprovalSource
-from kimi_cli.soul.agent import Agent, Runtime
-from kimi_cli.soul.context import Context
-from kimi_cli.soul.kimisoul import KimiSoul
-from kimi_cli.telemetry import set_context
-from kimi_cli.utils.aioqueue import QueueShutDown
-from kimi_cli.wire.jsonrpc import (
+import consilium.telemetry as telemetry_mod
+from consilium.approval_runtime import ApprovalSource
+from consilium.soul.agent import Agent, Runtime
+from consilium.soul.context import Context
+from consilium.soul.kimisoul import KimiSoul
+from consilium.telemetry import set_context
+from consilium.utils.aioqueue import QueueShutDown
+from consilium.wire.jsonrpc import (
     ClientInfo,
     ErrorCodes,
     JSONRPCErrorResponse,
@@ -24,8 +24,8 @@ from kimi_cli.wire.jsonrpc import (
     JSONRPCSuccessResponse,
     Statuses,
 )
-from kimi_cli.wire.server import WireServer
-from kimi_cli.wire.types import ApprovalRequest, ApprovalResponse, TextPart
+from consilium.wire.server import WireServer
+from consilium.wire.types import ApprovalRequest, ApprovalResponse, TextPart
 
 
 def _make_soul(runtime: Runtime, tmp_path: Path) -> KimiSoul:
@@ -232,7 +232,7 @@ async def test_handle_prompt_cleanup_keeps_background_approval_pending(
     async def fake_run_soul(*args, **kwargs):
         return None
 
-    monkeypatch.setattr("kimi_cli.wire.server.run_soul", fake_run_soul)
+    monkeypatch.setattr("consilium.wire.server.run_soul", fake_run_soul)
 
     response = await server._handle_prompt(
         JSONRPCPromptMessage(

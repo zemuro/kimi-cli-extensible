@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from kimi_cli.background.models import TaskSpec
+from consilium.background.models import TaskSpec
 
 
 def _make_spec_json(**overrides) -> str:

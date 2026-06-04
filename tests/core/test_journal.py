@@ -6,12 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from kimi_cli.do.journal import ChangeJournal, DiffEntry
+from consilium.do.journal import ChangeJournal, DiffEntry
 
 
 @pytest.fixture
 def journal(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> ChangeJournal:
-    from kimi_cli.do import journal as journal_mod
+    from consilium.do import journal as journal_mod
     monkeypatch.setattr(journal_mod, "JOURNAL_DIR", tmp_path / "do_sessions")
     return ChangeJournal("test-session")
 

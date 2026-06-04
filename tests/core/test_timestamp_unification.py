@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from kimi_cli.utils.timestamp import format_date, format_iso, parse_timestamp
+from consilium.utils.timestamp import format_date, format_iso, parse_timestamp
 
 
 class TestParseTimestamp:
@@ -69,13 +69,13 @@ class TestFormatDate:
 
 class TestThinkModels:
     def test_think_message_timestamp_is_float(self) -> None:
-        from kimi_cli.think.models import ThinkMessage
+        from consilium.think.models import ThinkMessage
 
         msg = ThinkMessage()
         assert isinstance(msg.timestamp, float)
 
     def test_think_session_created_at_is_float(self) -> None:
-        from kimi_cli.think.models import ThinkSession
+        from consilium.think.models import ThinkSession
 
         session = ThinkSession()
         assert isinstance(session.created_at, float)
@@ -83,7 +83,7 @@ class TestThinkModels:
 
 class TestPlanModels:
     def test_plan_metadata_created_is_float(self) -> None:
-        from kimi_cli.plan.models import PlanMetadata
+        from consilium.plan.models import PlanMetadata
 
         ts = time.time()
         meta = PlanMetadata(created=ts)
@@ -91,20 +91,20 @@ class TestPlanModels:
         assert meta.created == pytest.approx(ts)
 
     def test_audit_report_timestamp_is_float(self) -> None:
-        from kimi_cli.plan.models import AuditReport
+        from consilium.plan.models import AuditReport
 
         report = AuditReport(phase_id="p1")
         assert isinstance(report.timestamp, float)
 
     def test_doc_entry_last_updated_is_float(self) -> None:
-        from kimi_cli.plan.models import DocEntry
+        from consilium.plan.models import DocEntry
 
         ts = time.time()
         entry = DocEntry(path="x.md", last_updated=ts)
         assert isinstance(entry.last_updated, float)
 
     def test_dispatch_dispatched_at_is_float(self) -> None:
-        from kimi_cli.plan.models import Dispatch, DispatchAction
+        from consilium.plan.models import Dispatch, DispatchAction
 
         d = Dispatch(
             dispatch_id="d1",
@@ -115,7 +115,7 @@ class TestPlanModels:
         assert isinstance(d.dispatched_at, float)
 
     def test_handover_created_at_is_float(self) -> None:
-        from kimi_cli.plan.models import Handover
+        from consilium.plan.models import Handover
 
         h = Handover()
         assert isinstance(h.created_at, float)
@@ -123,7 +123,7 @@ class TestPlanModels:
 
 class TestJournalTimestamp:
     def test_journal_entry_timestamp_is_float(self) -> None:
-        from kimi_cli.do.journal import JournalEntry
+        from consilium.do.journal import JournalEntry
 
         entry = JournalEntry()
         assert isinstance(entry.timestamp, float)
@@ -131,7 +131,7 @@ class TestJournalTimestamp:
 
 class TestTokenTracker:
     def test_token_log_entry_timestamp_is_float(self) -> None:
-        from kimi_cli.token_tracker import TokenLogEntry
+        from consilium.token_tracker import TokenLogEntry
 
         entry = TokenLogEntry(
             timestamp=time.time(),
@@ -149,9 +149,9 @@ class TestBackwardCompat:
     def test_think_storage_roundtrip_with_float(self, tmp_path) -> None:
 
         # Override THINK_DIR for test
-        import kimi_cli.think.storage as storage_mod
-        from kimi_cli.think.models import ThinkMessage, ThinkSession
-        from kimi_cli.think.storage import load_session, save_session
+        import consilium.think.storage as storage_mod
+        from consilium.think.models import ThinkMessage, ThinkSession
+        from consilium.think.storage import load_session, save_session
 
         orig_dir = storage_mod.THINK_DIR
         storage_mod.THINK_DIR = tmp_path
@@ -171,8 +171,8 @@ class TestBackwardCompat:
         """Old JSONL with ISO strings should still load."""
         import json
 
-        import kimi_cli.think.storage as storage_mod
-        from kimi_cli.think.storage import load_session
+        import consilium.think.storage as storage_mod
+        from consilium.think.storage import load_session
 
         orig_dir = storage_mod.THINK_DIR
         storage_mod.THINK_DIR = tmp_path
@@ -198,7 +198,7 @@ class TestBackwardCompat:
             storage_mod.THINK_DIR = orig_dir
 
     def test_plan_parser_parses_date_to_float(self) -> None:
-        from kimi_cli.plan.parser import parse_plan
+        from consilium.plan.parser import parse_plan
 
         text = """# Plan
 **plan_id:** test-plan
@@ -210,13 +210,13 @@ Do setup.
 """
         plan = parse_plan(text)
         assert isinstance(plan.metadata.created, float)
-        from kimi_cli.utils.timestamp import format_date
+        from consilium.utils.timestamp import format_date
 
         assert format_date(plan.metadata.created) == "2026-05-24"
 
     def test_audit_report_roundtrip(self) -> None:
-        from kimi_cli.plan.audit_report import parse_audit_report, render_audit_report
-        from kimi_cli.plan.models import AuditReport
+        from consilium.plan.audit_report import parse_audit_report, render_audit_report
+        from consilium.plan.models import AuditReport
 
         report = AuditReport(phase_id="phase-1", timestamp=1716912000.0)
         text = render_audit_report(report)
@@ -227,8 +227,8 @@ Do setup.
         assert parsed.timestamp == pytest.approx(1716912000.0)
 
     def test_handover_read_preserves_timestamp(self, tmp_path) -> None:
-        from kimi_cli.plan.handover import _render_handover, read_handover
-        from kimi_cli.plan.models import Handover
+        from consilium.plan.handover import _render_handover, read_handover
+        from consilium.plan.models import Handover
 
         ts = 1716854400.0  # 2024-05-28 00:00:00 UTC (date-only precision)
         handover = Handover(created_at=ts)

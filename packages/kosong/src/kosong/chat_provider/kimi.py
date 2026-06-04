@@ -315,18 +315,20 @@ def _convert_message(message: Message) -> ChatCompletionMessageParam:
             content.append(part)
     message.content = content
     dumped_message = message.model_dump(exclude_none=True)
-    if (
-        message.role == "assistant"
-        and message.tool_calls
-        and _is_effectively_empty_content_parts(content)
-    ):
-        # OpenAI-compatible APIs allow assistant tool-call messages to omit
-        # `content`, but the Kimi-for-Coding compat layer rejects a content
-        # list that contains an empty text part (observed: `content:
-        # [{"type": "text", "text": ""}]` -> 400 "text content is empty").
-        # Dropping `content` entirely is always accepted, so do that whenever
-        # the visible content is effectively empty alongside a tool call.
-        dumped_message.pop("content", None)
+    if _is_effectively_empty_content_parts(content):
+        if message.role == "assistant" and message.tool_calls:
+            # OpenAI-compatible APIs allow assistant tool-call messages to omit
+            # `content`, but the Kimi-for-Coding compat layer rejects a content
+            # list that contains an empty text part (observed: `content:
+            # [{"type": "text", "text": ""}]` -> 400 "text content is empty").
+            # Dropping `content` entirely is always accepted, so do that whenever
+            # the visible content is effectively empty alongside a tool call.
+            dumped_message.pop("content", None)
+        elif message.role == "user":
+            # Empty user messages are rejected by the API with:
+            # "the message at position N with role 'user' must not be empty"
+            # Replace with a minimal space to satisfy validation.
+            dumped_message["content"] = " "
     if reasoning_content:
         dumped_message["reasoning_content"] = reasoning_content
     return cast(ChatCompletionMessageParam, dumped_message)

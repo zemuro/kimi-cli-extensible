@@ -5,9 +5,9 @@ import pytest
 from inline_snapshot import snapshot
 from pydantic import BaseModel
 
-from kimi_cli.wire.file import WireMessageRecord
-from kimi_cli.wire.serde import deserialize_wire_message, serialize_wire_message
-from kimi_cli.wire.types import (
+from consilium.wire.file import WireMessageRecord
+from consilium.wire.serde import deserialize_wire_message, serialize_wire_message
+from consilium.wire.types import (
     ApprovalRequest,
     ApprovalResponse,
     BriefDisplayBlock,
@@ -625,11 +625,11 @@ async def test_question_request_resolve_empty():
 
 
 def test_wire_message_type_alias():
-    import kimi_cli.wire.types
+    import consilium.wire.types
 
-    module = kimi_cli.wire.types
+    module = consilium.wire.types
     # Helper types that are BaseModel subclasses but not WireMessage types
-    from kimi_cli.wire.types import HookResponse
+    from consilium.wire.types import HookResponse
 
     _NON_WIRE_TYPES = {
         WireMessageEnvelope,
@@ -667,7 +667,7 @@ def test_read_wire_lines_request_id(tmp_path: Path):
     import json
     import time
 
-    from kimi_cli.web.api.sessions import _read_wire_lines
+    from consilium.web.api.sessions import _read_wire_lines
 
     # Build a realistic wire.jsonl with request and event messages
     wire_file = tmp_path / "wire.jsonl"

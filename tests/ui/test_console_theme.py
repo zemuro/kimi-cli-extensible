@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from kimi_cli.ui.shell.console import NEUTRAL_MARKDOWN_THEME
+from consilium.ui.shell.console import NEUTRAL_MARKDOWN_THEME
 
 
 class TestNeutralMarkdownThemeNoBgColor:

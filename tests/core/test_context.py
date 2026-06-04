@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 from kosong.message import Message, Role
 
-from kimi_cli.soul.context import Context
-from kimi_cli.wire.types import TextPart
+from consilium.soul.context import Context
+from consilium.wire.types import TextPart
 
 
 def _write_lines(path: Path, lines: list[dict]) -> None:

@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, patch
 
 from pydantic import SecretStr
 
-from kimi_cli.cli.export import _collect_recent_log_files, _session_time_range
+from consilium.cli.export import _collect_recent_log_files, _session_time_range
 
 _TWO_DAYS = 2 * 24 * 60 * 60
 
@@ -93,7 +93,7 @@ class TestCollectRecentLogFiles:
         session_dir = tmp_path / "session"
         session_dir.mkdir()
 
-        with patch("kimi_cli.share.get_share_dir", return_value=tmp_path):
+        with patch("consilium.share.get_share_dir", return_value=tmp_path):
             files = _collect_recent_log_files(session_dir)
 
         names = {f.name for f in files}
@@ -117,7 +117,7 @@ class TestCollectRecentLogFiles:
         session_dir.mkdir()
         _write_wire_records(session_dir / "wire.jsonl", [session_time, session_time + 7200])
 
-        with patch("kimi_cli.share.get_share_dir", return_value=tmp_path):
+        with patch("consilium.share.get_share_dir", return_value=tmp_path):
             files = _collect_recent_log_files(session_dir)
 
         names = {f.name for f in files}
@@ -136,7 +136,7 @@ class TestCollectRecentLogFiles:
         session_dir.mkdir()
         # No wire.jsonl
 
-        with patch("kimi_cli.share.get_share_dir", return_value=tmp_path):
+        with patch("consilium.share.get_share_dir", return_value=tmp_path):
             files = _collect_recent_log_files(session_dir)
 
         names = {f.name for f in files}
@@ -152,7 +152,7 @@ class TestCollectRecentLogFiles:
         session_dir = tmp_path / "session"
         session_dir.mkdir()
 
-        with patch("kimi_cli.share.get_share_dir", return_value=tmp_path):
+        with patch("consilium.share.get_share_dir", return_value=tmp_path):
             files = _collect_recent_log_files(session_dir)
 
         names = {f.name for f in files}
@@ -163,14 +163,14 @@ class TestCollectRecentLogFiles:
         session_dir = tmp_path / "session"
         session_dir.mkdir()
 
-        with patch("kimi_cli.share.get_share_dir", return_value=tmp_path):
+        with patch("consilium.share.get_share_dir", return_value=tmp_path):
             assert _collect_recent_log_files(session_dir) == []
 
     def test_no_log_dir(self, tmp_path: Path):
         session_dir = tmp_path / "session"
         session_dir.mkdir()
 
-        with patch("kimi_cli.share.get_share_dir", return_value=tmp_path):
+        with patch("consilium.share.get_share_dir", return_value=tmp_path):
             assert _collect_recent_log_files(session_dir) == []
 
 
@@ -184,9 +184,9 @@ class TestToolExecutionLogging:
 
     async def test_toolset_tool_execution_error_logged(self):
         """When a tool raises an exception, toolset should log an ERROR."""
-        from kimi_cli.hooks.engine import HookEngine
-        from kimi_cli.soul.toolset import KimiToolset
-        from kimi_cli.wire.types import ToolCall
+        from consilium.hooks.engine import HookEngine
+        from consilium.soul.toolset import KimiToolset
+        from consilium.wire.types import ToolCall
 
         toolset = KimiToolset()
         toolset._hook_engine = HookEngine([], cwd="/tmp")
@@ -205,7 +205,7 @@ class TestToolExecutionLogging:
             function=ToolCall.FunctionBody(name="FailingTool", arguments="{}"),
         )
 
-        with patch("kimi_cli.soul.toolset.logger") as mock_logger:
+        with patch("consilium.soul.toolset.logger") as mock_logger:
             result = toolset.handle(tool_call)
             if isinstance(result, asyncio.Task):
                 await result
@@ -214,8 +214,8 @@ class TestToolExecutionLogging:
 
     async def test_toolset_json_parse_error_logged(self):
         """When tool call arguments are invalid JSON, toolset should log a WARNING."""
-        from kimi_cli.soul.toolset import KimiToolset
-        from kimi_cli.wire.types import ToolCall
+        from consilium.soul.toolset import KimiToolset
+        from consilium.wire.types import ToolCall
 
         toolset = KimiToolset()
 
@@ -230,7 +230,7 @@ class TestToolExecutionLogging:
             function=ToolCall.FunctionBody(name="DummyTool", arguments="{invalid json}"),
         )
 
-        with patch("kimi_cli.soul.toolset.logger") as mock_logger:
+        with patch("consilium.soul.toolset.logger") as mock_logger:
             toolset.handle(tool_call)
             mock_logger.warning.assert_called()
             assert "DummyTool" in str(mock_logger.warning.call_args)
@@ -240,11 +240,11 @@ class TestFileToolLogging:
     """Test that file tool errors produce WARNING logs."""
 
     async def test_read_file_exception_logged(self, read_file_tool):
-        from kimi_cli.tools.file.read import Params
+        from consilium.tools.file.read import Params
 
         with (
-            patch("kimi_cli.tools.file.read.logger") as mock_logger,
-            patch("kimi_cli.tools.file.read.kaos_path_from_user_input") as mock_path,
+            patch("consilium.tools.file.read.logger") as mock_logger,
+            patch("consilium.tools.file.read.kaos_path_from_user_input") as mock_path,
         ):
             mock_path.side_effect = RuntimeError("Unexpected")
             result = await read_file_tool(Params(path="/some/file"))
@@ -252,11 +252,11 @@ class TestFileToolLogging:
             mock_logger.warning.assert_called_once()
 
     async def test_write_file_exception_logged(self, write_file_tool):
-        from kimi_cli.tools.file.write import Params
+        from consilium.tools.file.write import Params
 
         with (
-            patch("kimi_cli.tools.file.write.logger") as mock_logger,
-            patch("kimi_cli.tools.file.write.kaos_path_from_user_input") as mock_path,
+            patch("consilium.tools.file.write.logger") as mock_logger,
+            patch("consilium.tools.file.write.kaos_path_from_user_input") as mock_path,
         ):
             mock_path.side_effect = RuntimeError("Unexpected")
             result = await write_file_tool(Params(path="/some/file", content="test"))
@@ -264,11 +264,11 @@ class TestFileToolLogging:
             mock_logger.warning.assert_called_once()
 
     async def test_glob_exception_logged(self, glob_tool):
-        from kimi_cli.tools.file.glob import Params
+        from consilium.tools.file.glob import Params
 
         with (
-            patch("kimi_cli.tools.file.glob.logger") as mock_logger,
-            patch("kimi_cli.tools.file.glob.kaos_path_from_user_input") as mock_path,
+            patch("consilium.tools.file.glob.logger") as mock_logger,
+            patch("consilium.tools.file.glob.kaos_path_from_user_input") as mock_path,
         ):
             mock_path.side_effect = RuntimeError("Unexpected")
             result = await glob_tool(Params(pattern="*.py", directory="/some/dir"))
@@ -276,11 +276,11 @@ class TestFileToolLogging:
             mock_logger.warning.assert_called_once()
 
     async def test_replace_file_exception_logged(self, str_replace_file_tool):
-        from kimi_cli.tools.file.replace import Edit, Params
+        from consilium.tools.file.replace import Edit, Params
 
         with (
-            patch("kimi_cli.tools.file.replace.logger") as mock_logger,
-            patch("kimi_cli.tools.file.replace.kaos_path_from_user_input") as mock_path,
+            patch("consilium.tools.file.replace.logger") as mock_logger,
+            patch("consilium.tools.file.replace.kaos_path_from_user_input") as mock_path,
         ):
             mock_path.side_effect = RuntimeError("Unexpected")
             result = await str_replace_file_tool(
@@ -292,13 +292,13 @@ class TestFileToolLogging:
 
 class TestSearchWebLogging:
     async def test_search_timeout_logged(self, search_web_tool):
-        from kimi_cli.tools.web.search import Params
+        from consilium.tools.web.search import Params
         from tests.conftest import tool_call_context
 
         with (
             tool_call_context("SearchWeb"),
-            patch("kimi_cli.tools.web.search.logger") as mock_logger,
-            patch("kimi_cli.tools.web.search.new_client_session") as mock_session,
+            patch("consilium.tools.web.search.logger") as mock_logger,
+            patch("consilium.tools.web.search.new_client_session") as mock_session,
         ):
             mock_session.return_value.__aenter__ = AsyncMock(side_effect=TimeoutError())
             result = await search_web_tool(Params(query="test query"))
@@ -308,10 +308,10 @@ class TestSearchWebLogging:
 
 class TestLLMLogging:
     def test_create_llm_missing_config_logged(self):
-        from kimi_cli.config import LLMModel, LLMProvider
+        from consilium.config import LLMModel, LLMProvider
 
-        with patch("kimi_cli.llm.logger") as mock_logger:
-            from kimi_cli.llm import create_llm
+        with patch("consilium.llm.logger") as mock_logger:
+            from consilium.llm import create_llm
 
             result = create_llm(
                 LLMProvider(type="kimi", base_url="", api_key=SecretStr("")),
@@ -323,12 +323,12 @@ class TestLLMLogging:
 
 class TestSubagentRunnerLogging:
     async def test_max_steps_reached_logged(self):
-        from kimi_cli.soul import MaxStepsReached
-        from kimi_cli.subagents.runner import run_soul_checked
+        from consilium.soul import MaxStepsReached
+        from consilium.subagents.runner import run_soul_checked
 
         with (
-            patch("kimi_cli.subagents.runner.run_soul") as mock_run_soul,
-            patch("kimi_cli.subagents.runner.logger") as mock_logger,
+            patch("consilium.subagents.runner.run_soul") as mock_run_soul,
+            patch("consilium.subagents.runner.logger") as mock_logger,
         ):
             mock_run_soul.side_effect = MaxStepsReached(100)
             result = await run_soul_checked(
@@ -345,11 +345,11 @@ class TestSubagentRunnerLogging:
     async def test_api_status_error_logged(self):
         from kosong.chat_provider import APIStatusError
 
-        from kimi_cli.subagents.runner import run_soul_checked
+        from consilium.subagents.runner import run_soul_checked
 
         with (
-            patch("kimi_cli.subagents.runner.run_soul") as mock_run_soul,
-            patch("kimi_cli.subagents.runner.logger") as mock_logger,
+            patch("consilium.subagents.runner.run_soul") as mock_run_soul,
+            patch("consilium.subagents.runner.logger") as mock_logger,
         ):
             mock_run_soul.side_effect = APIStatusError(429, "Rate limited")
             result = await run_soul_checked(
@@ -366,11 +366,11 @@ class TestSubagentRunnerLogging:
     async def test_chat_provider_error_logged(self):
         from kosong.chat_provider import ChatProviderError
 
-        from kimi_cli.subagents.runner import run_soul_checked
+        from consilium.subagents.runner import run_soul_checked
 
         with (
-            patch("kimi_cli.subagents.runner.run_soul") as mock_run_soul,
-            patch("kimi_cli.subagents.runner.logger") as mock_logger,
+            patch("consilium.subagents.runner.run_soul") as mock_run_soul,
+            patch("consilium.subagents.runner.logger") as mock_logger,
         ):
             mock_run_soul.side_effect = ChatProviderError("Provider down")
             result = await run_soul_checked(

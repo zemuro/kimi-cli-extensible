@@ -1,0 +1,17 @@
+[project]
+name = "consilium-code"
+version = "1.44.0"
+description = "Consilium Code is a CLI agent that lives in your terminal."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["consilium==1.44.0"]
+
+[project.scripts]
+consilium-code = "consilium.__main__:main"
+
+[build-system]
+requires = ["uv_build>=0.8.5,<0.10.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = ["kimi_code"]

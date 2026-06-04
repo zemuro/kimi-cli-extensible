@@ -4,8 +4,8 @@ import json
 
 from kosong.tooling import ToolReturnValue
 
-from kimi_cli.ui.print.visualize import FinalOnlyJsonPrinter, FinalOnlyTextPrinter, JsonPrinter
-from kimi_cli.wire.types import (
+from consilium.ui.print.visualize import FinalOnlyJsonPrinter, FinalOnlyTextPrinter, JsonPrinter
+from consilium.wire.types import (
     Notification,
     StepRetry,
     TextPart,

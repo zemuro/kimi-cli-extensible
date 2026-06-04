@@ -10,8 +10,8 @@ from kosong.tooling import CallableTool2, ToolOk, ToolReturnValue
 from kosong.tooling.error import ToolNotFoundError as KosongToolNotFoundError
 from pydantic import BaseModel
 
-from kimi_cli.soul.toolset import KimiToolset
-from kimi_cli.wire.types import ToolCall, ToolResult
+from consilium.soul.toolset import KimiToolset
+from consilium.wire.types import ToolCall, ToolResult
 
 
 class DummyParams(BaseModel):

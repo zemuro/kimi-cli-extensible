@@ -14,9 +14,9 @@ from typing import Any, cast
 
 import pytest
 
-from kimi_cli.wire.types import ApprovalRequest, ApprovalResponse, QuestionRequest, StatusUpdate
+from consilium.wire.types import ApprovalRequest, ApprovalResponse, QuestionRequest, StatusUpdate
 
-shell_visualize = importlib.import_module("kimi_cli.ui.shell.visualize")
+shell_visualize = importlib.import_module("consilium.ui.shell.visualize")
 _LiveView = shell_visualize._LiveView
 _PromptLiveView = shell_visualize._PromptLiveView
 ApprovalPromptDelegate = shell_visualize.ApprovalPromptDelegate
@@ -689,7 +689,7 @@ async def test_compose_panel_rendered_before_tool_calls(panel_type: str) -> None
     from rich.console import Group
     from rich.panel import Panel
 
-    from kimi_cli.wire.types import ToolCall
+    from consilium.wire.types import ToolCall
 
     view = _LiveView(StatusUpdate())
 
@@ -719,7 +719,7 @@ async def test_compose_approval_before_question_when_both_present() -> None:
     from rich.console import Group
     from rich.panel import Panel
 
-    from kimi_cli.wire.types import ToolCall
+    from consilium.wire.types import ToolCall
 
     view = _LiveView(StatusUpdate())
 
@@ -792,7 +792,7 @@ async def test_compose_equals_panels_plus_agent_output() -> None:
     """compose() must be the concatenation of interactive panels + agent output."""
     from rich.console import Group
 
-    from kimi_cli.wire.types import ToolCall
+    from consilium.wire.types import ToolCall
 
     view = _LiveView(StatusUpdate())
     view.request_approval(_make_approval_request())
@@ -820,7 +820,7 @@ async def test_compose_agent_output_includes_spinners_and_tool_calls() -> None:
     """compose_agent_output() should include spinners and tool call blocks."""
     from rich.spinner import Spinner
 
-    from kimi_cli.wire.types import ToolCall
+    from consilium.wire.types import ToolCall
 
     view = _LiveView(StatusUpdate())
     view._active_turn_depth = 1  # moon fallback requires active turn
@@ -846,7 +846,7 @@ async def test_render_agent_status_excludes_panels_in_interactive() -> None:
     """
     from rich.spinner import Spinner
 
-    from kimi_cli.ui.shell.visualize import _PromptLiveView
+    from consilium.ui.shell.visualize import _PromptLiveView
 
     view = object.__new__(_PromptLiveView)
     view._turn_ended = False
@@ -936,11 +936,11 @@ async def test_shell_external_approval_response_syncs_modal(
     to the next request."""
     from kosong.tooling.empty import EmptyToolset
 
-    from kimi_cli.approval_runtime import ApprovalSource
-    from kimi_cli.soul.agent import Agent
-    from kimi_cli.soul.context import Context
-    from kimi_cli.soul.kimisoul import KimiSoul
-    from kimi_cli.ui.shell import Shell
+    from consilium.approval_runtime import ApprovalSource
+    from consilium.soul.agent import Agent
+    from consilium.soul.context import Context
+    from consilium.soul.kimisoul import KimiSoul
+    from consilium.ui.shell import Shell
 
     agent = Agent(
         name="Test",
@@ -1034,11 +1034,11 @@ async def test_shell_forward_approval_to_sink_fallback_when_no_sink(
     should fall back to the pending queue."""
     from kosong.tooling.empty import EmptyToolset
 
-    from kimi_cli.approval_runtime import ApprovalSource
-    from kimi_cli.soul.agent import Agent
-    from kimi_cli.soul.context import Context
-    from kimi_cli.soul.kimisoul import KimiSoul
-    from kimi_cli.ui.shell import Shell
+    from consilium.approval_runtime import ApprovalSource
+    from consilium.soul.agent import Agent
+    from consilium.soul.context import Context
+    from consilium.soul.kimisoul import KimiSoul
+    from consilium.ui.shell import Shell
 
     agent = Agent(
         name="Test",
@@ -1198,10 +1198,10 @@ async def test_shell_command_mode_starts_root_wire_hub_watcher(
 
     from kosong.tooling.empty import EmptyToolset
 
-    from kimi_cli.soul.agent import Agent
-    from kimi_cli.soul.context import Context
-    from kimi_cli.soul.kimisoul import KimiSoul
-    from kimi_cli.ui.shell import Shell
+    from consilium.soul.agent import Agent
+    from consilium.soul.context import Context
+    from consilium.soul.kimisoul import KimiSoul
+    from consilium.ui.shell import Shell
 
     agent = Agent(
         name="Test",
@@ -1235,11 +1235,11 @@ async def test_clear_active_approval_sink_requeues_pending_requests(
     presented in the next turn or via the prompt modal."""
     from kosong.tooling.empty import EmptyToolset
 
-    from kimi_cli.approval_runtime import ApprovalSource
-    from kimi_cli.soul.agent import Agent
-    from kimi_cli.soul.context import Context
-    from kimi_cli.soul.kimisoul import KimiSoul
-    from kimi_cli.ui.shell import Shell
+    from consilium.approval_runtime import ApprovalSource
+    from consilium.soul.agent import Agent
+    from consilium.soul.context import Context
+    from consilium.soul.kimisoul import KimiSoul
+    from consilium.ui.shell import Shell
 
     agent = Agent(
         name="Test",

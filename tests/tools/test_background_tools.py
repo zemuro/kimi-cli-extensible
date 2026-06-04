@@ -4,8 +4,8 @@ import time
 
 import pytest
 
-from kimi_cli.background import TaskRuntime, TaskSpec, TaskStatus
-from kimi_cli.tools.shell import Params
+from consilium.background import TaskRuntime, TaskSpec, TaskStatus
+from consilium.tools.shell import Params
 
 
 def _write_task(runtime, task_id: str, *, status: TaskStatus, output: str = ""):
@@ -343,7 +343,7 @@ async def test_task_stop_rejected_by_approval(runtime, task_stop_tool, monkeypat
         output="watching\n",
     )
 
-    from kimi_cli.soul.approval import ApprovalResult
+    from consilium.soul.approval import ApprovalResult
 
     async def _reject(*_args, **_kwargs):
         return ApprovalResult(approved=False)

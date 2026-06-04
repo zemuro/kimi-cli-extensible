@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from kimi_cli.tools import extract_key_argument
+from consilium.tools import extract_key_argument
 
 
 class TestExtractKeyArgument:

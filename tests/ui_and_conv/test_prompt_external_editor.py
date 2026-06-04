@@ -8,8 +8,8 @@ from typing import cast
 import pytest
 from prompt_toolkit.key_binding import KeyPressEvent
 
-from kimi_cli.ui.shell import prompt as shell_prompt
-from kimi_cli.ui.shell.placeholders import PromptPlaceholderManager
+from consilium.ui.shell import prompt as shell_prompt
+from consilium.ui.shell.placeholders import PromptPlaceholderManager
 
 
 class _DummyApp:
@@ -52,8 +52,8 @@ async def test_open_in_external_editor_uses_provider_value(monkeypatch) -> None:
         assert in_executor is True
         return func()
 
-    monkeypatch.setattr("kimi_cli.utils.editor.get_editor_command", fake_get_editor_command)
-    monkeypatch.setattr("kimi_cli.utils.editor.edit_text_in_editor", fake_edit_text_in_editor)
+    monkeypatch.setattr("consilium.utils.editor.get_editor_command", fake_get_editor_command)
+    monkeypatch.setattr("consilium.utils.editor.edit_text_in_editor", fake_edit_text_in_editor)
     run_in_terminal_module = importlib.import_module("prompt_toolkit.application.run_in_terminal")
     monkeypatch.setattr(run_in_terminal_module, "run_in_terminal", fake_run_in_terminal)
 
@@ -86,7 +86,7 @@ async def test_open_in_external_editor_expands_and_refolds_text_placeholders(mon
 
     edit_calls: list[tuple[str, str]] = []
 
-    monkeypatch.setattr("kimi_cli.utils.editor.get_editor_command", lambda configured=None: ["vim"])
+    monkeypatch.setattr("consilium.utils.editor.get_editor_command", lambda configured=None: ["vim"])
 
     def fake_edit_text_in_editor(text: str, configured: str | None = None):
         edit_calls.append((text, configured or ""))
@@ -96,7 +96,7 @@ async def test_open_in_external_editor_expands_and_refolds_text_placeholders(mon
         assert in_executor is True
         return func()
 
-    monkeypatch.setattr("kimi_cli.utils.editor.edit_text_in_editor", fake_edit_text_in_editor)
+    monkeypatch.setattr("consilium.utils.editor.edit_text_in_editor", fake_edit_text_in_editor)
     run_in_terminal_module = importlib.import_module("prompt_toolkit.application.run_in_terminal")
     monkeypatch.setattr(run_in_terminal_module, "run_in_terminal", fake_run_in_terminal)
 
@@ -128,7 +128,7 @@ async def test_open_in_external_editor_leaves_moved_text_expanded_when_refold_is
     buff = _DummyBuffer(f"{pasted_text}\n---\n{token}")
     event = SimpleNamespace(current_buffer=buff, app=app)
 
-    monkeypatch.setattr("kimi_cli.utils.editor.get_editor_command", lambda configured=None: ["vim"])
+    monkeypatch.setattr("consilium.utils.editor.get_editor_command", lambda configured=None: ["vim"])
 
     def fake_edit_text_in_editor(text: str, configured: str | None = None):
         return f"{pasted_text}\n{pasted_text}\n---\n"
@@ -137,7 +137,7 @@ async def test_open_in_external_editor_leaves_moved_text_expanded_when_refold_is
         assert in_executor is True
         return func()
 
-    monkeypatch.setattr("kimi_cli.utils.editor.edit_text_in_editor", fake_edit_text_in_editor)
+    monkeypatch.setattr("consilium.utils.editor.edit_text_in_editor", fake_edit_text_in_editor)
     run_in_terminal_module = importlib.import_module("prompt_toolkit.application.run_in_terminal")
     monkeypatch.setattr(run_in_terminal_module, "run_in_terminal", fake_run_in_terminal)
 
@@ -165,7 +165,7 @@ def test_open_in_external_editor_toast_when_no_editor(monkeypatch) -> None:
     def fake_toast(message: str, *_, **__):
         toast_calls.append(message)
 
-    monkeypatch.setattr("kimi_cli.utils.editor.get_editor_command", lambda configured=None: None)
+    monkeypatch.setattr("consilium.utils.editor.get_editor_command", lambda configured=None: None)
     monkeypatch.setattr(shell_prompt, "toast", fake_toast)
 
     prompt_session._open_in_external_editor(cast(KeyPressEvent, event))

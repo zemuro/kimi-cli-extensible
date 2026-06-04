@@ -13,10 +13,10 @@ from unittest.mock import Mock
 
 import pytest
 
-from kimi_cli.cli import Reload, SwitchToVis, SwitchToWeb
-from kimi_cli.ui.shell.slash import ShellSlashCmdFunc, shell_mode_registry
-from kimi_cli.ui.shell.slash import registry as shell_slash_registry
-from kimi_cli.utils.slashcmd import SlashCommand
+from consilium.cli import Reload, SwitchToVis, SwitchToWeb
+from consilium.ui.shell.slash import ShellSlashCmdFunc, shell_mode_registry
+from consilium.ui.shell.slash import registry as shell_slash_registry
+from consilium.utils.slashcmd import SlashCommand
 
 
 async def _invoke_slash_command(command: SlashCommand[ShellSlashCmdFunc], shell: Any) -> None:
@@ -27,7 +27,7 @@ async def _invoke_slash_command(command: SlashCommand[ShellSlashCmdFunc], shell:
 
 def _mock_shell_with_soul(session_id: str = "current-session-id") -> Mock:
     """Create a mock Shell whose soul passes the KimiSoul isinstance check."""
-    from kimi_cli.soul.kimisoul import KimiSoul
+    from consilium.soul.kimisoul import KimiSoul
 
     mock_soul = Mock(spec=KimiSoul)
     mock_soul.runtime.session.id = session_id
@@ -54,7 +54,7 @@ class TestWebCommandRegistration:
         assert shell_mode_registry.find_command("web") is None
 
     def test_not_in_soul_registry(self) -> None:
-        from kimi_cli.soul.slash import registry as soul_slash_registry
+        from consilium.soul.slash import registry as soul_slash_registry
 
         assert soul_slash_registry.find_command("web") is None
 
@@ -131,7 +131,7 @@ class TestVisCommandRegistration:
         assert shell_mode_registry.find_command("vis") is None
 
     def test_not_in_soul_registry(self) -> None:
-        from kimi_cli.soul.slash import registry as soul_slash_registry
+        from consilium.soul.slash import registry as soul_slash_registry
 
         assert soul_slash_registry.find_command("vis") is None
 

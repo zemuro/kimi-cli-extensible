@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from kimi_cli.token_tracker import BudgetExceededError, TokenLogEntry, TokenTracker
+from consilium.token_tracker import BudgetExceededError, TokenLogEntry, TokenTracker, get_quota_summary
 
 
 @pytest.fixture
@@ -160,3 +160,80 @@ class TestBudgetExceededError:
     def test_budget_exceeded_error_message(self) -> None:
         err = BudgetExceededError("Token budget exceeded: 1000 / 1000 tokens")
         assert str(err) == "Token budget exceeded: 1000 / 1000 tokens"
+
+
+class TestGetQuotaSummary:
+    def test_session_quota(self, tracker: TokenTracker) -> None:
+        from datetime import datetime, timezone
+        base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        tracker.log(
+            TokenLogEntry(
+                timestamp=base_time,
+                session_id="sess_quota",
+                turn_id="t1",
+                model="model_1",
+                tokens_in=4000,
+                tokens_out=2000,
+                active_context=200,
+            )
+        )
+        quota = get_quota_summary("sess_quota", budget_tokens=20_000)
+        assert quota is not None
+        assert quota.weekly_used_minutes == 3  # 6000 // 2000
+        assert quota.weekly_limit_minutes == 10  # 20_000 // 2000
+        assert quota.weekly_remaining_minutes == 7
+
+    def test_global_quota(self, tracker: TokenTracker) -> None:
+        from datetime import datetime, timezone
+        base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        tracker.log(
+            TokenLogEntry(
+                timestamp=base_time,
+                session_id="sess_A",
+                turn_id="t1",
+                model="model_1",
+                tokens_in=2000,
+                tokens_out=0,
+                active_context=200,
+            )
+        )
+        tracker.log(
+            TokenLogEntry(
+                timestamp=base_time,
+                session_id="sess_B",
+                turn_id="t2",
+                model="model_2",
+                tokens_in=0,
+                tokens_out=2000,
+                active_context=200,
+            )
+        )
+        quota = get_quota_summary(budget_tokens=10_000)
+        assert quota is not None
+        assert quota.weekly_used_minutes == 2  # 4000 // 2000
+        assert quota.weekly_limit_minutes == 5  # 10_000 // 2000
+        assert quota.weekly_remaining_minutes == 3
+
+    def test_quota_no_data_returns_none(self, tracker: TokenTracker) -> None:
+        quota = get_quota_summary("nonexistent")
+        assert quota is None
+
+    def test_quota_defaults_budget(self, tracker: TokenTracker) -> None:
+        from datetime import datetime, timezone
+        base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        tracker.log(
+            TokenLogEntry(
+                timestamp=base_time,
+                session_id="sess_default",
+                turn_id="t1",
+                model="model_1",
+                tokens_in=200_000,
+                tokens_out=0,
+                active_context=200,
+            )
+        )
+        quota = get_quota_summary("sess_default")
+        assert quota is not None
+        assert quota.weekly_limit_minutes == 50  # 100_000 // 2000
+        assert quota.weekly_used_minutes == 100  # 200_000 // 2000
+        assert quota.weekly_remaining_minutes == 0  # clamped at 0

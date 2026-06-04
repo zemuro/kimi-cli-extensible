@@ -18,10 +18,10 @@ import pytest
 from kosong.message import Message
 from kosong.tooling.empty import EmptyToolset
 
-from kimi_cli.approval_runtime import ApprovalSource
-from kimi_cli.soul.agent import Agent as SoulAgent
-from kimi_cli.subagents import AgentLaunchSpec, AgentTypeDefinition, ToolPolicy
-from kimi_cli.wire.types import TextPart
+from consilium.approval_runtime import ApprovalSource
+from consilium.soul.agent import Agent as SoulAgent
+from consilium.subagents import AgentLaunchSpec, AgentTypeDefinition, ToolPolicy
+from consilium.wire.types import TextPart
 
 
 def _register_coder(runtime) -> None:
@@ -82,8 +82,8 @@ async def test_kill_background_agent_during_soul_run(runtime, monkeypatch):
         # Block forever — will be cancelled by task.cancel().
         await asyncio.Future()
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
-    monkeypatch.setattr("kimi_cli.subagents.runner.run_soul", fake_run_soul)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.runner.run_soul", fake_run_soul)
 
     # Create a background task via the manager.
     runtime.background_tasks.bind_runtime(runtime)
@@ -168,8 +168,8 @@ async def test_kill_keeps_strong_reference_until_runner_finishes(runtime, monkey
         soul_started.set()
         await asyncio.Future()  # Block forever; cancellation will unblock us.
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
-    monkeypatch.setattr("kimi_cli.subagents.runner.run_soul", fake_run_soul)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.runner.run_soul", fake_run_soul)
 
     runtime.background_tasks.bind_runtime(runtime)
     view = runtime.background_tasks.create_agent_task(
@@ -277,8 +277,8 @@ async def test_kill_before_runner_starts_cleans_up_live_tasks(runtime, monkeypat
     ):
         await asyncio.Future()  # Would block forever if reached.
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
-    monkeypatch.setattr("kimi_cli.subagents.runner.run_soul", fake_run_soul)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.runner.run_soul", fake_run_soul)
 
     runtime.background_tasks.bind_runtime(runtime)
 
@@ -361,8 +361,8 @@ async def test_kill_cancels_pending_approvals(runtime, monkeypatch):
         approval_blocked.set()
         await asyncio.Future()  # Block forever.
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
-    monkeypatch.setattr("kimi_cli.subagents.runner.run_soul", fake_run_soul)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.runner.run_soul", fake_run_soul)
 
     runtime.background_tasks.bind_runtime(runtime)
     view = runtime.background_tasks.create_agent_task(
@@ -431,8 +431,8 @@ async def test_kill_completed_task_is_noop(runtime, monkeypatch):
     ):
         await soul.context.append_message(Message(role="assistant", content=[TextPart(text=long)]))
 
-    monkeypatch.setattr("kimi_cli.subagents.builder.load_agent", fake_load_agent)
-    monkeypatch.setattr("kimi_cli.subagents.runner.run_soul", fake_run_soul)
+    monkeypatch.setattr("consilium.subagents.builder.load_agent", fake_load_agent)
+    monkeypatch.setattr("consilium.subagents.runner.run_soul", fake_run_soul)
 
     runtime.background_tasks.bind_runtime(runtime)
     view = runtime.background_tasks.create_agent_task(

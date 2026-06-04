@@ -10,20 +10,20 @@ import pytest
 from kosong.message import Message, ToolCall
 from kosong.tooling import Tool, ToolError, ToolResult
 
-from kimi_cli.soul.btw import (
+from consilium.soul.btw import (
     _build_btw_context,
     _DenyAllToolset,
     _tool_result_to_message,
     execute_side_question,
 )
-from kimi_cli.ui.shell.prompt import PromptMode, UserInput
-from kimi_cli.ui.shell.visualize import (
+from consilium.ui.shell.prompt import PromptMode, UserInput
+from consilium.ui.shell.visualize import (
     InputAction,
     _BtwModalDelegate,
     _PromptLiveView,
     classify_input,
 )
-from kimi_cli.wire.types import (
+from consilium.wire.types import (
     BtwBegin,
     BtwEnd,
     SteerInput,
@@ -261,7 +261,7 @@ class TestExecuteSideQuestion:
                 kw["on_message_part"](TextPart(text="Hello!"))
             return _text_result("Hello!")
 
-        with patch("kimi_cli.soul.btw.kosong.step", side_effect=fake_step):
+        with patch("consilium.soul.btw.kosong.step", side_effect=fake_step):
             response, error = asyncio.run(execute_side_question(soul, "hi"))
 
         assert response == "Hello!"
@@ -288,7 +288,7 @@ class TestExecuteSideQuestion:
                 kw["on_message_part"](TextPart(text="Here is the answer"))
             return _text_result("Here is the answer")
 
-        with patch("kimi_cli.soul.btw.kosong.step", side_effect=fake_step):
+        with patch("consilium.soul.btw.kosong.step", side_effect=fake_step):
             response, error = asyncio.run(execute_side_question(soul, "hi"))
 
         assert call_count == 2
@@ -306,7 +306,7 @@ class TestExecuteSideQuestion:
         async def fake_step(provider, sys_prompt, toolset, history, **kw):
             return _tool_call_result("Bash")
 
-        with patch("kimi_cli.soul.btw.kosong.step", side_effect=fake_step):
+        with patch("consilium.soul.btw.kosong.step", side_effect=fake_step):
             response, error = asyncio.run(execute_side_question(soul, "hi"))
 
         assert response is None
@@ -337,7 +337,7 @@ class TestExecuteSideQuestion:
                 kw["on_message_part"](TextPart(text="The answer is 42"))
             return _text_result("The answer is 42")
 
-        with patch("kimi_cli.soul.btw.kosong.step", side_effect=fake_step):
+        with patch("consilium.soul.btw.kosong.step", side_effect=fake_step):
             response, error = asyncio.run(execute_side_question(soul, "what is X?"))
 
         assert call_count == 2, "Should have retried after mixed text+tool"
@@ -359,7 +359,7 @@ class TestExecuteSideQuestion:
                 kw["on_message_part"](TextPart(text="Preamble..."))
             return _mixed_text_and_tool_result("Preamble...", "Bash")
 
-        with patch("kimi_cli.soul.btw.kosong.step", side_effect=fake_step):
+        with patch("consilium.soul.btw.kosong.step", side_effect=fake_step):
             response, error = asyncio.run(execute_side_question(soul, "hi"))
 
         assert response is None
@@ -389,7 +389,7 @@ class TestExecuteSideQuestion:
                 cb(TextPart(text="Real answer."))
             return _text_result("Real answer.")
 
-        with patch("kimi_cli.soul.btw.kosong.step", side_effect=fake_step):
+        with patch("consilium.soul.btw.kosong.step", side_effect=fake_step):
             response, error = asyncio.run(
                 execute_side_question(soul, "q", on_text_chunk=chunks.append)
             )
@@ -412,7 +412,7 @@ class TestExecuteSideQuestion:
         async def fake_step(*args, **kw):
             raise RuntimeError("API timeout")
 
-        with patch("kimi_cli.soul.btw.kosong.step", side_effect=fake_step):
+        with patch("consilium.soul.btw.kosong.step", side_effect=fake_step):
             response, error = asyncio.run(execute_side_question(soul, "hi"))
 
         assert response is None
@@ -435,7 +435,7 @@ class TestExecuteSideQuestion:
                 cb(TextPart(text="chunk2"))
             return _text_result("chunk1chunk2")
 
-        with patch("kimi_cli.soul.btw.kosong.step", side_effect=fake_step):
+        with patch("consilium.soul.btw.kosong.step", side_effect=fake_step):
             response, error = asyncio.run(
                 execute_side_question(soul, "hi", on_text_chunk=chunks.append)
             )
@@ -469,8 +469,8 @@ class TestExecuteSideQuestionTelemetry:
             return _text_result("Hello!")
 
         with (
-            patch("kimi_cli.soul.btw.kosong.step", side_effect=fake_step),
-            patch("kimi_cli.telemetry.track") as mock_track,
+            patch("consilium.soul.btw.kosong.step", side_effect=fake_step),
+            patch("consilium.telemetry.track") as mock_track,
         ):
             response, error = asyncio.run(execute_side_question(soul, "hi"))
 
@@ -491,7 +491,7 @@ class TestExecuteSideQuestionTelemetry:
         soul = MagicMock()
         soul._runtime.llm = None
 
-        with patch("kimi_cli.telemetry.track") as mock_track:
+        with patch("consilium.telemetry.track") as mock_track:
             response, error = asyncio.run(execute_side_question(soul, "hi"))
 
         assert response is None
@@ -513,8 +513,8 @@ class TestExecuteSideQuestionTelemetry:
             return _tool_call_result("Bash")
 
         with (
-            patch("kimi_cli.soul.btw.kosong.step", side_effect=fake_step),
-            patch("kimi_cli.telemetry.track") as mock_track,
+            patch("consilium.soul.btw.kosong.step", side_effect=fake_step),
+            patch("consilium.telemetry.track") as mock_track,
         ):
             response, error = asyncio.run(execute_side_question(soul, "hi"))
 
@@ -537,8 +537,8 @@ class TestExecuteSideQuestionTelemetry:
             return _text_result("")  # Empty response
 
         with (
-            patch("kimi_cli.soul.btw.kosong.step", side_effect=fake_step),
-            patch("kimi_cli.telemetry.track") as mock_track,
+            patch("consilium.soul.btw.kosong.step", side_effect=fake_step),
+            patch("consilium.telemetry.track") as mock_track,
         ):
             response, error = asyncio.run(execute_side_question(soul, "hi"))
 
@@ -560,8 +560,8 @@ class TestExecuteSideQuestionTelemetry:
             raise RuntimeError("API timeout")
 
         with (
-            patch("kimi_cli.soul.btw.kosong.step", side_effect=fake_step),
-            patch("kimi_cli.telemetry.track") as mock_track,
+            patch("consilium.soul.btw.kosong.step", side_effect=fake_step),
+            patch("consilium.telemetry.track") as mock_track,
         ):
             response, error = asyncio.run(execute_side_question(soul, "hi"))
 
@@ -714,7 +714,7 @@ class TestBtwMarkupEscape:
 class TestSteerDedup:
     def test_local_steer_consumed_by_counter(self, monkeypatch):
         """SteerInput from wire is consumed when local steer count > 0."""
-        from kimi_cli.ui.shell.visualize import _LiveView
+        from consilium.ui.shell.visualize import _LiveView
 
         view = object.__new__(_PromptLiveView)
         view._pending_local_steer_count = 1
@@ -733,7 +733,7 @@ class TestSteerDedup:
 
     def test_non_local_steer_forwarded(self, monkeypatch):
         """SteerInput from wire is forwarded when no local steers pending."""
-        from kimi_cli.ui.shell.visualize import _LiveView
+        from consilium.ui.shell.visualize import _LiveView
 
         view = object.__new__(_PromptLiveView)
         view._pending_local_steer_count = 0
@@ -752,7 +752,7 @@ class TestSteerDedup:
 
     def test_multiple_steers_consumed_in_order(self, monkeypatch):
         """Multiple local steers are consumed one by one."""
-        from kimi_cli.ui.shell.visualize import _LiveView
+        from consilium.ui.shell.visualize import _LiveView
 
         view = object.__new__(_PromptLiveView)
         view._pending_local_steer_count = 2
@@ -772,7 +772,7 @@ class TestSteerDedup:
         assert len(forwarded) == 1  # only "third" forwarded
 
     def test_btw_events_suppressed(self, monkeypatch):
-        from kimi_cli.ui.shell.visualize import _LiveView
+        from consilium.ui.shell.visualize import _LiveView
 
         view = object.__new__(_PromptLiveView)
         view._pending_local_steer_count = 0
@@ -881,7 +881,7 @@ class TestHandleLocalInput:
 
         toasted = []
         monkeypatch.setattr(
-            "kimi_cli.ui.shell.prompt.toast",
+            "consilium.ui.shell.prompt.toast",
             lambda msg, **kw: toasted.append(msg),
         )
 
@@ -951,7 +951,7 @@ class TestHandleImmediateSteer:
 
     def test_normal_text_via_ctrl_s_steers_normally(self, monkeypatch):
         """Ctrl+S with normal text should steer, not btw."""
-        from kimi_cli.ui.shell.console import console
+        from consilium.ui.shell.console import console
 
         view = object.__new__(_PromptLiveView)
         view._turn_ended = False
@@ -1014,7 +1014,7 @@ class TestHandleImmediateSteer:
 
         toasted = []
         monkeypatch.setattr(
-            "kimi_cli.ui.shell.prompt.toast",
+            "consilium.ui.shell.prompt.toast",
             lambda msg, **kw: toasted.append(msg),
         )
 
@@ -1042,7 +1042,7 @@ class TestCtrlSFromQueue:
         from prompt_toolkit.buffer import Buffer
         from prompt_toolkit.document import Document
 
-        from kimi_cli.ui.shell.console import console
+        from consilium.ui.shell.console import console
 
         view = object.__new__(_PromptLiveView)
         view._turn_ended = False
@@ -1113,7 +1113,7 @@ class TestCtrlSFromQueue:
 
     def test_steer_increments_counter(self, monkeypatch):
         """handle_immediate_steer increments _pending_local_steer_count."""
-        from kimi_cli.ui.shell.console import console
+        from consilium.ui.shell.console import console
 
         view = object.__new__(_PromptLiveView)
         view._turn_ended = False
@@ -1156,7 +1156,7 @@ class TestClassifyInputResolved:
         # Simulate: user types /btw then pastes multi-line text
         # command = "/btw [Pasted text #1 +3 lines]"
         # resolved_command = "/btw line1\nline2\nline3"
-        from kimi_cli.ui.shell.visualize._input_router import InputAction, classify_input
+        from consilium.ui.shell.visualize._input_router import InputAction, classify_input
 
         # With resolved text → BTW action has actual content
         action = classify_input("/btw line1\nline2\nline3", is_streaming=False)

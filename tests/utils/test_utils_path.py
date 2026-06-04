@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from kimi_cli.utils.path import next_available_rotation, sanitize_cli_path
+from consilium.utils.path import next_available_rotation, sanitize_cli_path
 
 
 async def test_next_available_rotation_empty_dir(tmp_path):

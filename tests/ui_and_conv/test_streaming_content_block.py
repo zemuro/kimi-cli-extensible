@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pytest
 
-from kimi_cli.ui.shell.visualize import (
+from consilium.ui.shell.visualize import (
     _ContentBlock,
     _estimate_tokens,
     _find_committed_boundary,
@@ -364,7 +364,7 @@ class TestShowThinkingStream:
 
     def test_stream_mode_compose_final_returns_markdown_bullet(self):
         """Stream mode commits the full reasoning to history (legacy behavior)."""
-        from kimi_cli.utils.rich.columns import BulletColumns
+        from consilium.utils.rich.columns import BulletColumns
 
         block = _ContentBlock(is_think=True, show_thinking_stream=True)
         block.append("Some thought content")
@@ -406,7 +406,7 @@ class TestShowThinkingStream:
 
     def test_preview_constant_is_six_lines(self):
         """Stream preview window matches the historical 6-line tail."""
-        from kimi_cli.ui.shell.visualize._blocks import _THINKING_PREVIEW_LINES
+        from consilium.ui.shell.visualize._blocks import _THINKING_PREVIEW_LINES
 
         assert _THINKING_PREVIEW_LINES == 6
 

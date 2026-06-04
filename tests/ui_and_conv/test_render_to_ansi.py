@@ -8,7 +8,7 @@ from rich.console import Group
 from rich.style import Style
 from rich.text import Text
 
-from kimi_cli.ui.shell.console import _OSC8_RE, render_to_ansi
+from consilium.ui.shell.console import _OSC8_RE, render_to_ansi
 
 # SGR 48;2;R;G;B — truecolor background escape sequence
 _TRUECOLOR_BG_RE = re.compile(r"\x1b\[(?:\d+;)*48;2;\d+;\d+;\d+m")

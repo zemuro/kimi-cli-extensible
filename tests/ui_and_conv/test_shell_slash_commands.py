@@ -11,16 +11,16 @@ import pytest
 from kaos.path import KaosPath
 from kosong.message import Message
 
-from kimi_cli.cli import Reload
-from kimi_cli.session import Session
-from kimi_cli.ui.shell.slash import (
+from consilium.cli import Reload
+from consilium.session import Session
+from consilium.ui.shell.slash import (
     ShellSlashCmdFunc,
     _expanded_command_items,
     shell_mode_registry,
 )
-from kimi_cli.ui.shell.slash import registry as shell_slash_registry
-from kimi_cli.utils.slashcmd import SlashCommand
-from kimi_cli.wire.types import TextPart
+from consilium.ui.shell.slash import registry as shell_slash_registry
+from consilium.utils.slashcmd import SlashCommand
+from consilium.wire.types import TextPart
 
 
 async def _invoke_slash_command(command: SlashCommand[ShellSlashCmdFunc], shell: Any) -> None:
@@ -44,8 +44,8 @@ def isolated_share_dir(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
         share_dir.mkdir(parents=True, exist_ok=True)
         return share_dir
 
-    monkeypatch.setattr("kimi_cli.share.get_share_dir", _get_share_dir)
-    monkeypatch.setattr("kimi_cli.metadata.get_share_dir", _get_share_dir)
+    monkeypatch.setattr("consilium.share.get_share_dir", _get_share_dir)
+    monkeypatch.setattr("consilium.metadata.get_share_dir", _get_share_dir)
     return share_dir
 
 
@@ -63,7 +63,7 @@ def mock_shell(work_dir: KaosPath) -> Mock:
     The mock session is treated as non-empty so that /new does not attempt
     to delete it (delete would fail on a plain Mock because it is not awaitable).
     """
-    from kimi_cli.soul.kimisoul import KimiSoul
+    from consilium.soul.kimisoul import KimiSoul
 
     mock_soul = Mock(spec=KimiSoul)
     mock_soul.runtime.session.work_dir = work_dir
@@ -95,7 +95,7 @@ class TestNewCommandRegistration:
 
     def test_not_in_soul_registry(self) -> None:
         """/new should NOT appear in soul-level commands (Web UI visibility)."""
-        from kimi_cli.soul.slash import registry as soul_slash_registry
+        from consilium.soul.slash import registry as soul_slash_registry
 
         assert soul_slash_registry.find_command("new") is None
 
@@ -222,7 +222,7 @@ class TestNewCommandSessionCleanup:
         self, isolated_share_dir: Path, work_dir: KaosPath
     ) -> None:
         """An empty current session should be removed to avoid orphan directories."""
-        from kimi_cli.soul.kimisoul import KimiSoul
+        from consilium.soul.kimisoul import KimiSoul
 
         empty_session = await Session.create(work_dir)
         assert empty_session.is_empty()
@@ -246,7 +246,7 @@ class TestNewCommandSessionCleanup:
         self, isolated_share_dir: Path, work_dir: KaosPath
     ) -> None:
         """A session that already has content must NOT be deleted."""
-        from kimi_cli.soul.kimisoul import KimiSoul
+        from consilium.soul.kimisoul import KimiSoul
 
         session_with_content = await Session.create(work_dir)
         _write_context_message(session_with_content.context_file, "hello world")
@@ -270,7 +270,7 @@ class TestNewCommandSessionCleanup:
         self, isolated_share_dir: Path, work_dir: KaosPath
     ) -> None:
         """Calling /new repeatedly should not leave orphan empty sessions."""
-        from kimi_cli.soul.kimisoul import KimiSoul
+        from consilium.soul.kimisoul import KimiSoul
 
         cmd = shell_slash_registry.find_command("new")
         assert cmd is not None
@@ -342,13 +342,13 @@ async def test_reject_no_do_session(mock_shell: Mock) -> None:
 async def test_approve_not_awaiting(mock_shell: Mock, monkeypatch: pytest.MonkeyPatch) -> None:
     """/approve warns when there is no pending review."""
     _ensure_runtime_attr(mock_shell)
-    from kimi_cli.do.session import DoSession
+    from consilium.do.session import DoSession
 
     do_session = Mock(spec=DoSession)
     do_session.state = "idle"
 
     monkeypatch.setattr(
-        "kimi_cli.do.registry.get_do_session", lambda _sid: do_session
+        "consilium.do.registry.get_do_session", lambda _sid: do_session
     )
 
     cmd = shell_slash_registry.find_command("approve")
@@ -360,13 +360,13 @@ async def test_approve_not_awaiting(mock_shell: Mock, monkeypatch: pytest.Monkey
 async def test_reject_not_awaiting(mock_shell: Mock, monkeypatch: pytest.MonkeyPatch) -> None:
     """/reject warns when there is no pending review."""
     _ensure_runtime_attr(mock_shell)
-    from kimi_cli.do.session import DoSession
+    from consilium.do.session import DoSession
 
     do_session = Mock(spec=DoSession)
     do_session.state = "idle"
 
     monkeypatch.setattr(
-        "kimi_cli.do.registry.get_do_session", lambda _sid: do_session
+        "consilium.do.registry.get_do_session", lambda _sid: do_session
     )
 
     cmd = shell_slash_registry.find_command("reject")
@@ -378,14 +378,14 @@ async def test_reject_not_awaiting(mock_shell: Mock, monkeypatch: pytest.MonkeyP
 async def test_approve_approves_and_reruns(mock_shell: Mock, monkeypatch: pytest.MonkeyPatch) -> None:
     """/approve calls approve_review() and re-runs the soul."""
     _ensure_runtime_attr(mock_shell)
-    from kimi_cli.do.session import DoSession
+    from consilium.do.session import DoSession
 
     do_session = Mock(spec=DoSession)
     do_session.state = "awaiting_review"
     do_session.approve_review = AsyncMock()
 
     monkeypatch.setattr(
-        "kimi_cli.do.registry.get_do_session", lambda _sid: do_session
+        "consilium.do.registry.get_do_session", lambda _sid: do_session
     )
 
     mock_shell.run_soul_command = AsyncMock()
@@ -402,14 +402,14 @@ async def test_approve_approves_and_reruns(mock_shell: Mock, monkeypatch: pytest
 async def test_reject_rejects_and_clears(mock_shell: Mock, monkeypatch: pytest.MonkeyPatch) -> None:
     """/reject calls reject_review() with an optional reason."""
     _ensure_runtime_attr(mock_shell)
-    from kimi_cli.do.session import DoSession
+    from consilium.do.session import DoSession
 
     do_session = Mock(spec=DoSession)
     do_session.state = "awaiting_review"
     do_session.reject_review = AsyncMock()
 
     monkeypatch.setattr(
-        "kimi_cli.do.registry.get_do_session", lambda _sid: do_session
+        "consilium.do.registry.get_do_session", lambda _sid: do_session
     )
 
     cmd = shell_slash_registry.find_command("reject")
@@ -445,13 +445,13 @@ async def test_review_no_do_session(mock_shell: Mock) -> None:
 async def test_review_already_pending(mock_shell: Mock, monkeypatch: pytest.MonkeyPatch) -> None:
     """/review warns when a review is already pending."""
     _ensure_runtime_attr(mock_shell)
-    from kimi_cli.do.session import DoSession
+    from consilium.do.session import DoSession
 
     do_session = Mock(spec=DoSession)
     do_session.state = "awaiting_review"
 
     monkeypatch.setattr(
-        "kimi_cli.do.registry.get_do_session", lambda _sid: do_session
+        "consilium.do.registry.get_do_session", lambda _sid: do_session
     )
 
     cmd = shell_slash_registry.find_command("review")
@@ -463,8 +463,8 @@ async def test_review_already_pending(mock_shell: Mock, monkeypatch: pytest.Monk
 async def test_review_triggers_manual_review(mock_shell: Mock, monkeypatch: pytest.MonkeyPatch) -> None:
     """/review calls trigger_manual_review() and prints the report."""
     _ensure_runtime_attr(mock_shell)
-    from kimi_cli.do.plan_review import PlanReviewReport
-    from kimi_cli.do.session import DoSession
+    from consilium.do.plan_review import PlanReviewReport
+    from consilium.do.session import DoSession
 
     report = PlanReviewReport(
         feasible=True,
@@ -479,7 +479,7 @@ async def test_review_triggers_manual_review(mock_shell: Mock, monkeypatch: pyte
     do_session.trigger_manual_review = AsyncMock(return_value=report)
 
     monkeypatch.setattr(
-        "kimi_cli.do.registry.get_do_session", lambda _sid: do_session
+        "consilium.do.registry.get_do_session", lambda _sid: do_session
     )
 
     cmd = shell_slash_registry.find_command("review")

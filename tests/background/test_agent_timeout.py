@@ -8,8 +8,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kimi_cli.background import TaskSpec
-from kimi_cli.background.agent_runner import BackgroundAgentRunner
+from consilium.background import TaskSpec
+from consilium.background.agent_runner import BackgroundAgentRunner
 
 
 @pytest.fixture

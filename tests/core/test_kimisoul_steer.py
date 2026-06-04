@@ -8,18 +8,18 @@ from kosong import StepResult
 from kosong.message import ContentPart, Message
 from kosong.tooling.empty import EmptyToolset
 
-import kimi_cli.soul.kimisoul as kimisoul_module
-from kimi_cli.llm import LLM, ModelCapability
-from kimi_cli.soul import LLMNotSupported, run_soul
-from kimi_cli.soul.agent import Agent, Runtime
-from kimi_cli.soul.approval import Approval
-from kimi_cli.soul.context import Context
-from kimi_cli.soul.dynamic_injection import DynamicInjection
-from kimi_cli.soul.kimisoul import KimiSoul
-from kimi_cli.soul.message import is_system_reminder_message
-from kimi_cli.utils.aioqueue import QueueShutDown
-from kimi_cli.wire import Wire
-from kimi_cli.wire.types import ImageURLPart, SteerInput, StepBegin, TextPart, TurnBegin, TurnEnd
+import consilium.soul.kimisoul as kimisoul_module
+from consilium.llm import LLM, ModelCapability
+from consilium.soul import LLMNotSupported, run_soul
+from consilium.soul.agent import Agent, Runtime
+from consilium.soul.approval import Approval
+from consilium.soul.context import Context
+from consilium.soul.dynamic_injection import DynamicInjection
+from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.message import is_system_reminder_message
+from consilium.utils.aioqueue import QueueShutDown
+from consilium.wire import Wire
+from consilium.wire.types import ImageURLPart, SteerInput, StepBegin, TextPart, TurnBegin, TurnEnd
 
 
 @pytest.fixture

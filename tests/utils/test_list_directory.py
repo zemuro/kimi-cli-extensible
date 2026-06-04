@@ -9,7 +9,7 @@ import pytest
 from inline_snapshot import snapshot
 from kaos.path import KaosPath
 
-from kimi_cli.utils.path import _LIST_DIR_CHILD_WIDTH, _LIST_DIR_ROOT_WIDTH, list_directory
+from consilium.utils.path import _LIST_DIR_CHILD_WIDTH, _LIST_DIR_ROOT_WIDTH, list_directory
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="Unix-specific symlink tests.")

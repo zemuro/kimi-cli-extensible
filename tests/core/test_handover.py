@@ -6,13 +6,13 @@ from pathlib import Path
 
 import pytest
 
-from kimi_cli.plan.handover import (
+from consilium.plan.handover import (
     find_latest_handover,
     read_handover,
     write_handover,
 )
-from kimi_cli.plan.models import CompletedPhaseEntry, PhaseStatus
-from kimi_cli.plan.parser import parse_plan
+from consilium.plan.models import CompletedPhaseEntry, PhaseStatus
+from consilium.plan.parser import parse_plan
 
 
 PLAN_TEXT = """\

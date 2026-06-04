@@ -1,16 +1,16 @@
-# Kimi Code CLI — Prompt-Extensible Fork
+# Consilium — Prompt-Extensible Fork
 
-> This is a community fork of [MoonshotAI/kimi-cli](https://github.com/MoonshotAI/kimi-cli) with two focus areas:
+> This is a community fork of [MoonshotAI/consilium](https://github.com/MoonshotAI/consilium) with two focus areas:
 > 1. **Prompt extensibility** — every system prompt is editable via config, without code changes.
 > 2. **Generation parameters** — per-model `temperature`, `top_p`, `max_tokens`, etc. via config file or CLI flags (`--temperature`, `--top-p`, `--max-tokens`).
 
-[![Commit Activity](https://img.shields.io/github/commit-activity/w/zemuro/kimi-cli-extensible)](https://github.com/zemuro/kimi-cli-extensible/graphs/commit-activity)
-[![Version](https://img.shields.io/pypi/v/kimi-cli)](https://pypi.org/project/kimi-cli/)
-[![Downloads](https://img.shields.io/pypi/dw/kimi-cli)](https://pypistats.org/packages/kimi-cli)
+[![Commit Activity](https://img.shields.io/github/commit-activity/w/zemuro/consilium-extensible)](https://github.com/zemuro/consilium-extensible/graphs/commit-activity)
+[![Version](https://img.shields.io/pypi/v/consilium)](https://pypi.org/project/consilium/)
+[![Downloads](https://img.shields.io/pypi/dw/consilium)](https://pypistats.org/packages/consilium)
 
-[Kimi Code](https://www.kimi.com/code/) | [Upstream Docs](https://moonshotai.github.io/kimi-cli/en/) | [Upstream 文档](https://moonshotai.github.io/kimi-cli/zh/)
+[Kimi Code](https://www.kimi.com/code/) | [Upstream Docs](https://moonshotai.github.io/consilium/en/) | [Upstream 文档](https://moonshotai.github.io/consilium/zh/)
 
-Kimi Code CLI is an AI agent that runs in the terminal, helping you complete software development tasks and terminal operations. It can read and edit code, execute shell commands, search and fetch web pages, and autonomously plan and adjust actions during execution.
+Consilium is an AI agent that runs in the terminal, helping you complete software development tasks and terminal operations. It can read and edit code, execute shell commands, search and fetch web pages, and autonomously plan and adjust actions during execution.
 
 ---
 
@@ -162,7 +162,7 @@ Features: editable history, JSONL storage, checkpoints, manual compaction, Pytho
 An immutable, tool-enabled agent loop with full audit trail.
 
 ```
-[kimi]$ kimi --do --plan-file docs/plan.md --phase phase-02
+[kimi]$ consilium --do --plan-file docs/plan.md --phase phase-02
 [Do] Stashed uncommitted changes. Starting Phase 2 audit...
 ...
 > /review                     # manually audit the current plan
@@ -207,16 +207,16 @@ See [`docs/BEST_PRACTICES.md`](./docs/BEST_PRACTICES.md) for workflow guidance a
 
 ## Getting Started
 
-See the [upstream Getting Started guide](https://moonshotai.github.io/kimi-cli/en/guides/getting-started.html) for how to install and start using Kimi Code CLI.
+See the [upstream Getting Started guide](https://moonshotai.github.io/consilium/en/guides/getting-started.html) for how to install and start using Consilium.
 
 To install this fork directly from source:
 
 ```sh
-git clone https://github.com/zemuro/kimi-cli-extensible.git
-cd kimi-cli-extensible
+git clone https://github.com/zemuro/consilium-extensible.git
+cd consilium-extensible
 
 make prepare  # prepare the development environment
-uv run kimi   # run Kimi Code CLI
+uv run kimi   # run Consilium
 ```
 
 ## Key Features
@@ -225,7 +225,7 @@ uv run kimi   # run Kimi Code CLI
 
 ### Shell command mode
 
-Kimi Code CLI is not only a coding agent, but also a shell. You can switch the shell command mode by pressing `Ctrl-X`. In this mode, you can directly run shell commands without leaving Kimi Code CLI.
+Consilium is not only a coding agent, but also a shell. You can switch the shell command mode by pressing `Ctrl-X`. In this mode, you can directly run shell commands without leaving Consilium.
 
 ![](./docs/media/shell-mode.gif)
 
@@ -234,24 +234,24 @@ Kimi Code CLI is not only a coding agent, but also a shell. You can switch the s
 
 ### VS Code extension
 
-Kimi Code CLI can be integrated with [Visual Studio Code](https://code.visualstudio.com/) via the [Kimi Code VS Code Extension](https://marketplace.visualstudio.com/items?itemName=moonshot-ai.kimi-code).
+Consilium can be integrated with [Visual Studio Code](https://code.visualstudio.com/) via the [Kimi Code VS Code Extension](https://marketplace.visualstudio.com/items?itemName=moonshot-ai.kimi-code).
 
 ![VS Code Extension](./docs/media/vscode.png)
 
 ### IDE integration via ACP
 
-Kimi Code CLI supports [Agent Client Protocol] out of the box. You can use it together with any ACP-compatible editor or IDE.
+Consilium supports [Agent Client Protocol] out of the box. You can use it together with any ACP-compatible editor or IDE.
 
 [Agent Client Protocol]: https://github.com/agentclientprotocol/agent-client-protocol
 
-To use Kimi Code CLI with ACP clients, make sure to run Kimi Code CLI in the terminal and send `/login` to complete the login first. Then, you can configure your ACP client to start Kimi Code CLI as an ACP agent server with command `kimi acp`.
+To use Consilium with ACP clients, make sure to run Consilium in the terminal and send `/login` to complete the login first. Then, you can configure your ACP client to start Consilium as an ACP agent server with command `kimi acp`.
 
-For example, to use Kimi Code CLI with [Zed](https://zed.dev/) or [JetBrains](https://blog.jetbrains.com/ai/2025/12/bring-your-own-ai-agent-to-jetbrains-ides/), add the following configuration to your `~/.config/zed/settings.json` or `~/.jetbrains/acp.json` file:
+For example, to use Consilium with [Zed](https://zed.dev/) or [JetBrains](https://blog.jetbrains.com/ai/2025/12/bring-your-own-ai-agent-to-jetbrains-ides/), add the following configuration to your `~/.config/zed/settings.json` or `~/.jetbrains/acp.json` file:
 
 ```json
 {
   "agent_servers": {
-    "Kimi Code CLI": {
+    "Consilium": {
       "type": "custom",
       "command": "kimi",
       "args": ["acp"],
@@ -261,35 +261,35 @@ For example, to use Kimi Code CLI with [Zed](https://zed.dev/) or [JetBrains](ht
 }
 ```
 
-Then you can create Kimi Code CLI threads in IDE's agent panel.
+Then you can create Consilium threads in IDE's agent panel.
 
 ![](./docs/media/acp-integration.gif)
 
 ### Zsh integration
 
-You can use Kimi Code CLI together with Zsh, to empower your shell experience with AI agent capabilities.
+You can use Consilium together with Zsh, to empower your shell experience with AI agent capabilities.
 
-Install the [zsh-kimi-cli](https://github.com/MoonshotAI/zsh-kimi-cli) plugin via:
+Install the [zsh-consilium](https://github.com/MoonshotAI/zsh-consilium) plugin via:
 
 ```sh
-git clone https://github.com/MoonshotAI/zsh-kimi-cli.git \
-  ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/kimi-cli
+git clone https://github.com/MoonshotAI/zsh-consilium.git \
+  ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/consilium
 ```
 
 > [!NOTE]
 > If you are using a plugin manager other than Oh My Zsh, you may need to refer to the plugin's README for installation instructions.
 
-Then add `kimi-cli` to your Zsh plugin list in `~/.zshrc`:
+Then add `consilium` to your Zsh plugin list in `~/.zshrc`:
 
 ```sh
-plugins=(... kimi-cli)
+plugins=(... consilium)
 ```
 
 After restarting Zsh, you can switch to agent mode by pressing `Ctrl-X`.
 
 ### MCP support
 
-Kimi Code CLI supports MCP (Model Context Protocol) tools.
+Consilium supports MCP (Model Context Protocol) tools.
 
 **`kimi mcp` sub-command group**
 
@@ -317,7 +317,7 @@ kimi mcp auth linear
 
 **Ad-hoc MCP configuration**
 
-Kimi Code CLI also supports ad-hoc MCP server configuration via CLI option.
+Consilium also supports ad-hoc MCP server configuration via CLI option.
 
 Given an MCP config file in the well-known MCP config format like the following:
 
@@ -338,7 +338,7 @@ Given an MCP config file in the well-known MCP config format like the following:
 }
 ```
 
-Run `kimi` with `--mcp-config-file` option to connect to the specified MCP servers:
+Run `consilium` with `--mcp-config-file` option to connect to the specified MCP servers:
 
 ```sh
 kimi --mcp-config-file /path/to/mcp.json
@@ -346,28 +346,28 @@ kimi --mcp-config-file /path/to/mcp.json
 
 ### More
 
-See more features in the [upstream documentation](https://moonshotai.github.io/kimi-cli/en/).
+See more features in the [upstream documentation](https://moonshotai.github.io/consilium/en/).
 
 ## Development
 
 ```sh
-git clone https://github.com/zemuro/kimi-cli-extensible.git
-cd kimi-cli-extensible
+git clone https://github.com/zemuro/consilium-extensible.git
+cd consilium-extensible
 
 make prepare  # prepare the development environment
 ```
 
-Then you can start working on Kimi Code CLI.
+Then you can start working on Consilium.
 
 Refer to the following commands after you make changes:
 
 ```sh
-uv run kimi  # run Kimi Code CLI
+uv run kimi  # run Consilium
 
 make format  # format code
 make check  # run linting and type checking
 make test  # run tests
-make test-kimi-cli  # run Kimi Code CLI tests only
+make test-consilium  # run Consilium tests only
 make test-kosong  # run kosong tests only
 make test-pykaos  # run pykaos tests only
 make build-web  # build the web UI and sync it into the package (requires Node.js/npm)

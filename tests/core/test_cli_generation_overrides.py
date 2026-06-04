@@ -3,11 +3,11 @@ from __future__ import annotations
 from inline_snapshot import snapshot
 from pydantic import SecretStr
 
-from kimi_cli.config import GenerationConfig, LLMModel, LLMProvider
-from kimi_cli.llm import create_llm
+from consilium.config import GenerationConfig, LLMModel, LLMProvider
+from consilium.llm import create_llm
 
 
-def test_create_llm_kimi_cli_overrides_config():
+def test_create_llm_consilium_overrides_config():
     """CLI --temperature/--top-p/--max-tokens override config values."""
     provider = LLMProvider(
         type="kimi",
@@ -42,7 +42,7 @@ def test_create_llm_kimi_cli_overrides_config():
     )
 
 
-def test_create_llm_kimi_cli_overrides_env(monkeypatch):
+def test_create_llm_consilium_overrides_env(monkeypatch):
     """CLI overrides win over env vars."""
     monkeypatch.setenv("KIMI_MODEL_TEMPERATURE", "0.2")
     monkeypatch.setenv("KIMI_MODEL_MAX_TOKENS", "1234")
