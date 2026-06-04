@@ -50,9 +50,17 @@ class Metadata(BaseModel):
 
     def get_work_dir_meta(self, path: KaosPath) -> WorkDirMeta | None:
         """Get the metadata for a work directory."""
+        import sys
+        target_path = str(path)
+        is_win = sys.platform == "win32"
+        if is_win:
+            target_path = target_path.lower()
+
         for wd in self.work_dirs:
-            if wd.path == str(path) and wd.kaos == get_current_kaos().name:
-                return wd
+            if wd.kaos == get_current_kaos().name:
+                wd_path = wd.path.lower() if is_win else wd.path
+                if wd_path == target_path:
+                    return wd
         return None
 
     def new_work_dir_meta(self, path: KaosPath) -> WorkDirMeta:

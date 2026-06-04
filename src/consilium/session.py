@@ -222,8 +222,10 @@ class Session:
 
         session_dir = work_dir_meta.sessions_dir / session_id
         if not session_dir.is_dir():
-            logger.debug("Session directory not found: {session_dir}", session_dir=session_dir)
-            return None
+            imported = cls._try_import_session(session_id, session_dir)
+            if not imported:
+                logger.debug("Session directory not found: {session_dir}", session_dir=session_dir)
+                return None
 
         context_file = session_dir / "context.jsonl"
 
@@ -293,8 +295,17 @@ class Session:
         for wd in load_metadata().work_dirs:
             sessions = await cls.list(KaosPath.unsafe_from_local_path(Path(wd.path)))
             all_sessions.extend(sessions)
+        
+        # Deduplicate by session_id, keeping the most recently updated one
         all_sessions.sort(key=lambda s: s.updated_at, reverse=True)
-        return all_sessions
+        seen = set()
+        deduped: list[Session] = []
+        for s in all_sessions:
+            if s.id not in seen:
+                seen.add(s.id)
+                deduped.append(s)
+                
+        return deduped
 
     @staticmethod
     async def continue_(work_dir: KaosPath) -> Session | None:
@@ -318,6 +329,38 @@ class Session:
         return await Session.find(work_dir, work_dir_meta.last_session_id)
 
 
+    @classmethod
+    def _try_import_session(cls, session_id: str, dest_dir: Path) -> bool:
+        """Attempt to import a session from other workspaces or think sessions."""
+        import shutil
+        from consilium.think.storage import get_think_dir
+        
+        # Check Think sessions
+        think_file = get_think_dir() / f"{session_id}.jsonl"
+        if think_file.exists():
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy(think_file, dest_dir / "wire.jsonl")
+            (dest_dir / "context.jsonl").touch()
+            logger.info("Imported Think session {session_id} into {dest_dir}", session_id=session_id, dest_dir=dest_dir)
+            return True
+            
+        # Check other workspaces (legacy or just different tab)
+        metadata = load_metadata()
+        for wd in metadata.work_dirs:
+            other_dir = wd.sessions_dir / session_id
+            if other_dir.is_dir() and other_dir != dest_dir:
+                dest_dir.mkdir(parents=True, exist_ok=True)
+                if (other_dir / "wire.jsonl").exists():
+                    shutil.copy(other_dir / "wire.jsonl", dest_dir / "wire.jsonl")
+                if (other_dir / "context.jsonl").exists():
+                    shutil.copy(other_dir / "context.jsonl", dest_dir / "context.jsonl")
+                if (other_dir / "state.json").exists():
+                    shutil.copy(other_dir / "state.json", dest_dir / "state.json")
+                logger.info("Imported session {session_id} from {other_dir}", session_id=session_id, other_dir=other_dir)
+                return True
+                
+        return False
+
 def _migrate_session_context_file(work_dir_meta: WorkDirMeta, session_id: str) -> None:
     old_context_file = work_dir_meta.sessions_dir / f"{session_id}.jsonl"
     new_context_file = work_dir_meta.sessions_dir / session_id / "context.jsonl"
@@ -329,3 +372,26 @@ def _migrate_session_context_file(work_dir_meta: WorkDirMeta, session_id: str) -
             old=old_context_file,
             new=new_context_file,
         )
+
+    # Backfill wire.jsonl for legacy sessions
+    wire_file = work_dir_meta.sessions_dir / session_id / "wire.jsonl"
+    if new_context_file.exists() and not wire_file.exists():
+        logger.info("Backfilling wire.jsonl for legacy session {session_id}", session_id=session_id)
+        with open(new_context_file, "r", encoding="utf-8") as f_in, open(wire_file, "w", encoding="utf-8") as f_out:
+            for line in f_in:
+                if not line.strip():
+                    continue
+                try:
+                    record = json.loads(line)
+                    role = record.get("role")
+                    if role in ("user", "assistant"):
+                        event = {
+                            "type": "Message",
+                            "payload": {
+                                "role": role,
+                                "content": record.get("content", "")
+                            }
+                        }
+                        f_out.write(json.dumps(event) + "\n")
+                except json.JSONDecodeError:
+                    pass

@@ -267,9 +267,10 @@ class ThinkSoul(Soul):
                 wire_send(part)
                 parts.append(part.text)
             elif isinstance(part, ThinkPart):
-                # Stream thinking content as text for now
-                wire_send(TextPart(text=part.think))
-                parts.append(part.think)
+                # Emit actual ThinkPart to wire so UI renders it as thinking
+                wire_send(part)
+                # Still append to parts to maintain history format if needed
+                parts.append(f"<thinking>\n{part.think}\n</thinking>\n")
 
         result = await generate(
             self._llm.chat_provider,
