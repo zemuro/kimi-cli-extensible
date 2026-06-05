@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import inspect
 import json
 from dataclasses import asdict
 from typing import Any, Literal, cast
@@ -940,7 +941,12 @@ class WireServer:
         )
         provider = getattr(llm, "chat_provider", None) if llm else None
         if provider is not None and hasattr(provider, "force_abort"):
-            provider.force_abort()
+            abort_result = provider.force_abort()
+            if inspect.isawaitable(abort_result):
+                try:
+                    await abort_result
+                except Exception:
+                    logger.exception("force_abort failed during cancel")
 
         return JSONRPCSuccessResponse(
             id=msg.id,

@@ -13,8 +13,8 @@ from typing import Any
 from consilium.utils.logging import logger
 
 
-def _close_client(client: Any) -> None:
-    """Best-effort close of an async HTTP client."""
+async def _close_client_sync(client: Any) -> None:
+    """Synchronous close of an async HTTP client — best-effort."""
     close = getattr(client, "close", None)
     if not callable(close):
         return
@@ -23,26 +23,20 @@ def _close_client(client: Any) -> None:
     except Exception:
         return
     if inspect.isawaitable(result):
+        # We are in an async context — await it directly for immediate effect
         try:
-            loop = asyncio.get_running_loop()
-            loop.create_task(_drain(result))
-        except RuntimeError:
-            if hasattr(result, "close"):
-                result.close()  # type: ignore[attr-defined]
+            await result
+        except Exception:
+            pass
 
 
-async def _drain(awaitable: Any) -> None:
-    with asyncio.suppress(Exception):
-        await awaitable
-
-
-def _force_abort_openai_like(provider: Any) -> None:
+async def _force_abort_openai_like(provider: Any) -> None:
     """Close and recreate the underlying OpenAI client."""
     from kosong.chat_provider.openai_common import create_openai_client
 
     old_client = getattr(provider, "client", None) or getattr(provider, "_client", None)
     if old_client is not None:
-        _close_client(old_client)
+        await _close_client_sync(old_client)
 
     api_key = getattr(provider, "_api_key", None)
     base_url = getattr(provider, "_base_url", None)
@@ -64,13 +58,13 @@ def _force_abort_openai_like(provider: Any) -> None:
         provider._client = new_client
 
 
-def _force_abort_anthropic(provider: Any) -> None:
+async def _force_abort_anthropic(provider: Any) -> None:
     """Close and recreate the underlying Anthropic client."""
     from anthropic import AsyncAnthropic
 
     old_client = getattr(provider, "_client", None)
     if old_client is not None:
-        _close_client(old_client)
+        await _close_client_sync(old_client)
 
     api_key = getattr(provider, "_api_key", None)
     base_url = getattr(provider, "_base_url", None)
@@ -99,9 +93,9 @@ def patch_chat_provider(provider: Any) -> None:
     name = type(provider).__name__
 
     if "anthropic" in module.lower() or name.lower() == "anthropic":
-        provider.force_abort = lambda: _force_abort_anthropic(provider)  # type: ignore[method-assign]
+        provider.force_abort = lambda: asyncio.create_task(_force_abort_anthropic(provider))  # type: ignore[method-assign]
     elif "openai" in module.lower() or name.lower().startswith("kimi"):
-        provider.force_abort = lambda: _force_abort_openai_like(provider)  # type: ignore[method-assign]
+        provider.force_abort = lambda: asyncio.create_task(_force_abort_openai_like(provider))  # type: ignore[method-assign]
     else:
         # Unknown provider — no-op abort
         provider.force_abort = lambda: None  # type: ignore[method-assign]

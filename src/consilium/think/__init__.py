@@ -165,6 +165,16 @@ class ThinkSoul(Soul):
             self._spawner = ThinkSubagentSpawner(self._runtime)
         return await self._spawner.explore(prompt)
 
+    async def run_plan_edit(self, prompt: str) -> str:
+        """Spawn a foreground plan_editor subagent and return its summary."""
+        if self._spawner is None:
+            if self._runtime is None:
+                raise RuntimeError("Runtime not configured — subagents require a Runtime")
+            from consilium.think.subagent_spawner import ThinkSubagentSpawner
+
+            self._spawner = ThinkSubagentSpawner(self._runtime)
+        return await self._spawner.plan_edit(prompt)
+
     async def run_investigate(self, question: str, angles: list[str]) -> str:
         """Spawn parallel background investigations and return a unified report."""
         if self._spawner is None:

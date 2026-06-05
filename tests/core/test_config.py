@@ -34,7 +34,7 @@ def test_default_config_dump():
                 "max_steps_per_turn": 1000,
                 "max_retries_per_step": 3,
                 "max_ralph_iterations": 0,
-                "reserved_context_size": 50000,
+                "reserved_context_size": 100000,
                 "compaction_trigger_ratio": 0.85,
             },
             "background": {

@@ -8,8 +8,7 @@ import uuid
 from typing import TYPE_CHECKING
 
 from consilium.subagents.runner import ForegroundRunRequest, ForegroundSubagentRunner
-from consilium.think.investigate import InvestigationResult, InvestigateResult
-from consilium.utils.logging import logger
+from consilium.think.investigate import InvestigateResult, InvestigationResult
 
 if TYPE_CHECKING:
     from consilium.soul.agent import Runtime
@@ -25,25 +24,46 @@ class ThinkSubagentSpawner:
     def __init__(self, root_runtime: Runtime) -> None:
         self._runtime = root_runtime
 
-    async def explore(self, prompt: str, timeout: int = 300) -> str:
-        """Foreground deep-dive. Blocks until completion. Returns summary."""
+    async def spawn(
+        self,
+        subagent_type: str,
+        prompt: str,
+        description: str | None = None,
+        timeout: int = 300,
+    ) -> str:
+        """Spawn a foreground subagent of any type. Blocks until completion."""
         runner = ForegroundSubagentRunner(self._runtime)
         req = ForegroundRunRequest(
-            description="Think explore",
+            description=description or f"Think {subagent_type}",
             prompt=prompt,
-            requested_type="explore",
+            requested_type=subagent_type,
             model=None,
             resume=None,
         )
         result = await asyncio.wait_for(runner.run(req), timeout=timeout)
         if result.is_error:
-            return f"[Explore Failed] {result.message}"
+            return f"[{subagent_type.capitalize()} Failed] {result.message}"
 
         if isinstance(result.output, str):
             return result.output
         elif isinstance(result.output, list):
             return " ".join(getattr(p, "text", "") for p in result.output)
         return str(result.output)
+
+    async def explore(self, prompt: str, timeout: int = 300) -> str:
+        """Foreground deep-dive. Blocks until completion. Returns summary."""
+        return await self.spawn("explore", prompt, description="Think explore", timeout=timeout)
+
+    async def plan_edit(self, prompt: str, timeout: int = 300) -> str:
+        """Spawn a plan_editor subagent. Blocks until completion. Returns summary."""
+        # Ensure plan/ directory exists
+        from pathlib import Path
+        Path("plan").mkdir(exist_ok=True)
+        Path("plan/reports").mkdir(exist_ok=True)
+        Path("plan/reviews").mkdir(exist_ok=True)
+        return await self.spawn(
+            "plan_editor", prompt, description="Think plan edit", timeout=timeout
+        )
 
     async def investigate(self, question: str, angles: list[str]) -> InvestigateResult:
         """Spawn parallel background subagents, one per angle, and collect results."""
@@ -97,7 +117,7 @@ class ThinkSubagentSpawner:
                         output=output,
                     )
                 )
-            except (TimeoutError, asyncio.TimeoutError):
+            except TimeoutError:
                 results.append(
                     InvestigationResult(
                         task_id=task_id,

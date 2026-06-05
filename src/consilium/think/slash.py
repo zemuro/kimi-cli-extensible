@@ -177,13 +177,15 @@ async def slash_explore(history: HistoryManager, session: ThinkSession, args: st
     if soul is None:
         return "ThinkSoul not found in registry."
 
+    import json
+    import uuid
+
     from kosong.message import ToolCall
     from kosong.tooling import ToolOk
-    from consilium.wire.types import ToolResult
-    from consilium.soul.toolset import current_tool_call
+
     from consilium.soul import get_wire_or_none
-    import uuid
-    import json
+    from consilium.soul.toolset import current_tool_call
+    from consilium.wire.types import ToolResult
 
     tool_id = f"call_{uuid.uuid4().hex[:12]}"
     fake_tool_call = ToolCall(
@@ -210,6 +212,56 @@ async def slash_explore(history: HistoryManager, session: ThinkSession, args: st
         if wire:
             # We don't have the final summary in finally if there was an exception,
             # but we can just send an empty ok or error result to close the block.
+            wire.soul_side.send(
+                ToolResult(tool_call_id=tool_id, return_value=ToolOk(output="done"))
+            )
+
+
+@think_registry.command(name="plan-edit", aliases=["pe"])
+async def slash_plan_edit(history: HistoryManager, session: ThinkSession, args: str) -> str:
+    """Spawn a plan_editor subagent to create or edit plan documents: /plan-edit <task>"""
+    if not args.strip():
+        return "Usage: /plan-edit <task description>"
+
+    from consilium.think import get_think_soul
+
+    soul = get_think_soul(session.id)
+    if soul is None:
+        return "ThinkSoul not found in registry."
+
+    import json
+    import uuid
+
+    from kosong.message import ToolCall
+    from kosong.tooling import ToolOk
+
+    from consilium.soul import get_wire_or_none
+    from consilium.soul.toolset import current_tool_call
+    from consilium.wire.types import ToolResult
+
+    tool_id = f"call_{uuid.uuid4().hex[:12]}"
+    fake_tool_call = ToolCall(
+        id=tool_id,
+        function=ToolCall.FunctionBody(
+            name="Agent", arguments=json.dumps({"type": "plan_editor", "prompt": args.strip()})
+        ),
+    )
+
+    wire = get_wire_or_none()
+    if wire:
+        wire.soul_side.send(fake_tool_call)
+
+    token = current_tool_call.set(fake_tool_call)
+    try:
+        summary = await soul.run_plan_edit(args.strip())
+        history.add_message("assistant", f"[Plan Edit result]\n{summary}")
+        return summary
+    except Exception as exc:
+        logger.exception("Think /plan-edit failed")
+        return f"[Error] /plan-edit: {exc}"
+    finally:
+        current_tool_call.reset(token)
+        if wire:
             wire.soul_side.send(
                 ToolResult(tool_call_id=tool_id, return_value=ToolOk(output="done"))
             )
@@ -410,7 +462,7 @@ def slash_inbox(history: HistoryManager, session: ThinkSession, args: str) -> st
 
     Usage: /inbox
     """
-    from consilium.think.inbox import read_unread_reports, mark_report_read
+    from consilium.think.inbox import mark_report_read, read_unread_reports
 
     reports = read_unread_reports(session.id)
     if not reports:

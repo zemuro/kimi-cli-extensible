@@ -538,7 +538,7 @@ class KimiSoul:
 
     @property
     def status(self) -> StatusSnapshot:
-        token_count = self._context.token_count
+        token_count = self._context.token_count_with_pending
         max_size = self._runtime.llm.max_context_size if self._runtime.llm is not None else 0
         return StatusSnapshot(
             context_usage=self._context_usage,
@@ -565,7 +565,7 @@ class KimiSoul:
     @property
     def _context_usage(self) -> float:
         if self._runtime.llm is not None:
-            return self._context.token_count / self._runtime.llm.max_context_size
+            return self._context.token_count_with_pending / self._runtime.llm.max_context_size
         return 0.0
 
     @property

@@ -179,10 +179,10 @@ class LoopControl(BaseModel):
     """Maximum number of retries in one step"""
     max_ralph_iterations: int = Field(default=0, ge=-1)
     """Extra iterations after the first turn in Ralph mode. Use -1 for unlimited."""
-    reserved_context_size: int = Field(default=50_000, ge=1000)
+    reserved_context_size: int = Field(default=100_000, ge=1000)
     """Reserved token count for LLM response generation. Auto-compaction triggers when
     either context_tokens + reserved_context_size >= max_context_size or
-    context_tokens >= max_context_size * compaction_trigger_ratio. Default is 50000."""
+    context_tokens >= max_context_size * compaction_trigger_ratio. Default is 100000."""
     compaction_trigger_ratio: float = Field(default=0.85, ge=0.5, le=0.99)
     """Context usage ratio threshold for auto-compaction. Default is 0.85 (85%).
     Auto-compaction triggers when context_tokens >= max_context_size * compaction_trigger_ratio
