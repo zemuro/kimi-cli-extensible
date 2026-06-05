@@ -380,31 +380,38 @@ class ThinkSoul(Soul):
         """Execute a single tool call."""
         import json
 
-        name = tool_call.function.name
-        raw_args = tool_call.function.arguments or "{}"
-        args = json.loads(raw_args)
+        # Set current_tool_call context so subagent runner can forward events
+        from consilium.soul.toolset import current_tool_call
 
-        if name == "spawn_subagent":
-            subagent_type = args.get("subagent_type", "explore")
-            prompt = args.get("prompt", "")
-            angles = args.get("angles", [])
+        token = current_tool_call.set(tool_call)
+        try:
+            name = tool_call.function.name
+            raw_args = tool_call.function.arguments or "{}"
+            args = json.loads(raw_args)
 
-            if subagent_type == "explore":
-                output = await self.run_explore(prompt)
-            elif subagent_type == "plan_editor":
-                output = await self.run_plan_edit(prompt)
-            elif subagent_type == "investigate":
-                result = await self.run_investigate(prompt, angles)
-                output = result
-            else:
-                raise ValueError(f"Unknown subagent type: {subagent_type}")
+            if name == "spawn_subagent":
+                subagent_type = args.get("subagent_type", "explore")
+                prompt = args.get("prompt", "")
+                angles = args.get("angles", [])
 
-            return ToolResult(
-                tool_call_id=tool_call.id,
-                return_value=ToolOk(output=output),
-            )
+                if subagent_type == "explore":
+                    output = await self.run_explore(prompt)
+                elif subagent_type == "plan_editor":
+                    output = await self.run_plan_edit(prompt)
+                elif subagent_type == "investigate":
+                    result = await self.run_investigate(prompt, angles)
+                    output = result
+                else:
+                    raise ValueError(f"Unknown subagent type: {subagent_type}")
 
-        raise ValueError(f"Unknown tool: {name}")
+                return ToolResult(
+                    tool_call_id=tool_call.id,
+                    return_value=ToolOk(output=output),
+                )
+
+            raise ValueError(f"Unknown tool: {name}")
+        finally:
+            current_tool_call.reset(token)
 
     def _check_compaction_threshold(self) -> None:
         """Warn user if context usage exceeds compaction threshold."""
