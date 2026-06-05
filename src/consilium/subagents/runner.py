@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import uuid
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -79,12 +80,23 @@ async def run_soul_checked(
     ``ChatProviderError``, generic ``Exception``) are converted to failures.
     Only ``CancelledError`` and ``RunCancelled`` are re-raised.
     """
+    cancel_event = asyncio.Event()
+
+    async def _watch_parent_cancel() -> None:
+        """Link parent's cancellation to subagent's cancel_event."""
+        try:
+            await asyncio.Event().wait()  # wait forever
+        except asyncio.CancelledError:
+            cancel_event.set()
+            raise
+
+    watch_task = asyncio.create_task(_watch_parent_cancel())
     try:
         await run_soul(
             soul,
             prompt,
             ui_loop_fn,
-            asyncio.Event(),
+            cancel_event,
             wire_file=WireFile(wire_path),
             runtime=soul.runtime,
         )
@@ -94,7 +106,7 @@ async def run_soul_checked(
             n_steps=exc.n_steps,
             phase=phase,
         )
-        return SoulRunFailure(
+        failure = SoulRunFailure(
             message=(
                 f"Max steps {exc.n_steps} reached when {phase}. "
                 "Please try splitting the task into smaller subtasks."
@@ -112,7 +124,7 @@ async def run_soul_checked(
             phase=phase,
             error=exc,
         )
-        return SoulRunFailure(
+        failure = SoulRunFailure(
             message=f"LLM API error (HTTP {exc.status_code}) when {phase}: {exc}",
             brief=f"API error ({exc.status_code})",
         )
@@ -122,16 +134,25 @@ async def run_soul_checked(
             phase=phase,
             error=exc,
         )
-        return SoulRunFailure(
+        failure = SoulRunFailure(
             message=f"LLM provider error when {phase}: {exc}",
             brief="LLM provider error",
         )
     except Exception as exc:
         logger.exception("Subagent soul run failed when {phase}", phase=phase)
-        return SoulRunFailure(
+        failure = SoulRunFailure(
             message=f"Unexpected error when {phase}: {exc}",
             brief="Agent run error",
         )
+    else:
+        failure = None
+    finally:
+        watch_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await watch_task
+
+    if failure is not None:
+        return failure
 
     context = soul.context
     if not context.history or context.history[-1].role != "assistant":
