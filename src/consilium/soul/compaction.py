@@ -101,7 +101,7 @@ if TYPE_CHECKING:
 
 
 class SimpleCompaction:
-    def __init__(self, max_preserved_messages: int = 2) -> None:
+    def __init__(self, max_preserved_messages: int = 10) -> None:
         self.max_preserved_messages = max_preserved_messages
 
     async def compact(

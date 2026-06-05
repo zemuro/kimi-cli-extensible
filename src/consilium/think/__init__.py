@@ -16,14 +16,16 @@ from typing import Any, cast
 
 from kosong import generate
 from kosong.chat_provider import StreamedMessagePart, TokenUsage
-from kosong.message import ContentPart, Message, TextPart, ThinkPart
+from kosong.message import ContentPart, Message, TextPart, ThinkPart, ToolCall
 from kosong.message import Message as KosongMessage
+from kosong.tooling import Tool, ToolError, ToolOk, ToolResult
 
 from consilium.config import Config
 from consilium.hooks.engine import HookEngine
 from consilium.llm import LLM
 from consilium.session import Session
 from consilium.soul import LLMNotSet, Soul, StatusSnapshot, wire_send
+from consilium.soul.message import tool_result_to_message
 from consilium.think.context import assemble_context, estimate_context_tokens
 from consilium.think.history import HistoryManager
 from consilium.think.models import ThinkMessage
@@ -38,6 +40,9 @@ from consilium.wire.types import (
     TurnBegin,
     TurnEnd,
 )
+from consilium.wire.types import (
+    ToolCall as WireToolCall,
+)
 
 _THINK_SYSTEM_PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "think_system.md"
 
@@ -46,6 +51,41 @@ def _load_system_prompt() -> str:
     if _THINK_SYSTEM_PROMPT_PATH.exists():
         return _THINK_SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
     return "You are a helpful assistant."
+
+
+# Tool definition for spawning subagents from Think mode
+_SPAWN_SUBAGENT_TOOL = Tool(
+    name="spawn_subagent",
+    description=(
+        "Spawn a specialized subagent for tasks that require filesystem access, "
+        "code exploration, or planning document creation. Available types:\n"
+        "- explore: Read-only codebase exploration "
+        "(find files, search code, understand architecture)\n"
+        "- plan_editor: Create or modify planning documents "
+        "in the plan/ directory\n"
+        "- investigate: Parallel multi-angle research on a complex question"
+    ),
+    parameters={
+        "type": "object",
+        "properties": {
+            "subagent_type": {
+                "type": "string",
+                "enum": ["explore", "plan_editor", "investigate"],
+                "description": "The type of subagent to spawn.",
+            },
+            "prompt": {
+                "type": "string",
+                "description": "Clear, specific task description for the subagent.",
+            },
+            "angles": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "For 'investigate' only: list of investigation angles (optional).",
+            },
+        },
+        "required": ["subagent_type", "prompt"],
+    },
+)
 
 
 # Module-level weak registry for ThinkSoul instances (keyed by session ID)
@@ -265,7 +305,7 @@ class ThinkSoul(Soul):
     # ── Internal ─────────────────────────────────────────────────────────
 
     async def _call_llm(self, context: list[Message]) -> str:
-        """Call kosong.generate with streaming, return assistant text."""
+        """Call kosong.generate with streaming and tool support, return assistant text."""
         if self._llm is None:
             raise LLMNotSet()
         wire_send(StepBegin(n=1))
@@ -279,19 +319,92 @@ class ThinkSoul(Soul):
             elif isinstance(part, ThinkPart):
                 # Emit actual ThinkPart to wire so UI renders it as thinking
                 wire_send(part)
-                # Still append to parts to maintain history format if needed
                 parts.append(f"<thinking>\n{part.think}\n</thinking>\n")
+
+        def _on_tool_call(tool_call: ToolCall) -> None:
+            # Emit tool call to wire so UI renders it as a tool call card
+            wire_send(WireToolCall(id=tool_call.id, function=tool_call.function))
+
+        # Use subagent tool only when runtime is available
+        tools: list[Tool] = [_SPAWN_SUBAGENT_TOOL] if self._runtime is not None else []
 
         result = await generate(
             self._llm.chat_provider,
             system_prompt="",  # already in context[0]
-            tools=[],
+            tools=tools,
             history=context[1:],  # exclude system
             on_message_part=_on_part,
+            on_tool_call=_on_tool_call,
         )
 
         self._last_usage = result.usage
+
+        # Handle tool calls
+        if result.message.tool_calls:
+            assistant_text = result.message.extract_text()
+            self._history.add_message("assistant", assistant_text)
+
+            # Execute tools
+            tool_results = await self._execute_tool_calls(result.message.tool_calls)
+
+            # Build tool result messages and extend context
+            tool_messages = [tool_result_to_message(tr) for tr in tool_results]
+            new_context = context + [result.message] + tool_messages
+
+            # Re-call LLM with tool results
+            return await self._call_llm(new_context)
+
         return result.message.extract_text()
+
+    async def _execute_tool_calls(self, tool_calls: list[ToolCall]) -> list[ToolResult]:
+        """Execute a list of tool calls and return their results."""
+        results: list[ToolResult] = []
+        for tc in tool_calls:
+            try:
+                result = await self._execute_single_tool(tc)
+                results.append(result)
+            except Exception as exc:
+                logger.exception("Think tool execution failed")
+                results.append(
+                    ToolResult(
+                        tool_call_id=tc.id,
+                        return_value=ToolError(
+                            message=f"Tool execution failed: {exc}",
+                            brief="Execution error",
+                        ),
+                    )
+                )
+        return results
+
+    async def _execute_single_tool(self, tool_call: ToolCall) -> ToolResult:
+        """Execute a single tool call."""
+        import json
+
+        name = tool_call.function.name
+        raw_args = tool_call.function.arguments or "{}"
+        args = json.loads(raw_args)
+
+        if name == "spawn_subagent":
+            subagent_type = args.get("subagent_type", "explore")
+            prompt = args.get("prompt", "")
+            angles = args.get("angles", [])
+
+            if subagent_type == "explore":
+                output = await self.run_explore(prompt)
+            elif subagent_type == "plan_editor":
+                output = await self.run_plan_edit(prompt)
+            elif subagent_type == "investigate":
+                result = await self.run_investigate(prompt, angles)
+                output = result
+            else:
+                raise ValueError(f"Unknown subagent type: {subagent_type}")
+
+            return ToolResult(
+                tool_call_id=tool_call.id,
+                return_value=ToolOk(output=output),
+            )
+
+        raise ValueError(f"Unknown tool: {name}")
 
     def _check_compaction_threshold(self) -> None:
         """Warn user if context usage exceeds compaction threshold."""

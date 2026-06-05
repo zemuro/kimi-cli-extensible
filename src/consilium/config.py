@@ -187,6 +187,10 @@ class LoopControl(BaseModel):
     """Context usage ratio threshold for auto-compaction. Default is 0.85 (85%).
     Auto-compaction triggers when context_tokens >= max_context_size * compaction_trigger_ratio
     or when context_tokens + reserved_context_size >= max_context_size."""
+    max_preserved_messages: int = Field(default=10, ge=0, le=50)
+    """Number of recent messages to preserve during context compaction.
+    Higher values retain more conversation history at the cost of context window space.
+    Default is 10. Set to 0 to disable compaction (not recommended)."""
 
 
 class BackgroundConfig(BaseModel):

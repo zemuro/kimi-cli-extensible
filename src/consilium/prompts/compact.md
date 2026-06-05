@@ -5,11 +5,12 @@ The above is a list of messages in an agent conversation. You are now given a ta
 
 **Compression Priorities (in order):**
 1. **Current Task State**: What is being worked on RIGHT NOW
-2. **Errors & Solutions**: All encountered errors and their resolutions
-3. **Code Evolution**: Final working versions only (remove intermediate attempts)
-4. **System Context**: Project structure, dependencies, environment setup
-5. **Design Decisions**: Architectural choices and their rationale
-6. **TODO Items**: Unfinished tasks and known issues
+2. **Agent Capabilities**: What tools and abilities the agent has access to (WriteFile, ReadFile, Shell, etc.) and which mode it is running in (Think vs Do / KimiSoul vs ThinkSoul)
+3. **Errors & Solutions**: All encountered errors and their resolutions
+4. **Code Evolution**: Final working versions only (remove intermediate attempts)
+5. **System Context**: Project structure, dependencies, environment setup
+6. **Design Decisions**: Architectural choices and their rationale
+7. **TODO Items**: Unfinished tasks and known issues
 
 **Compression Rules:**
 - MUST KEEP: Error messages, stack traces, working solutions, current task
@@ -23,6 +24,12 @@ The above is a list of messages in an agent conversation. You are now given a ta
 - For discussions: Extract decisions and action items only
 
 **Required Output Structure:**
+
+<capabilities>
+- **Agent mode**: [Which agent/soul is running: KimiSoul/Do mode or ThinkSoul/Think mode]
+- **Available tools**: [List of tools the agent has access to: WriteFile, ReadFile, StrReplaceFile, Shell, Agent/subagent spawning, etc.]
+- **Current permissions**: [yoloMode, auto-execute, approval required, etc.]
+</capabilities>
 
 <current_focus>
 [What we're working on now]
