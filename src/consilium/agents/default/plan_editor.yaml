@@ -4,6 +4,7 @@ agent:
   system_prompt_args_files:
     ROLE_ADDITIONAL: "./plan_editor_role.md"
   when_to_use_file: "./plan_editor_when_to_use.md"
+  min_summary_length: 0
   allowed_tools:
     - "consilium.tools.shell:Shell"
     - "consilium.tools.file:ReadFile"

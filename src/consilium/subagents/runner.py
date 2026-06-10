@@ -168,12 +168,16 @@ async def run_with_summary_continuation(
     prompt: str,
     ui_loop_fn: UILoopFn,
     wire_path: Path,
+    min_summary_length: int = SUMMARY_MIN_LENGTH,
 ) -> tuple[str | None, SoulRunFailure | None]:
     """Run soul, then optionally extend the summary if it is too short.
 
     Returns ``(final_response, failure)``.  On success ``failure`` is
     ``None`` and ``final_response`` contains the agent's output text.
     On failure ``final_response`` is ``None``.
+
+    ``min_summary_length`` controls how short a response must be to trigger
+    a continuation prompt. Set to 0 to disable continuation entirely.
     """
     failure = await run_soul_checked(soul, prompt, ui_loop_fn, wire_path, "running agent")
     if failure is not None:
@@ -181,7 +185,7 @@ async def run_with_summary_continuation(
 
     final_response = soul.context.history[-1].extract_text(sep="\n")
     remaining = SUMMARY_CONTINUATION_ATTEMPTS
-    while remaining > 0 and len(final_response) < SUMMARY_MIN_LENGTH:
+    while remaining > 0 and len(final_response) < min_summary_length:
         remaining -= 1
         failure = await run_soul_checked(
             soul,
@@ -350,6 +354,7 @@ class ForegroundSubagentRunner:
                 prompt,
                 ui_loop_fn,
                 self._store.wire_path(agent_id),
+                min_summary_length=type_def.min_summary_length,
             )
             if failure is not None:
                 self._store.update_instance(agent_id, status="failed")

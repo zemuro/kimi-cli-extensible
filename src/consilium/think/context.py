@@ -23,9 +23,9 @@ def assemble_context(session: ThinkSession, system_prompt: str) -> list[Message]
         and (m.role != "system" or m.id.startswith("compact_"))
     ]
     for msg in active:
-        # Skip empty user messages — they cause API 400 errors
+        # Skip empty user and assistant messages — they cause API 400 errors
         # ("message at position N with role 'user' must not be empty").
-        if msg.role == "user" and not msg.content.strip():
+        if msg.role in ("user", "assistant") and not msg.content.strip():
             continue
         messages.append(Message(role=msg.role, content=msg.content))
     return messages

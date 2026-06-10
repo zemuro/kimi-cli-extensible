@@ -26,6 +26,17 @@ from consilium.llm import LLM
 from consilium.session import Session
 from consilium.soul import LLMNotSet, Soul, StatusSnapshot, wire_send
 from consilium.soul.message import tool_result_to_message
+import sys
+from consilium.utils.logging import logger
+
+def _debug(msg: str) -> None:
+    print(f"[THINKSOUL] {msg}", file=sys.stderr, flush=True)
+    # Also write to a temp file for debugging since stderr might be swallowed on Windows
+    try:
+        with open(r"C:\Users\zemuro\think_debug.log", "a", encoding="utf-8") as f:
+            f.write(f"[THINKSOUL] {msg}\n")
+    except Exception:
+        pass
 from consilium.think.context import assemble_context, estimate_context_tokens
 from consilium.think.history import HistoryManager
 from consilium.think.models import ThinkMessage
@@ -42,6 +53,7 @@ from consilium.wire.types import (
 )
 from consilium.wire.types import (
     ToolCall as WireToolCall,
+    ToolCallPart,
 )
 
 _THINK_SYSTEM_PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "think_system.md"
@@ -313,6 +325,7 @@ class ThinkSoul(Soul):
         parts: list[str] = []
 
         def _on_part(part: StreamedMessagePart) -> None:
+            _debug(f"_on_part: type={type(part).__name__}")
             if isinstance(part, TextPart):
                 wire_send(part)
                 parts.append(part.text)
@@ -320,17 +333,27 @@ class ThinkSoul(Soul):
                 # Emit actual ThinkPart to wire so UI renders it as thinking
                 wire_send(part)
                 parts.append(f"<thinking>\n{part.think}\n</thinking>\n")
+            elif isinstance(part, ToolCall):
+                # Buffer tool call during streaming, emit complete version in _on_tool_call
+                _debug(f"_on_part: ToolCall id={part.id} name={part.function.name}")
+                parts.append(f"<tool_call>\n{part.function.name}\n</tool_call>\n")
+            elif isinstance(part, ToolCallPart):
+                # Don't emit ToolCallPart over wire — wait for complete ToolCall in _on_tool_call
+                pass
 
         def _on_tool_call(tool_call: ToolCall) -> None:
             # Emit tool call to wire so UI renders it as a tool call card
+            _debug(f"_on_tool_call: id={tool_call.id} name={tool_call.function.name}")
             wire_send(WireToolCall(id=tool_call.id, function=tool_call.function))
 
         # Use subagent tool only when runtime is available
         tools: list[Tool] = [_SPAWN_SUBAGENT_TOOL] if self._runtime is not None else []
 
+        _debug(f"_call_llm: tools_count={len(tools)}")
+
         result = await generate(
             self._llm.chat_provider,
-            system_prompt="",  # already in context[0]
+            system_prompt=self._system_prompt,
             tools=tools,
             history=context[1:],  # exclude system
             on_message_part=_on_part,
@@ -339,6 +362,8 @@ class ThinkSoul(Soul):
 
         self._last_usage = result.usage
 
+        _debug(f"_call_llm: has_tool_calls={bool(result.message.tool_calls)} tool_count={len(result.message.tool_calls) if result.message.tool_calls else 0}")
+
         # Handle tool calls
         if result.message.tool_calls:
             assistant_text = result.message.extract_text()
@@ -346,6 +371,10 @@ class ThinkSoul(Soul):
 
             # Execute tools
             tool_results = await self._execute_tool_calls(result.message.tool_calls)
+
+            # Emit tool results to wire so UI updates tool card status
+            for tr in tool_results:
+                wire_send(tr)
 
             # Build tool result messages and extend context
             tool_messages = [tool_result_to_message(tr) for tr in tool_results]
@@ -357,24 +386,22 @@ class ThinkSoul(Soul):
         return result.message.extract_text()
 
     async def _execute_tool_calls(self, tool_calls: list[ToolCall]) -> list[ToolResult]:
-        """Execute a list of tool calls and return their results."""
-        results: list[ToolResult] = []
-        for tc in tool_calls:
+        """Execute a list of tool calls in parallel and return their results."""
+        async def _run_one(tc: ToolCall) -> ToolResult:
             try:
-                result = await self._execute_single_tool(tc)
-                results.append(result)
+                return await self._execute_single_tool(tc)
             except Exception as exc:
                 logger.exception("Think tool execution failed")
-                results.append(
-                    ToolResult(
-                        tool_call_id=tc.id,
-                        return_value=ToolError(
-                            message=f"Tool execution failed: {exc}",
-                            brief="Execution error",
-                        ),
-                    )
+                return ToolResult(
+                    tool_call_id=tc.id,
+                    return_value=ToolError(
+                        message=f"Tool execution failed: {exc}",
+                        brief="Execution error",
+                    ),
                 )
-        return results
+
+        results = await asyncio.gather(*[_run_one(tc) for tc in tool_calls])
+        return list(results)
 
     async def _execute_single_tool(self, tool_call: ToolCall) -> ToolResult:
         """Execute a single tool call."""

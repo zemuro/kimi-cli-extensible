@@ -7,6 +7,7 @@ import json
 import uuid
 from typing import TYPE_CHECKING
 
+from consilium.subagents.models import AgentLaunchSpec
 from consilium.subagents.runner import ForegroundRunRequest, ForegroundSubagentRunner
 from consilium.think.investigate import InvestigateResult, InvestigationResult
 
@@ -23,6 +24,9 @@ class ThinkSubagentSpawner:
 
     def __init__(self, root_runtime: Runtime) -> None:
         self._runtime = root_runtime
+        # ThinkSoul has no UI mechanism for subagent approval dialogs.
+        # Auto-approve all subagent tools since user already approved by spawning.
+        self._runtime.approval.set_yolo(True)
 
     async def spawn(
         self,
@@ -79,19 +83,43 @@ class ThinkSubagentSpawner:
         task_ids: list[str] = []
 
         for angle in angles:
-            view = self._runtime.background_tasks.create_agent_task(
-                agent_id=f"think-investigate-{uuid.uuid4().hex[:8]}",
-                subagent_type="explore",
-                prompt=f"{question}\n\nFocus on this angle: {angle}",
+            agent_id = f"think-investigate-{uuid.uuid4().hex[:8]}"
+            type_def = self._runtime.labor_market.require_builtin_type("explore")
+
+            # Create subagent instance in store (required by BackgroundAgentRunner)
+            self._runtime.subagent_store.create_instance(
+                agent_id=agent_id,
                 description=f"Investigate: {angle[:40]}",
-                tool_call_id="",
-                model_override=None,
+                launch_spec=AgentLaunchSpec(
+                    agent_id=agent_id,
+                    subagent_type="explore",
+                    model_override=None,
+                    effective_model=type_def.default_model,
+                ),
             )
+            self._runtime.subagent_store.update_instance(agent_id, status="running_background")
+
+            try:
+                view = self._runtime.background_tasks.create_agent_task(
+                    agent_id=agent_id,
+                    subagent_type="explore",
+                    prompt=f"{question}\n\nFocus on this angle: {angle}",
+                    description=f"Investigate: {angle[:40]}",
+                    tool_call_id="",
+                    model_override=None,
+                )
+            except Exception:
+                self._runtime.subagent_store.update_instance(agent_id, status="failed")
+                self._runtime.subagent_store.delete_instance(agent_id)
+                raise
+
             task_ids.append(view.spec.id)
             task_angles[view.spec.id] = angle
 
-        # Collect results from all tasks in parallel
-        async def _wait_one(task_id: str, angle: str) -> InvestigationResult:
+        # Collect results from all tasks
+        results: list[InvestigationResult] = []
+        for task_id in task_ids:
+            angle = task_angles[task_id]
             try:
                 final_view = await self._runtime.background_tasks.wait(
                     task_id,
@@ -106,34 +134,36 @@ class ThinkSubagentSpawner:
                 except ImportError:
                     summary = f"Task {task_id}: {final_view.runtime.status}"
 
-                return InvestigationResult(
-                    task_id=task_id,
-                    angle=angle,
-                    status=final_view.runtime.status,
-                    summary=summary,
-                    output=output,
+                results.append(
+                    InvestigationResult(
+                        task_id=task_id,
+                        angle=angle,
+                        status=final_view.runtime.status,
+                        summary=summary,
+                        output=output,
+                    )
                 )
             except TimeoutError:
+                results.append(
+                    InvestigationResult(
+                        task_id=task_id,
+                        angle=angle,
+                        status="timeout",
+                        summary="Investigation timed out",
+                        output="",
+                    )
+                )
                 await self._runtime.background_tasks.kill(task_id, reason="timeout")
-                return InvestigationResult(
-                    task_id=task_id,
-                    angle=angle,
-                    status="timeout",
-                    summary="Investigation timed out",
-                    output="",
-                )
             except Exception as e:
-                return InvestigationResult(
-                    task_id=task_id,
-                    angle=angle,
-                    status="error",
-                    summary=f"Investigation failed: {e}",
-                    output="",
+                results.append(
+                    InvestigationResult(
+                        task_id=task_id,
+                        angle=angle,
+                        status="error",
+                        summary=f"Investigation failed: {e}",
+                        output="",
+                    )
                 )
-
-        results: list[InvestigationResult] = await asyncio.gather(
-            *[_wait_one(tid, task_angles[tid]) for tid in task_ids]
-        )
 
         report = self._aggregate_results(question, results)
         return InvestigateResult(

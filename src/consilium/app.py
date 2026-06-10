@@ -255,6 +255,11 @@ async def create_think_soul(
                     when_to_use=builtin_spec.when_to_use,
                     default_model=builtin_spec.model,
                     tool_policy=tool_policy,
+                    min_summary_length=(
+                        builtin_spec.min_summary_length
+                        if builtin_spec.min_summary_length is not None
+                        else 200
+                    ),
                 )
             )
     except Exception as e:

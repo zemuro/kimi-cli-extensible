@@ -53,6 +53,10 @@ class AgentSpec(BaseModel):
     subagents: dict[str, SubagentSpec] | None | Inherit = Field(
         default=inherit, description="Subagents"
     )
+    min_summary_length: int | None = Field(
+        default=None,
+        description="Minimum summary length in chars. 0 disables continuation.",
+    )
 
 
 class SubagentSpec(BaseModel):
@@ -75,6 +79,7 @@ class ResolvedAgentSpec:
     allowed_tools: list[str] | None
     exclude_tools: list[str]
     subagents: dict[str, SubagentSpec]
+    min_summary_length: int | None
 
 
 def load_agent_spec(agent_file: Path) -> ResolvedAgentSpec:
@@ -109,6 +114,7 @@ def load_agent_spec(agent_file: Path) -> ResolvedAgentSpec:
         allowed_tools=agent_spec.allowed_tools,
         exclude_tools=agent_spec.exclude_tools or [],
         subagents=agent_spec.subagents or {},
+        min_summary_length=agent_spec.min_summary_length,
     )
 
 
@@ -175,5 +181,7 @@ def _load_agent_spec(agent_file: Path) -> AgentSpec:
             base_agent_spec.exclude_tools = agent_spec.exclude_tools
         if not isinstance(agent_spec.subagents, Inherit):
             base_agent_spec.subagents = agent_spec.subagents
+        if agent_spec.min_summary_length is not None:
+            base_agent_spec.min_summary_length = agent_spec.min_summary_length
         agent_spec = base_agent_spec
     return agent_spec

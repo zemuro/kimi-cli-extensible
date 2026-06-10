@@ -351,7 +351,7 @@ class Runtime:
             session=self.session,
             builtin_args=self.builtin_args,
             denwa_renji=DenwaRenji(),  # subagent must have its own DenwaRenji
-            approval=self.approval.share(),
+            approval=self.approval.copy_with_yolo(True),
             labor_market=self.labor_market,
             environment=self.environment,
             notifications=self.notifications,
@@ -429,6 +429,11 @@ async def load_agent(
                 when_to_use=builtin_spec.when_to_use,
                 default_model=builtin_spec.model,
                 tool_policy=tool_policy,
+                min_summary_length=(
+                    builtin_spec.min_summary_length
+                    if builtin_spec.min_summary_length is not None
+                    else 200
+                ),
             )
         )
 

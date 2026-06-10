@@ -31,6 +31,7 @@ class AgentTypeDefinition:
     default_model: str | None = None
     tool_policy: ToolPolicy = field(default_factory=lambda: ToolPolicy(mode="inherit"))
     supports_background: bool = True
+    min_summary_length: int = 200
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

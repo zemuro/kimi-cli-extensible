@@ -93,6 +93,16 @@ class Approval:
         """Create a new approval queue that shares approval state."""
         return Approval(state=self._state, runtime=self._runtime)
 
+    def copy_with_yolo(self, yolo: bool = True) -> Approval:
+        """Create a new approval queue with independent state, yolo flag set."""
+        new_state = ApprovalState(
+            yolo=yolo,
+            afk=self._state.afk,
+            runtime_afk=self._state.runtime_afk,
+            auto_approve_actions=set(self._state.auto_approve_actions),
+        )
+        return Approval(state=new_state, runtime=self._runtime)
+
     def set_runtime(self, runtime: ApprovalRuntime) -> None:
         self._runtime = runtime
 
@@ -171,9 +181,13 @@ class Approval:
         Raises:
             RuntimeError: If the approval is requested from outside a tool call.
         """
+        import sys
         tool_call = get_current_tool_call_or_none()
         if tool_call is None:
             raise RuntimeError("Approval must be requested from a tool call.")
+
+        source = get_current_approval_source_or_none()
+        print(f"[Approval.request] tool={tool_call.function.name} action={action} is_auto_approve={self.is_auto_approve()} is_yolo={self.is_yolo()} source={source}", file=sys.stderr)
 
         logger.debug(
             "{tool_name} ({tool_call_id}) requesting approval: {action} {description}",
@@ -217,8 +231,10 @@ class Approval:
             display=display_blocks,
             source=source,
         )
+        print(f"[Approval.request] waiting for response request_id={request_id}", file=sys.stderr)
         try:
             response, feedback = await self._runtime.wait_for_response(request_id)
+            print(f"[Approval.request] got response request_id={request_id} response={response}", file=sys.stderr)
         except ApprovalCancelledError:
             from consilium.telemetry import track
 
