@@ -37,3 +37,6 @@ agent:
     plan_editor:
       path: ./plan_editor.yaml
       description: "Planning documentation specialist that creates and edits project plans in the plan/ directory."
+    plan_reviewer:
+      path: ./plan_reviewer.yaml
+      description: "Pre-implementation plan review and validation."

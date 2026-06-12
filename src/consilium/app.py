@@ -24,7 +24,7 @@ from consilium.llm import augment_provider_with_env_vars, create_llm, model_disp
 from consilium.session import Session
 from consilium.share import get_share_dir
 from consilium.soul import RunCancelled, run_soul
-from consilium.soul.agent import Runtime, load_agent
+from consilium.soul.agent import Runtime, _load_system_prompt, load_agent
 from consilium.soul.context import Context
 from consilium.soul.kimisoul import KimiSoul
 from consilium.utils.aioqueue import QueueShutDown
@@ -143,6 +143,7 @@ async def create_think_soul(
     thinking: bool | None,
     generation_overrides: dict[str, Any] | None,
     budget_tokens: int | None,
+    agent_file: Path | None = None,
 ) -> tuple[Any, dict[str, str]]:
     """Create a ThinkSoul with the given configuration."""
     from consilium.think import ThinkSoul
@@ -238,8 +239,8 @@ async def create_think_soul(
     from consilium.subagents.models import AgentTypeDefinition, ToolPolicy
 
     try:
-        agent_file = Path(__file__).parent / "agents" / "default" / "agent.yaml"
-        agent_spec = load_agent_spec(agent_file)
+        builtin_agent_file = Path(__file__).parent / "agents" / "default" / "agent.yaml"
+        agent_spec = load_agent_spec(builtin_agent_file)
         for subagent_name, subagent_spec in agent_spec.subagents.items():
             builtin_spec = load_agent_spec(subagent_spec.path)
             tool_policy = (
@@ -267,7 +268,25 @@ async def create_think_soul(
 
         logger.warning(f"Failed to load builtin subagents for Think mode: {e}")
 
-    return ThinkSoul(session, llm, _config, think_session, runtime=runtime), env_overrides
+    # Load custom system prompt from agent file if provided.
+    system_prompt: str | None = None
+    if agent_file is not None:
+        from consilium.agentspec import load_agent_spec
+
+        try:
+            spec = load_agent_spec(agent_file)
+            system_prompt = _load_system_prompt(
+                spec.system_prompt_path,
+                spec.system_prompt_args,
+                runtime.builtin_args,
+                config=_config,
+            )
+        except Exception as e:
+            from consilium.utils.logging import logger
+
+            logger.warning("Failed to load custom Think agent file {agent_file}: {error}. Falling back to built-in system prompt.", agent_file=agent_file, error=e)
+
+    return ThinkSoul(session, llm, _config, think_session, runtime=runtime, system_prompt=system_prompt), env_overrides
 
 
 class KimiCLI:

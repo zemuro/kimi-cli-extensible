@@ -122,6 +122,7 @@ class ThinkSoul(Soul):
         config: Config,
         think_session: Any,
         runtime: Any | None = None,
+        system_prompt: str | None = None,
     ) -> None:
         self._session = session
         self._llm = llm
@@ -130,7 +131,7 @@ class ThinkSoul(Soul):
         self._think_session = think_session
         self._history = HistoryManager(think_session)
         self._hook_engine = HookEngine()
-        self._system_prompt = _load_system_prompt()
+        self._system_prompt = system_prompt if system_prompt is not None else _load_system_prompt()
         self._last_usage: TokenUsage | None = None
         self._runtime = runtime
         # Lazy-init spawner when needed

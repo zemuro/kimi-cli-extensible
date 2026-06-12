@@ -818,6 +818,7 @@ def kimi(
                     thinking=thinking,
                     generation_overrides=generation_overrides if generation_overrides else None,
                     budget_tokens=budget_tokens,
+                    agent_file=agent_file,
                 )
                 startup_progress.stop()
 
