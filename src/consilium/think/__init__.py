@@ -2,12 +2,15 @@
 
 Think mode is a mutable-history REPL for speculative reasoning.
 It implements the Soul protocol so it works with all UIs (shell, ACP, wire).
-No tools are used; LLM calls go through kosong.generate() directly.
+LLM calls go through kosong.generate() directly. When a Runtime is available,
+the `spawn_subagent` tool is registered so Think mode can dispatch subagents.
 """
 
 from __future__ import annotations
 
 import asyncio
+import re
+import uuid
 import weakref
 from collections.abc import Awaitable
 from datetime import UTC, datetime
@@ -68,37 +71,37 @@ def _load_system_prompt() -> str:
 # Tool definition for spawning subagents from Think mode
 _SPAWN_SUBAGENT_TOOL = Tool(
     name="spawn_subagent",
-    description=(
-        "Spawn a specialized subagent for tasks that require filesystem access, "
-        "code exploration, or planning document creation. Available types:\n"
-        "- explore: Read-only codebase exploration "
-        "(find files, search code, understand architecture)\n"
-        "- plan_editor: Create or modify planning documents "
-        "in the plan/ directory\n"
-        "- investigate: Parallel multi-angle research on a complex question"
-    ),
+    description="Spawn a subagent to read files, explore code, or edit plan documents.",
     parameters={
         "type": "object",
         "properties": {
             "subagent_type": {
                 "type": "string",
                 "enum": ["explore", "plan_editor", "investigate"],
-                "description": "The type of subagent to spawn.",
+                "description": "Type of subagent to spawn: explore (read-only research), plan_editor (edit plan/), or investigate (parallel research).",
             },
             "prompt": {
                 "type": "string",
-                "description": "Clear, specific task description for the subagent.",
+                "description": "Specific task description for the subagent.",
             },
             "angles": {
                 "type": "array",
                 "items": {"type": "string"},
-                "description": "For 'investigate' only: list of investigation angles (optional).",
+                "description": "Optional investigation angles; use only with subagent_type='investigate'.",
             },
         },
         "required": ["subagent_type", "prompt"],
     },
 )
 
+
+# The model is currently conditioned to emit subagent calls as plain-text
+# <function=spawn_subagent>{...}</function> blocks instead of using the native
+# tool-calling channel. Detect that shape and normalize it to a real ToolCall.
+_PLAINTEXT_SPAWN_SUBAGENT_RE = re.compile(
+    r"<function=spawn_subagent>\s*(\{.*?\})\s*</function>",
+    re.DOTALL | re.IGNORECASE,
+)
 
 # Module-level weak registry for ThinkSoul instances (keyed by session ID)
 _think_soul_registry: weakref.WeakValueDictionary[str, ThinkSoul] = weakref.WeakValueDictionary()
@@ -365,7 +368,7 @@ class ThinkSoul(Soul):
 
         _debug(f"_call_llm: has_tool_calls={bool(result.message.tool_calls)} tool_count={len(result.message.tool_calls) if result.message.tool_calls else 0}")
 
-        # Handle tool calls
+        # Handle native tool calls
         if result.message.tool_calls:
             assistant_text = result.message.extract_text()
             self._history.add_message("assistant", assistant_text)
@@ -384,7 +387,54 @@ class ThinkSoul(Soul):
             # Re-call LLM with tool results
             return await self._call_llm(new_context)
 
-        return result.message.extract_text()
+        # Normalize plain-text pseudo-tool calls to real ToolCalls. The model is
+        # currently emitting these instead of using the native tool channel.
+        response_text = result.message.extract_text()
+        fallback_tool_call = self._maybe_extract_plaintext_tool_call(response_text)
+        if fallback_tool_call is not None:
+            _debug(f"_call_llm: normalized plaintext tool_call id={fallback_tool_call.id}")
+            cleaned_text = self._strip_plaintext_tool_call(response_text)
+            self._history.add_message("assistant", cleaned_text or "[spawned subagent]")
+            wire_send(WireToolCall(id=fallback_tool_call.id, function=fallback_tool_call.function))
+            tool_results = await self._execute_tool_calls([fallback_tool_call])
+            for tr in tool_results:
+                wire_send(tr)
+            synthetic_msg = Message(
+                role="assistant",
+                content=cleaned_text or "",
+                tool_calls=[fallback_tool_call],
+            )
+            tool_messages = [tool_result_to_message(tr) for tr in tool_results]
+            new_context = context + [synthetic_msg] + tool_messages
+            return await self._call_llm(new_context)
+
+        return response_text
+
+    def _maybe_extract_plaintext_tool_call(self, text: str) -> ToolCall | None:
+        """Detect plain-text <function=spawn_subagent> tags and convert to a ToolCall."""
+        import json
+
+        match = _PLAINTEXT_SPAWN_SUBAGENT_RE.search(text)
+        if not match:
+            return None
+        raw_json = match.group(1)
+        try:
+            args = json.loads(raw_json)
+        except json.JSONDecodeError:
+            _debug(f"plaintext tool_call JSON decode failed: {raw_json[:200]!r}")
+            return None
+        return ToolCall(
+            id=str(uuid.uuid4()),
+            function=ToolCall.FunctionBody(
+                name="spawn_subagent",
+                arguments=json.dumps(args),
+            ),
+        )
+
+    def _strip_plaintext_tool_call(self, text: str) -> str:
+        """Remove the plain-text <function=spawn_subagent> block from the response."""
+        cleaned = _PLAINTEXT_SPAWN_SUBAGENT_RE.sub("", text)
+        return "\n".join(line for line in cleaned.splitlines() if line.strip()).strip()
 
     async def _execute_tool_calls(self, tool_calls: list[ToolCall]) -> list[ToolResult]:
         """Execute a list of tool calls in parallel and return their results."""

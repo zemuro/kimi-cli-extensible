@@ -355,6 +355,16 @@ def kimi(
             help="Custom agent specification file. Default: builtin default agent.",
         ),
     ] = None,
+    subagent_system_prompt: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--subagent-system-prompt",
+            help=(
+                "Override the system prompt role content for a builtin subagent. "
+                "Format: <subagent_name>=<path_to_markdown_file>. Repeatable."
+            ),
+        ),
+    ] = None,
     mcp_config_file: Annotated[
         list[Path] | None,
         typer.Option(
@@ -465,6 +475,49 @@ def kimi(
                 stream.flush()
                 return
         typer.echo(message, err=True)
+
+    def _parse_subagent_role_overrides(
+        values: list[str] | None,
+    ) -> dict[str, Path]:
+        """Parse --subagent-system-prompt values and env vars into {subagent_name: role_file_path}."""
+        import os
+
+        overrides: dict[str, Path] = {}
+
+        # Environment variables take lower precedence than CLI flags.
+        env_prefix = "CONSILIUM_SUBAGENT_SYSTEM_PROMPT_"
+        for key, value in os.environ.items():
+            if key.startswith(env_prefix):
+                name = key[len(env_prefix) :].lower()
+                if name and value.strip():
+                    path = Path(value.strip())
+                    if path.is_file():
+                        overrides[name] = path
+
+        if not values:
+            return overrides
+        for value in values:
+            if "=" not in value:
+                raise typer.BadParameter(
+                    f"Invalid --subagent-system-prompt value: {value!r}. "
+                    "Expected format: <subagent_name>=<path>.",
+                    param_hint="--subagent-system-prompt",
+                )
+            name, path_str = value.split("=", 1)
+            name = name.strip()
+            path = Path(path_str.strip())
+            if not name:
+                raise typer.BadParameter(
+                    "Subagent name cannot be empty in --subagent-system-prompt.",
+                    param_hint="--subagent-system-prompt",
+                )
+            if not path.is_file():
+                raise typer.BadParameter(
+                    f"Subagent role file not found: {path}",
+                    param_hint="--subagent-system-prompt",
+                )
+            overrides[name] = path
+        return overrides
 
     # session_id states:
     #   None  → not provided (new session)
@@ -704,6 +757,8 @@ def kimi(
                     param_hint="--plan-file",
                 )
 
+            subagent_role_overrides = _parse_subagent_role_overrides(subagent_system_prompt)
+
             if do_mode:
                 instance = await KimiCLI.create(
                     session,
@@ -716,6 +771,7 @@ def kimi(
                     plan_mode=plan,
                     resumed=resumed,
                     agent_file=agent_file,
+                    subagent_role_overrides=subagent_role_overrides,
                     mcp_configs=mcp_configs,
                     skills_dirs=skills_dirs,
                     max_steps_per_turn=max_steps_per_turn,
@@ -819,6 +875,7 @@ def kimi(
                     generation_overrides=generation_overrides if generation_overrides else None,
                     budget_tokens=budget_tokens,
                     agent_file=agent_file,
+                    subagent_role_overrides=subagent_role_overrides,
                 )
                 startup_progress.stop()
 

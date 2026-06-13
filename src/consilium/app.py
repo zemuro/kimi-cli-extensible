@@ -144,6 +144,8 @@ async def create_think_soul(
     generation_overrides: dict[str, Any] | None,
     budget_tokens: int | None,
     agent_file: Path | None = None,
+    subagent_role_overrides: dict[str, Path] | None = None,
+    yolo: bool = False,
 ) -> tuple[Any, dict[str, str]]:
     """Create a ThinkSoul with the given configuration."""
     from consilium.think import ThinkSoul
@@ -231,8 +233,9 @@ async def create_think_soul(
         oauth,
         llm,
         session,
-        yolo=False,
+        yolo=yolo,
         afk=False,
+        subagent_role_overrides=subagent_role_overrides,
     )
 
     from consilium.agentspec import load_agent_spec
@@ -307,6 +310,7 @@ class KimiCLI:
         ui_mode: str = "shell",
         # Extensions
         agent_file: Path | None = None,
+        subagent_role_overrides: dict[str, Path] | None = None,
         mcp_configs: list[MCPConfig] | list[dict[str, Any]] | None = None,
         skills_dirs: list[KaosPath] | None = None,
         # Generation overrides (CLI > env > config)
@@ -459,6 +463,7 @@ class KimiCLI:
             afk=afk,
             runtime_afk=runtime_afk,
             skills_dirs=skills_dirs,
+            subagent_role_overrides=subagent_role_overrides,
         )
         runtime.ui_mode = ui_mode
         runtime.resumed = resumed
@@ -710,7 +715,16 @@ class KimiCLI:
             mcp_ms=_phase_timings_ms.get("mcp_ms", 0),
         )
 
-        return KimiCLI(soul, runtime, env_overrides, bg_refresh_task, do_mode=do_mode)
+        return KimiCLI(
+            soul,
+            runtime,
+            env_overrides,
+            bg_refresh_task,
+            do_mode=do_mode,
+            agent_file=agent_file,
+            subagent_role_overrides=subagent_role_overrides,
+            yolo=yolo,
+        )
 
     def __init__(
         self,
@@ -719,12 +733,18 @@ class KimiCLI:
         _env_overrides: dict[str, str],
         _bg_refresh_task: asyncio.Task[None] | None = None,
         do_mode: bool = False,
+        agent_file: Path | None = None,
+        subagent_role_overrides: dict[str, Path] | None = None,
+        yolo: bool = False,
     ) -> None:
         self._soul = _soul
         self._runtime = _runtime
         self._env_overrides = _env_overrides
         self._bg_refresh_task = _bg_refresh_task
         self._do_mode = do_mode
+        self._agent_file = agent_file
+        self._subagent_role_overrides = subagent_role_overrides
+        self._yolo = yolo
 
     @property
     def soul(self) -> KimiSoul:
@@ -1144,5 +1164,21 @@ class KimiCLI:
 
         async with self._env():
             mode = "do" if self._do_mode else "think"
-            server = WireServer(self._soul, session=self.session, mode=mode)
+            if mode == "think":
+                # Think tab is designed as a stateless reasoning agent. Use ThinkSoul
+                # instead of KimiSoul so it only exposes the spawn_subagent tool.
+                think_soul, _ = await create_think_soul(
+                    self.session,
+                    config=self._runtime.config,
+                    model_name=self._runtime.llm.model_name,
+                    thinking=None,
+                    generation_overrides={},
+                    budget_tokens=self._runtime.config.budget_tokens,
+                    agent_file=self._agent_file,
+                    subagent_role_overrides=self._subagent_role_overrides,
+                    yolo=self._yolo,
+                )
+                server = WireServer(think_soul, session=self.session, mode=mode)
+            else:
+                server = WireServer(self._soul, session=self.session, mode=mode)
             await server.serve()

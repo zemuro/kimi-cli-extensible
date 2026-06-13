@@ -349,13 +349,26 @@ class ForegroundSubagentRunner:
             )
 
             output_writer.stage("run_soul_start")
-            final_response, failure = await run_with_summary_continuation(
-                soul,
-                prompt,
-                ui_loop_fn,
-                self._store.wire_path(agent_id),
-                min_summary_length=type_def.min_summary_length,
-            )
+            timeout_seconds = self._runtime.config.subagents.timeout_seconds
+            try:
+                async with asyncio.timeout(timeout_seconds):
+                    final_response, failure = await run_with_summary_continuation(
+                        soul,
+                        prompt,
+                        ui_loop_fn,
+                        self._store.wire_path(agent_id),
+                        min_summary_length=type_def.min_summary_length,
+                    )
+            except TimeoutError:
+                self._store.update_instance(agent_id, status="failed")
+                output_writer.stage("failed: timeout")
+                return ToolError(
+                    message=(
+                        f"Subagent timed out after {timeout_seconds}s. "
+                        "Increase [subagents] timeout_seconds if this task is expected to take longer."
+                    ),
+                    brief="Subagent timeout",
+                )
             if failure is not None:
                 self._store.update_instance(agent_id, status="failed")
                 output_writer.stage(f"failed: {failure.brief}")

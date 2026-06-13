@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
@@ -191,6 +191,7 @@ class Runtime:
     root_wire_hub: RootWireHub | None = None
     subagent_id: str | None = None
     subagent_type: str | None = None
+    subagent_role_overrides: dict[str, Path] = field(default_factory=dict)
     role: Literal["root", "subagent"] = "root"
     ui_mode: str = "shell"
     resumed: bool = False
@@ -218,6 +219,7 @@ class Runtime:
         afk: bool = False,
         runtime_afk: bool = False,
         skills_dirs: list[KaosPath] | None = None,
+        subagent_role_overrides: dict[str, Path] | None = None,
     ) -> Runtime:
         ls_output, agents_md, environment = await asyncio.gather(
             list_directory(session.work_dir),
@@ -334,6 +336,7 @@ class Runtime:
             approval_runtime=ApprovalRuntime(),
             root_wire_hub=RootWireHub(),
             role="root",
+            subagent_role_overrides=subagent_role_overrides or {},
         )
 
     def copy_for_subagent(
@@ -365,6 +368,7 @@ class Runtime:
             root_wire_hub=self.root_wire_hub,
             subagent_id=agent_id,
             subagent_type=subagent_type,
+            subagent_role_overrides=self.subagent_role_overrides,
             role="subagent",
         )
 
@@ -401,6 +405,25 @@ async def load_agent(
     """
     logger.info("Loading agent: {agent_file}", agent_file=agent_file)
     agent_spec = load_agent_spec(agent_file)
+
+    # Apply subagent role override if one was provided for this subagent type.
+    if (
+        runtime.subagent_type
+        and runtime.subagent_type in runtime.subagent_role_overrides
+    ):
+        override_path = runtime.subagent_role_overrides[runtime.subagent_type]
+        try:
+            agent_spec.system_prompt_args["ROLE_ADDITIONAL"] = override_path.read_text(
+                encoding="utf-8"
+            )
+        except Exception as e:
+            logger.warning(
+                "Failed to load subagent role override for {subagent_type} from {path}: {error}. "
+                "Falling back to built-in role.",
+                subagent_type=runtime.subagent_type,
+                path=override_path,
+                error=e,
+            )
 
     system_prompt = _load_system_prompt(
         agent_spec.system_prompt_path,

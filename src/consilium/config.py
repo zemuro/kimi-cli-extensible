@@ -322,10 +322,10 @@ class SubagentBudgetConfig(BaseModel):
     """Token and tool-call budget limits for subagent tasks."""
 
     max_tokens_per_task: int = Field(
-        default=20_000, ge=1_000, description="Hard token limit per subagent task"
+        default=40_000, ge=1_000, description="Hard token limit per subagent task"
     )
     max_tool_calls_per_task: int = Field(
-        default=20, ge=1, description="Hard tool-call limit per subagent task"
+        default=50, ge=1, description="Hard tool-call limit per subagent task"
     )
     warn_tokens_ratio: float = Field(
         default=0.8, ge=0.1, le=1.0, description="Warn when token usage exceeds this ratio"
@@ -519,6 +519,43 @@ def get_default_config() -> Config:
     )
 
 
+def _apply_env_overrides(config: Config) -> None:
+    """Apply environment-variable overrides to subagent limits.
+
+    Supported variables:
+    - CONSILIUM_SUBAGENTS_TIMEOUT_SECONDS
+    - CONSILIUM_SUBAGENTS_BUDGET_MAX_TOKENS_PER_TASK
+    - CONSILIUM_SUBAGENTS_BUDGET_MAX_TOOL_CALLS_PER_TASK
+    """
+    import os
+
+    def _read_int(name: str, min_val: int, max_val: int) -> int | None:
+        raw = os.environ.get(name)
+        if raw is None:
+            return None
+        try:
+            value = int(raw)
+        except ValueError as e:
+            raise ConfigError(f"Invalid integer for {name}: {raw!r}") from e
+        if not (min_val <= value <= max_val):
+            raise ConfigError(
+                f"{name}={value} is outside allowed range [{min_val}, {max_val}]"
+            )
+        return value
+
+    value = _read_int("CONSILIUM_SUBAGENTS_TIMEOUT_SECONDS", 10, 3600)
+    if value is not None:
+        config.subagents.timeout_seconds = value
+
+    value = _read_int("CONSILIUM_SUBAGENTS_BUDGET_MAX_TOKENS_PER_TASK", 1_000, 1_000_000)
+    if value is not None:
+        config.subagents.budget.max_tokens_per_task = value
+
+    value = _read_int("CONSILIUM_SUBAGENTS_BUDGET_MAX_TOOL_CALLS_PER_TASK", 1, 10_000)
+    if value is not None:
+        config.subagents.budget.max_tool_calls_per_task = value
+
+
 def load_config(config_file: Path | None = None) -> Config:
     """
     Load configuration from config file.
@@ -567,6 +604,7 @@ def load_config(config_file: Path | None = None) -> Config:
         raise ConfigError(f"Invalid configuration file {config_file}: {e}") from e
     config.is_from_default_location = is_default_config_file
     config.source_file = config_file
+    _apply_env_overrides(config)
     return config
 
 
@@ -607,6 +645,7 @@ def load_config_from_string(config_string: str) -> Config:
         raise ConfigError(f"Invalid configuration text: {e}") from e
     config.is_from_default_location = False
     config.source_file = None
+    _apply_env_overrides(config)
     return config
 
 
