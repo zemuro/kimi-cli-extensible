@@ -322,10 +322,10 @@ class SubagentBudgetConfig(BaseModel):
     """Token and tool-call budget limits for subagent tasks."""
 
     max_tokens_per_task: int = Field(
-        default=40_000, ge=1_000, description="Hard token limit per subagent task"
+        default=80_000, ge=1_000, description="Hard token limit per subagent task"
     )
     max_tool_calls_per_task: int = Field(
-        default=50, ge=1, description="Hard tool-call limit per subagent task"
+        default=100, ge=1, description="Hard tool-call limit per subagent task"
     )
     warn_tokens_ratio: float = Field(
         default=0.8, ge=0.1, le=1.0, description="Warn when token usage exceeds this ratio"

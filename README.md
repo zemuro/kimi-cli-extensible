@@ -204,8 +204,8 @@ Subagents (explore, plan-review, investigate) run with token and tool-call budge
 
 ```toml
 [subagents.budget]
-max_tokens_per_task = 20_000
-max_tool_calls_per_task = 20
+max_tokens_per_task = 80_000
+max_tool_calls_per_task = 100
 warn_tokens_ratio = 0.8
 ```
 

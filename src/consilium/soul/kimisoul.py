@@ -1020,6 +1020,7 @@ class KimiSoul:
                         continue
                     if gate_outcome is not None:
                         step_outcome = gate_outcome
+                        await self._context.append_message(step_outcome.assistant_message)
                         break
 
             except BackToTheFuture as e:

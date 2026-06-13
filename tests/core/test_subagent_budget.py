@@ -122,14 +122,14 @@ class TestBudgetTracker:
 class TestBudgetConfig:
     def test_default_values(self) -> None:
         config = SubagentBudgetConfig()
-        assert config.max_tokens_per_task == 20_000
-        assert config.max_tool_calls_per_task == 20
+        assert config.max_tokens_per_task == 80_000
+        assert config.max_tool_calls_per_task == 100
         assert config.warn_tokens_ratio == 0.8
         assert config.warn_tool_calls_ratio == 0.8
 
     def test_nested_in_subagents_config(self) -> None:
         config = SubagentsConfig()
-        assert config.budget.max_tokens_per_task == 20_000
+        assert config.budget.max_tokens_per_task == 80_000
 
     def test_rejects_invalid_ratio_high(self) -> None:
         with pytest.raises(ValueError):
@@ -183,11 +183,11 @@ class TestBudgetEvent:
     def test_event_fields(self) -> None:
         event = SubagentBudgetWarningEvent(
             task_name="explore-auth",
-            tokens_burned=16_000,
-            tokens_limit=20_000,
-            tool_calls_made=16,
-            tool_calls_limit=20,
+            tokens_burned=64_000,
+            tokens_limit=80_000,
+            tool_calls_made=80,
+            tool_calls_limit=100,
         )
         assert event.type == "subagent_budget_warning"
         assert event.task_name == "explore-auth"
-        assert event.tokens_burned == 16_000
+        assert event.tokens_burned == 64_000
