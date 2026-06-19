@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal, Self
 
@@ -298,7 +299,7 @@ class ThinkConfig(BaseModel):
     """Think mode configuration."""
 
     default_temperature: float = Field(
-        default=0.7, ge=0.0, le=2.0, description="Default temperature for Think mode"
+        default=0.6, ge=0.0, le=2.0, description="Default temperature for Think mode"
     )
     max_context_tokens: int = Field(
         default=200_000, ge=1000, description="Maximum context tokens for Think mode"
@@ -311,10 +312,41 @@ class ThinkConfig(BaseModel):
         default=True, description="Enable context compaction warnings and /compact command"
     )
     compaction_threshold: float = Field(
-        default=0.75, ge=0.1, le=0.99, description="Context usage ratio to warn at"
+        default=0.85, ge=0.1, le=0.99, description="Context usage ratio to warn at"
     )
     compaction_preserve_messages: int = Field(
         default=6, ge=1, le=50, description="Messages to preserve during compaction"
+    )
+
+
+class SubagentOverrideConfig(BaseModel):
+    """Optional per-subagent override for temperature and budget limits.
+
+    All fields are optional; absence means "fall back to the next resolution
+    level" (CLI flag / env var / global default).
+    """
+
+    temperature: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=2.0,
+        description="Sampling temperature override for this subagent type",
+    )
+    max_tokens_per_task: int | None = Field(
+        default=None,
+        ge=1_000,
+        description="Hard token limit override for this subagent type",
+    )
+    max_tool_calls_per_task: int | None = Field(
+        default=None,
+        ge=1,
+        description="Hard tool-call limit override for this subagent type",
+    )
+    timeout_seconds: int | None = Field(
+        default=None,
+        ge=10,
+        le=3600,
+        description="Timeout override in seconds for this subagent type",
     )
 
 
@@ -335,15 +367,42 @@ class SubagentBudgetConfig(BaseModel):
     )
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ResolvedSubagentConfig:
+    """Fully resolved per-subagent runtime configuration."""
+
+    temperature: float
+    max_tokens_per_task: int
+    max_tool_calls_per_task: int
+    timeout_seconds: int
+
+
 class SubagentsConfig(BaseModel):
     """Cross-cutting subagent configuration."""
 
     enabled: bool = Field(default=True, description="Enable subagent spawning from Think and Do modes")
-    timeout_seconds: int = Field(default=300, ge=10, le=3600)
+    timeout_seconds: int = Field(default=900, ge=10, le=3600)
     default_type: str = Field(default="explore", description="Default subagent type for Think mode")
     budget: SubagentBudgetConfig = Field(
         default_factory=SubagentBudgetConfig, description="Subagent budget limits"
     )
+    overrides: dict[str, SubagentOverrideConfig] = Field(
+        default_factory=dict,
+        description="Per-subagent temperature and budget overrides keyed by agent type",
+    )
+
+    @model_validator(mode="after")
+    def _validate_override_keys(self) -> Self:
+        import re
+
+        valid = re.compile(r"^[a-z][a-z0-9_]*$")
+        for key in self.overrides:
+            if not valid.match(key):
+                raise ValueError(
+                    f"Invalid subagent override key: {key!r}. "
+                    "Keys must be lowercase identifiers."
+                )
+        return self
 
 
 class PlanReviewConfig(BaseModel):
@@ -520,12 +579,13 @@ def get_default_config() -> Config:
 
 
 def _apply_env_overrides(config: Config) -> None:
-    """Apply environment-variable overrides to subagent limits.
+    """Apply environment-variable overrides to configurable values.
 
     Supported variables:
     - CONSILIUM_SUBAGENTS_TIMEOUT_SECONDS
     - CONSILIUM_SUBAGENTS_BUDGET_MAX_TOKENS_PER_TASK
     - CONSILIUM_SUBAGENTS_BUDGET_MAX_TOOL_CALLS_PER_TASK
+    - CONSILIUM_DO_AUTO_GIT_SNAPSHOT ("true" or "false")
     """
     import os
 
@@ -543,6 +603,17 @@ def _apply_env_overrides(config: Config) -> None:
             )
         return value
 
+    def _read_bool(name: str) -> bool | None:
+        raw = os.environ.get(name)
+        if raw is None:
+            return None
+        lowered = raw.strip().lower()
+        if lowered in ("1", "true", "yes", "on"):
+            return True
+        if lowered in ("0", "false", "no", "off"):
+            return False
+        raise ConfigError(f"Invalid boolean for {name}: {raw!r}")
+
     value = _read_int("CONSILIUM_SUBAGENTS_TIMEOUT_SECONDS", 10, 3600)
     if value is not None:
         config.subagents.timeout_seconds = value
@@ -554,6 +625,10 @@ def _apply_env_overrides(config: Config) -> None:
     value = _read_int("CONSILIUM_SUBAGENTS_BUDGET_MAX_TOOL_CALLS_PER_TASK", 1, 10_000)
     if value is not None:
         config.subagents.budget.max_tool_calls_per_task = value
+
+    value = _read_bool("CONSILIUM_DO_AUTO_GIT_SNAPSHOT")
+    if value is not None:
+        config.do.auto_git_snapshot = value
 
 
 def load_config(config_file: Path | None = None) -> Config:
