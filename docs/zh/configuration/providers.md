@@ -1,6 +1,6 @@
 # 平台与模型
 
-Kimi Code CLI 支持多种 LLM 平台，可以通过配置文件或 `/login` 命令进行配置。
+Consilium CLI 支持多种 LLM 平台，可以通过配置文件或 `/login` 命令进行配置。
 
 ## 平台选择
 
@@ -10,13 +10,13 @@ Kimi Code CLI 支持多种 LLM 平台，可以通过配置文件或 `/login` 命
 2. 输入 API 密钥
 3. 从可用模型列表中选择模型
 
-配置完成后，Kimi Code CLI 会自动保存设置到 `~/.kimi/config.toml` 并重新加载。
+配置完成后，Consilium CLI 会自动保存设置到 `~/.consilium/config.toml` 并重新加载。
 
 `/login` 目前支持以下平台：
 
 | 平台 | 说明 |
 | --- | --- |
-| Kimi Code | Kimi Code 平台，支持搜索和抓取服务 |
+| Consilium | Consilium 平台，支持搜索和抓取服务 |
 | Moonshot AI 开放平台 (moonshot.cn) | 中国区 API 端点 |
 | Moonshot AI Open Platform (moonshot.ai) | 全球区 API 端点 |
 
@@ -39,12 +39,12 @@ Kimi Code CLI 支持多种 LLM 平台，可以通过配置文件或 `/login` 命
 
 ### `kimi`
 
-用于连接 Kimi API，包括 Kimi Code 和 Moonshot AI 开放平台。
+用于连接 Kimi API，包括 Consilium 和 Moonshot AI 开放平台。
 
 ```toml
-[providers.kimi-for-coding]
+[providers.consilium-for-coding]
 type = "kimi"
-base_url = "https://api.kimi.com/coding/v1"
+base_url = "https://api.consilium.com/coding/v1"
 api_key = "sk-xxx"
 ```
 
@@ -106,7 +106,7 @@ env = { GOOGLE_CLOUD_PROJECT = "your-project-id" }
 
 ## 模型能力
 
-模型配置中的 `capabilities` 字段声明模型支持的能力。这会影响 Kimi Code CLI 的功能可用性。
+模型配置中的 `capabilities` 字段声明模型支持的能力。这会影响 Consilium CLI 的功能可用性。
 
 | 能力 | 说明 |
 | --- | --- |
@@ -141,9 +141,9 @@ capabilities = ["thinking", "image_in"]
 
 ## 搜索和抓取服务
 
-`SearchWeb` 和 `FetchURL` 工具依赖外部服务，目前仅 Kimi Code 平台提供这些服务。
+`SearchWeb` 和 `FetchURL` 工具依赖外部服务，目前仅 Consilium 平台提供这些服务。
 
-使用 `/login` 选择 Kimi Code 平台时，搜索和抓取服务会自动配置。
+使用 `/login` 选择 Consilium 平台时，搜索和抓取服务会自动配置。
 
 | 服务 | 对应工具 | 未配置时的行为 |
 | --- | --- | --- |

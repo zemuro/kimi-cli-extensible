@@ -5,7 +5,7 @@ description: Sync Rust implementation with Python changes (exclude UI/login) by 
 
 # gen-rust
 
-Use this skill when the user wants Rust (kagent/kosong/kaos) to stay logically identical to Python (kimi_cli/kosong/kaos), excluding UI and login/auth. This includes code and tests: Rust behavior and tests must be fully synchronized with Python changes.
+Use this skill when the user wants Rust (kagent/kosong/kaos) to stay logically identical to Python (consilium/kosong/kaos), excluding UI and login/auth. This includes code and tests: Rust behavior and tests must be fully synchronized with Python changes.
 
 Note: The Rust binary is named `kagent`. User-facing CLI/output text in Rust must use `kagent`
 instead of `kimi` to match the Rust command name.
@@ -38,11 +38,11 @@ head -50 CHANGELOG.md
 3) **Map Python -> Rust**
 
 Common mappings:
-- `src/kimi_cli/llm.py` -> `rust/kagent/src/llm.rs`
-- `src/kimi_cli/soul/*` -> `rust/kagent/src/soul/*`
-- `src/kimi_cli/tools/*` -> `rust/kagent/src/tools/*`
-- `src/kimi_cli/utils/*` -> `rust/kagent/src/utils/*`
-- `src/kimi_cli/wire/*` -> `rust/kagent/src/wire/*`
+- `src/consilium/llm.py` -> `rust/kagent/src/llm.rs`
+- `src/consilium/soul/*` -> `rust/kagent/src/soul/*`
+- `src/consilium/tools/*` -> `rust/kagent/src/tools/*`
+- `src/consilium/utils/*` -> `rust/kagent/src/utils/*`
+- `src/consilium/wire/*` -> `rust/kagent/src/wire/*`
 - `packages/kosong/*` -> `rust/kosong/*`
 - `packages/kaos/*` -> `rust/kaos/*`
 
@@ -59,13 +59,13 @@ Common mappings:
 - Update Rust tests that assert content/strings/parts.
 - Mirror Python unit and integration tests when they exist; add missing Rust tests so coverage matches intent.
 - Ensure E2E parity: use the existing Python E2E suite against the Rust binary by setting
-  `KIMI_E2E_WIRE_CMD` (do not rewrite E2E in Rust). All E2E cases must pass or the gap must be documented.
+  `CONSILIUM_E2E_WIRE_CMD` (do not rewrite E2E in Rust). All E2E cases must pass or the gap must be documented.
 - Prefer targeted tests first (`cargo test -p kagent --test <name>`), then full suite if asked.
 
 6) **Verification is mandatory**
 
 - Run the full Rust test suite and ensure all Rust tests pass.
-- Run E2E tests with the wire command swapped to Rust (set `KIMI_E2E_WIRE_CMD`), and ensure they pass.
+- Run E2E tests with the wire command swapped to Rust (set `CONSILIUM_E2E_WIRE_CMD`), and ensure they pass.
 
 7) **Final report**
 
@@ -89,4 +89,4 @@ Common mappings:
 - [ ] Tests updated
 - [ ] Targeted tests run
 - [ ] Full Rust test suite passed
-- [ ] Rust E2E passed with `KIMI_E2E_WIRE_CMD`
+- [ ] Rust E2E passed with `CONSILIUM_E2E_WIRE_CMD`

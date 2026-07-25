@@ -1,6 +1,6 @@
 # Keyboard Shortcuts
 
-Kimi Code CLI shell mode supports the following keyboard shortcuts.
+Consilium CLI shell mode supports the following keyboard shortcuts.
 
 ## Shortcuts list
 
@@ -16,7 +16,7 @@ Kimi Code CLI shell mode supports the following keyboard shortcuts.
 | `Ctrl-E` | Expand full approval request content |
 | `1`–`4` | Quick select approval option (`4` for decline with feedback) |
 | `1`–`5` | Select question option by number |
-| `Ctrl-D` | Exit Kimi Code CLI |
+| `Ctrl-D` | Exit Consilium CLI |
 | `Ctrl-C` | Interrupt current operation |
 
 ## Mode switching
@@ -126,7 +126,7 @@ When the AI asks multiple questions at once, the question panel displays them as
 
 ### `Ctrl-D`: Exit
 
-Press `Ctrl-D` when the input box is empty to exit Kimi Code CLI.
+Press `Ctrl-D` when the input box is empty to exit Consilium CLI.
 
 ### `Ctrl-C`: Interrupt
 

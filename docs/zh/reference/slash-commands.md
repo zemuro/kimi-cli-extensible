@@ -1,6 +1,6 @@
 # 斜杠命令
 
-斜杠命令是 Kimi Code CLI 的内置命令，用于控制会话、配置和调试。在输入框中输入 `/` 开头的命令即可触发。
+斜杠命令是 Consilium CLI 的内置命令，用于控制会话、配置和调试。在输入框中输入 `/` 开头的命令即可触发。
 
 ::: tip Shell 模式
 部分斜杠命令在 Shell 模式下也可以使用，包括 `/help`、`/exit`、`/version`、`/editor`、`/theme`、`/changelog`、`/feedback`、`/export`、`/import` 和 `/task`。
@@ -16,7 +16,7 @@
 
 ### `/version`
 
-显示 Kimi Code CLI 版本号。
+显示 Consilium CLI 版本号。
 
 ### `/changelog`
 
@@ -26,7 +26,7 @@
 
 ### `/feedback`
 
-提交反馈以改进 Kimi Code CLI。执行后会提示输入反馈内容并提交。如果网络请求失败或超时，会自动回退到打开 GitHub Issues 页面。
+提交反馈以改进 Consilium CLI。执行后会提示输入反馈内容并提交。如果网络请求失败或超时，会自动回退到打开 GitHub Issues 页面。
 
 ## 账号与配置
 
@@ -34,10 +34,10 @@
 
 登录或配置 API 平台。执行后首先选择平台：
 
-- **Kimi Code**：自动打开浏览器进行 OAuth 授权登录
+- **Consilium**：自动打开浏览器进行 OAuth 授权登录
 - **其他平台**：输入 API 密钥，然后选择可用模型
 
-配置完成后自动保存到 `~/.kimi/config.toml` 并重新加载。详见 [平台与模型](../configuration/providers.md)。
+配置完成后自动保存到 `~/.consilium/config.toml` 并重新加载。详见 [平台与模型](../configuration/providers.md)。
 
 别名：`/setup`
 
@@ -47,7 +47,7 @@
 
 ### `/logout`
 
-登出当前平台。会清理存储的凭据并移除配置文件中的相关配置。登出后 Kimi Code CLI 会自动重新加载配置。
+登出当前平台。会清理存储的凭据并移除配置文件中的相关配置。登出后 Consilium CLI 会自动重新加载配置。
 
 ### `/model`
 
@@ -55,7 +55,7 @@
 
 此命令会先从 API 平台刷新可用模型列表。不带参数调用时，显示交互式选择界面，首先选择模型，然后选择是否开启 Thinking 模式（如果模型支持）。
 
-选择完成后，Kimi Code CLI 会自动更新配置文件并重新加载。
+选择完成后，Consilium CLI 会自动更新配置文件并重新加载。
 
 ::: tip 提示
 此命令仅在使用默认配置文件时可用。如果通过 `--config` 或 `--config-file` 指定了配置，则无法使用此命令。
@@ -67,7 +67,7 @@
 
 ### `/theme`
 
-切换终端配色主题。Kimi Code CLI 提供深色（`dark`）和浅色（`light`）两套配色方案，默认使用深色主题。
+切换终端配色主题。Consilium CLI 提供深色（`dark`）和浅色（`light`）两套配色方案，默认使用深色主题。
 
 用法：
 
@@ -79,7 +79,7 @@
 
 ### `/reload`
 
-重新加载配置文件，无需退出 Kimi Code CLI。
+重新加载配置文件，无需退出 Consilium CLI。
 
 ### `/debug`
 
@@ -97,7 +97,7 @@
 别名：`/status`
 
 ::: tip 提示
-此命令仅适用于 Kimi Code 平台。
+此命令仅适用于 Consilium 平台。
 :::
 
 ### `/mcp`
@@ -120,7 +120,7 @@
 
 ### `/new`
 
-创建一个新会话并立即切换过去，无需退出 Kimi Code CLI。如果当前会话没有任何内容，会自动清理空会话目录。
+创建一个新会话并立即切换过去，无需退出 Consilium CLI。如果当前会话没有任何内容，会自动清理空会话目录。
 
 ### `/sessions`
 
@@ -145,7 +145,7 @@
 
 ### `/undo`
 
-回退到之前的某个轮次并重试。执行后会弹出交互式选择器，展示所有历史轮次的用户消息（截断到 80 字符）。选中某个轮次后，Kimi Code CLI 会 fork 出一个新会话，包含该轮次**之前**的所有对话历史，并将被选中轮次的用户消息预填到输入框，方便编辑后重新发送。原会话始终保留不丢失。
+回退到之前的某个轮次并重试。执行后会弹出交互式选择器，展示所有历史轮次的用户消息（截断到 80 字符）。选中某个轮次后，Consilium CLI 会 fork 出一个新会话，包含该轮次**之前**的所有对话历史，并将被选中轮次的用户消息预填到输入框，方便编辑后重新发送。原会话始终保留不丢失。
 
 使用方向键选择轮次，按 `Enter` 确认，按 `Ctrl-C` 取消。
 
@@ -190,7 +190,7 @@
 
 手动压缩上下文，减少 token 使用。可以在命令后附带自定义指引，告诉 AI 在压缩时优先保留哪些信息，例如 `/compact 保留数据库相关的讨论`。
 
-当上下文过长时，Kimi Code CLI 会自动触发压缩。此命令可手动触发压缩过程。
+当上下文过长时，Consilium CLI 会自动触发压缩。此命令可手动触发压缩过程。
 
 ## Skills
 
@@ -320,11 +320,11 @@ AFK 会跳过所有审批确认，并且去掉提问澄清的安全网。仅在�
 
 ### `/web`
 
-切换到 Web UI。执行后 Kimi Code CLI 会启动 Web UI 服务器并在浏览器中打开当前会话，你可以在 Web UI 中继续对话。详见 [Web UI](./kimi-web.md)。
+切换到 Web UI。执行后 Consilium CLI 会启动 Web UI 服务器并在浏览器中打开当前会话，你可以在 Web UI 中继续对话。详见 [Web UI](./kimi-web.md)。
 
 ### `/vis`
 
-切换到 Agent Tracing Visualizer。执行后 Kimi Code CLI 会启动可视化面板服务器并在浏览器中打开当前会话的追踪视图，你可以在其中检查 Wire 事件时间线、上下文消息和用量统计。详见 [Agent Tracing Visualizer](./kimi-vis.md)。
+切换到 Agent Tracing Visualizer。执行后 Consilium CLI 会启动可视化面板服务器并在浏览器中打开当前会话的追踪视图，你可以在其中检查 Wire 事件时间线、上下文消息和用量统计。详见 [Agent Tracing Visualizer](./kimi-vis.md)。
 
 ## 命令补全
 

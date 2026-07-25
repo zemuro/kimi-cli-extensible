@@ -5,19 +5,19 @@ status: implemented
 dependencies:
   - phase-09
 files_involved:
-  - src/kimi_cli/utils/timestamp.py
-  - src/kimi_cli/token_tracker.py
-  - src/kimi_cli/think/models.py
-  - src/kimi_cli/think/storage.py
-  - src/kimi_cli/think/history.py
-  - src/kimi_cli/think/slash.py
-  - src/kimi_cli/plan/models.py
-  - src/kimi_cli/plan/parser.py
-  - src/kimi_cli/plan/audit_report.py
-  - src/kimi_cli/plan/handover.py
-  - src/kimi_cli/plan/dispatch.py
-  - src/kimi_cli/plan/docs_index.py
-  - src/kimi_cli/do/journal.py
+  - src/consilium/utils/timestamp.py
+  - src/consilium/token_tracker.py
+  - src/consilium/think/models.py
+  - src/consilium/think/storage.py
+  - src/consilium/think/history.py
+  - src/consilium/think/slash.py
+  - src/consilium/plan/models.py
+  - src/consilium/plan/parser.py
+  - src/consilium/plan/audit_report.py
+  - src/consilium/plan/handover.py
+  - src/consilium/plan/dispatch.py
+  - src/consilium/plan/docs_index.py
+  - src/consilium/do/journal.py
 ---
 
 **Status: IMPLEMENTED — 993 tests passing.**
@@ -49,11 +49,11 @@ This means a journal entry and a plan model created at the same moment cannot be
 
 | File | Current | Target |
 |---|---|---|
-| `~/.kimi/do_sessions/{id}/journal.jsonl` | ISO string | Unix float |
-| `~/.kimi/token_log/{date}.csv` | ISO string | Unix float |
-| `~/.kimi/think_sessions/{id}.jsonl` | ISO string | Unix float |
-| `~/.kimi/think_checkpoints/{name}.json` | ISO string | Unix float |
-| `~/.kimi/think_outbox/{id}.json` | ISO string | Unix float |
+| `~/.consilium/do_sessions/{id}/journal.jsonl` | ISO string | Unix float |
+| `~/.consilium/token_log/{date}.csv` | ISO string | Unix float |
+| `~/.consilium/think_sessions/{id}.jsonl` | ISO string | Unix float |
+| `~/.consilium/think_checkpoints/{name}.json` | ISO string | Unix float |
+| `~/.consilium/think_outbox/{id}.json` | ISO string | Unix float |
 
 **Migration:** On read, accept both ISO string and float for backward compatibility. On write, emit float.
 

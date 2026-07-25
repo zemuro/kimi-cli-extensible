@@ -8,7 +8,7 @@ from kosong.tooling import CallableTool2, ToolReturnValue
 
 from consilium.soul.agent import Runtime
 from consilium.soul.approval import Approval
-from consilium.soul.toolset import KimiToolset
+from consilium.soul.toolset import ConsiliumToolset
 from consilium.tools.shell import Params as ShellParams
 from consilium.tools.shell import Shell
 from consilium.tools.utils import ToolResultBuilder
@@ -19,7 +19,7 @@ def replace_tools(
     client_capabilities: acp.schema.ClientCapabilities,
     acp_conn: acp.Client,
     acp_session_id: str,
-    toolset: KimiToolset,
+    toolset: ConsiliumToolset,
     runtime: Runtime,
 ) -> None:
     current_kaos = get_current_kaos().name

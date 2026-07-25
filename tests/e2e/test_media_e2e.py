@@ -13,7 +13,7 @@ def _repo_root() -> Path:
 
 
 def _print_trace(label: str, text: str) -> None:
-    if os.getenv("KIMI_TEST_TRACE") == "1":
+    if os.getenv("CONSILIUM_TEST_TRACE") == "1":
         print("-----")
         print(f"{label}: {text}")
 
@@ -191,7 +191,7 @@ def test_scripted_echo_media_e2e(temp_work_dir: KaosPath, tmp_path: Path, mode: 
     scripts_path.write_text(json.dumps(scripts), encoding="utf-8")
 
     config_path = tmp_path / "config.json"
-    trace_env = os.getenv("KIMI_SCRIPTED_ECHO_TRACE", "0")
+    trace_env = os.getenv("CONSILIUM_SCRIPTED_ECHO_TRACE", "0")
     config_data = {
         "default_model": "scripted",
         "models": {
@@ -208,8 +208,8 @@ def test_scripted_echo_media_e2e(temp_work_dir: KaosPath, tmp_path: Path, mode: 
                 "base_url": "",
                 "api_key": "",
                 "env": {
-                    "KIMI_SCRIPTED_ECHO_SCRIPTS": str(scripts_path),
-                    "KIMI_SCRIPTED_ECHO_TRACE": trace_env,
+                    "CONSILIUM_SCRIPTED_ECHO_SCRIPTS": str(scripts_path),
+                    "CONSILIUM_SCRIPTED_ECHO_TRACE": trace_env,
                 },
             }
         },

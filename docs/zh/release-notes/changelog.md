@@ -1,6 +1,6 @@
 # 变更记录
 
-本页面记录 Kimi Code CLI 各版本的变更内容。
+本页面记录 Consilium CLI 各版本的变更内容。
 
 ## 未发布
 
@@ -16,11 +16,11 @@
 - Shell：恢复 Markdown 链接高亮样式（链接文本为亮蓝色下划线，URL 为青色下划线），并为 h2-h6 标题添加下划线分隔符；调整表格渲染为带可见边框的方形样式
 - Core：后台任务完成时的系统通知现在包含完成时间戳和运行时长，通知 payload 中新增 `finished_at` 和 `duration_s` 字段，方便追踪
 - MCP：将 MCP 客户端栈升级到 FastMCP 3.2.4，避免 FastMCP OAuth 启动路径打印 Authlib 弃用警告
-- MCP：使用 FastMCP 3 的持久化存储 API，将 OAuth MCP token 存储在 `~/.kimi/mcp-oauth/`；已有 OAuth MCP 授权的用户升级后可能需要重新运行一次 `kimi mcp auth <name>`
+- MCP：使用 FastMCP 3 的持久化存储 API，将 OAuth MCP token 存储在 `~/.consilium/mcp-oauth/`；已有 OAuth MCP 授权的用户升级后可能需要重新运行一次 `kimi mcp auth <name>`
 
 ## 1.42.0 (2026-05-11)
 
-- Shell：把 Windows 上的 Shell 后端从 PowerShell 切换到 Git Bash——Shell 工具现在通过 `bash.exe`（POSIX 语义）执行命令，而不再使用 `powershell.exe`。Windows 用户能使用与 Linux/macOS 一致的 Unix 风格语法（`&&`、`||`、`|`、`/dev/null`、`grep`、`sed` 等）。**需要先安装 Git for Windows**：kimi-cli 按以下顺序查找 `bash.exe`：环境变量 `KIMI_CLI_GIT_BASH_PATH` → `where.exe git` → 标准安装路径（`C:\Program Files\Git\bin\bash.exe`）；如果都找不到，启动时打印安装提示并退出
+- Shell：把 Windows 上的 Shell 后端从 PowerShell 切换到 Git Bash——Shell 工具现在通过 `bash.exe`（POSIX 语义）执行命令，而不再使用 `powershell.exe`。Windows 用户能使用与 Linux/macOS 一致的 Unix 风格语法（`&&`、`||`、`|`、`/dev/null`、`grep`、`sed` 等）。**需要先安装 Git for Windows**：consilium 按以下顺序查找 `bash.exe`：环境变量 `CONSILIUM_CLI_GIT_BASH_PATH` → `where.exe git` → 标准安装路径（`C:\Program Files\Git\bin\bash.exe`）；如果都找不到，启动时打印安装提示并退出
 - Shell：防御 Windows 上模型偶尔幻觉出的 CMD 风格 `2>nul` 重定向——在命令进入 git-bash 前自动改写为 `2>/dev/null`；如果不防御，git-bash 会真的创建一个名为 `nul` 的文件（Windows 保留设备名），破坏 `git add .` 和 `git clone`。该改写仅在 Windows 上生效；Linux/macOS 上 `>nul` 是合法的写入到名为 `nul` 文件的重定向，保持原样
 - File：`ReadFile`、`WriteFile`、`StrReplaceFile`、`Glob`、`Grep` 在 Windows 上接受 POSIX 形式的路径——除原生 Windows 路径外，这些工具现在能识别 `/c/Users/foo`（Git Bash 形式）、`/cygdrive/c/Users/foo`（Cygwin 形式）和 `\\server\share`（UNC 形式），并在文件系统操作前自动转换为原生形式
 - Shell：在 LLM 步骤重试时清除已流式输出的不完整内容——以前，如果某个步骤在流式输出中途失败（例如触发速率限制或服务器错误），被中断尝试所产生的未完成文本和未结束的工具调用块会留在屏幕上，并与新尝试的输出混在一起。现在 Shell 界面会丢弃这部分不完整状态，并打印一条重试横幅，显示失败原因、尝试次数和等待时间；Print 模式也会在重试时丢弃已缓冲的 Assistant 消息
@@ -52,23 +52,23 @@
 
 ## 1.39.0 (2026-04-24)
 
-- Skill：修复项目级 Skill 被忽略、用户级 Skill 在同名冲突时静默获胜的问题——系统提示现在会把发现到的 Skill 按 `### Project` / `### User` / `### Extra` / `### Built-in` 四个分组呈现，让模型能分辨出每个 Skill 来自哪一层；当同一 Skill 名称同时存在于多个作用域时，越具体的作用域优先（Project > User > Extra > Built-in），项目自身的 `.kimi/skills/foo` 或 `.claude/skills/foo` 现在能正确覆盖用户级或内置的同名 `foo`，而不是被它们覆盖
+- Skill：修复项目级 Skill 被忽略、用户级 Skill 在同名冲突时静默获胜的问题——系统提示现在会把发现到的 Skill 按 `### Project` / `### User` / `### Extra` / `### Built-in` 四个分组呈现，让模型能分辨出每个 Skill 来自哪一层；当同一 Skill 名称同时存在于多个作用域时，越具体的作用域优先（Project > User > Extra > Built-in），项目自身的 `.consilium/skills/foo` 或 `.claude/skills/foo` 现在能正确覆盖用户级或内置的同名 `foo`，而不是被它们覆盖
 - Skill：除了标准的 `<name>/SKILL.md` 子目录结构之外，现在也会识别 Skills 目录下的扁平 `<name>.md` 单文件 Skill——便于将扁平 Markdown 集合迁移到 Skills 目录；`name` 默认取文件名去掉 `.md` 后的部分（frontmatter 里显式写了 `name:` 时以 frontmatter 为准），描述解析与子目录形式统一走同一条三级链（frontmatter `description:` → 正文第一个非空行，超过 240 字符会截断 → `"No description provided."` 兜底）；当同目录下扁平 `.md` 和子目录形式同名时，以子目录为准，并记录一条警告日志
 - Skill：新增 `extra_skill_dirs` 配置项，用于在内置 / 用户级 / 项目级自动发现的基础上追加自定义 Skills 目录——每一项可以是绝对路径、`~` 前缀路径（会按 `$HOME` 展开），或相对于项目根的路径（即 `work_dir` 向上第一个包含 `.git` 的目录，不是当前工作目录）；不存在的条目会被静默跳过，同一路径的软链接或带尾部斜杠的写法会被 canonicalize 归并为一条根，避免同一目录在系统提示里重复出现
 - Skill：强化 Skill 发现对 `is_dir` / `iterdir` 抛出 `OSError` 的容错（例如 `extra_skill_dirs` 指向一个权限受限的目录）——受影响的条目会被记录并跳过，不会让整轮 Skill 发现失败中断
 - Core：修复 DeepSeek V4（以及其它走 `openai_legacy` 的 OpenAI 兼容 Thinking 模式后端）在思考轮次后紧跟工具调用时，被 API 以 400 `The reasoning_content in the thinking mode must be passed back to the API` 拒绝的问题——`openai_legacy` 供应商现在默认 `reasoning_key = "reasoning_content"`，模型响应中的推理内容会被正确存入历史，并在后续轮次自动回传给 API。同时给 `LLMProvider` 新增可选字段 `reasoning_key`，便于覆盖字段名（例如非标网关使用的 `"reasoning"`）或设置为 `""` 完全关闭推理内容回传
 - Core：新增 `skip_yolo_prompt_injection` 配置项，用于抑制 yolo 模式下注入的系统提示词——基于 `KimiSoul` 构建自定义应用且不需要该提示时很有用
-- Kimi：新增环境变量 `KIMI_MODEL_THINKING_KEEP`，将其值原样作为 `thinking.keep` 字段发送给 Moonshot API，用于启用 Preserved Thinking（例如 `export KIMI_MODEL_THINKING_KEEP=all` 可让模型在多轮之间保留历史 `reasoning_content`）；仅对支持 Preserved Thinking 的 Moonshot 模型（如 `kimi-k2.6` / `kimi-k2-thinking`）生效，未设置或空字符串时请求体不携带该字段、等同当前默认行为，且仅在当前模型真正处于 Thinking 模式时才注入，以避免 API 收到只有 `thinking.keep` 而缺少 `thinking.type` 的无效请求体。注意 `keep=all` 会因为重新发送历史推理内容而显著增加输入 token 与 API 费用
+- Kimi：新增环境变量 `CONSILIUM_MODEL_THINKING_KEEP`，将其值原样作为 `thinking.keep` 字段发送给 Moonshot API，用于启用 Preserved Thinking（例如 `export CONSILIUM_MODEL_THINKING_KEEP=all` 可让模型在多轮之间保留历史 `reasoning_content`）；仅对支持 Preserved Thinking 的 Moonshot 模型（如 `kimi-k2.6` / `kimi-k2-thinking`）生效，未设置或空字符串时请求体不携带该字段、等同当前默认行为，且仅在当前模型真正处于 Thinking 模式时才注入，以避免 API 收到只有 `thinking.keep` 而缺少 `thinking.type` 的无效请求体。注意 `keep=all` 会因为重新发送历史推理内容而显著增加输入 token 与 API 费用
 - Kosong：修复 `Kimi.with_extra_body` 在后续调用新增其它 `thinking.*` 字段时静默丢掉已有 `thinking.type` 的问题——`thinking` 子对象现在按字段合并，而不是被整体浅覆盖，使得 `with_thinking(...)` 与 `with_extra_body({"thinking": {...}})` 组合使用时两次设置的字段都能保留
 - Kosong：修复 Kimi provider 在 `tool_calls` 旁发送空 `content` 导致 Moonshot API 返回 400 "text content is empty" 错误的问题。当 Assistant 消息带有工具调用且可见内容实际为空（无文本或仅包含空白 / think 部分）时，现在会完全省略 `content` 字段
 - Shell：修复审批请求反馈文本输入的光标渲染问题——光标块现在根据实际光标位置正确渲染，不再始终固定在行尾；当光标位于文本中间时，光标所在字符会以反色显示（模拟终端原生块光标效果）
 - Kosong：修复接入某些 MCP 服务端（如 JetBrains Rider MCP 的 `truncateMode`）时，Moonshot API 以 `400 At path 'properties.X': type is not defined` 拒绝每次请求导致会话完全无法使用的问题——这些 MCP 工具的参数 schema 里有仅声明 `enum`/`const` 或根本没有类型提示的属性，符合 JSON Schema 规范但过不了 Moonshot 的严格校验；现在 Kimi 供应商会在发送前为每个工具 schema 补齐 JSON Schema `type`（尽量从 `enum`/`const` 值推断，否则默认 `"string"`），OpenAI 和 Anthropic 路径不受影响
-- Skill：项目级 Skill 发现现在会先向上查找最近的 `.git` 祖先目录，再查 `.kimi/skills` / `.claude/skills` / `.codex/skills` / `.agents/skills`，这样即使从子目录（例如 monorepo 的某个 package 内部）启动 kimi-cli，也能正确识别仓库根目录下定义的 Skills；找不到 `.git` 标记时，回退到工作目录本身，避免误入无关的上层目录
-- Skill：`merge_all_available_skills` 的默认值从 `false` 改为 `true`。kimi-cli 现在默认会合并用户级和项目级所有已存在的品牌 Skills 目录（`.kimi/skills`、`.claude/skills`、`.codex/skills`），而不是仅使用找到的第一个——让同时拥有多个品牌目录（例如同时保留 `~/.kimi/skills` 和 `~/.claude/skills`）的用户开箱即看到所有 Skills。**行为变更**：依赖旧默认（仅取第一个）的用户可通过在配置中显式设置 `merge_all_available_skills = false` 恢复旧行为。
+- Skill：项目级 Skill 发现现在会先向上查找最近的 `.git` 祖先目录，再查 `.consilium/skills` / `.claude/skills` / `.codex/skills` / `.agents/skills`，这样即使从子目录（例如 monorepo 的某个 package 内部）启动 consilium，也能正确识别仓库根目录下定义的 Skills；找不到 `.git` 标记时，回退到工作目录本身，避免误入无关的上层目录
+- Skill：`merge_all_available_skills` 的默认值从 `false` 改为 `true`。consilium 现在默认会合并用户级和项目级所有已存在的品牌 Skills 目录（`.consilium/skills`、`.claude/skills`、`.codex/skills`），而不是仅使用找到的第一个——让同时拥有多个品牌目录（例如同时保留 `~/.consilium/skills` 和 `~/.claude/skills`）的用户开箱即看到所有 Skills。**行为变更**：依赖旧默认（仅取第一个）的用户可通过在配置中显式设置 `merge_all_available_skills = false` 恢复旧行为。
 
 ## 1.38.0 (2026-04-22)
 - Shell：修复 approval 弹窗超时后被误报为 `Rejected by user` 的问题——300 秒安全超时后，工具调用会以 `Rejected: approval timed out` 拒绝，让离开电脑一段时间后回来的用户能分辨出这是超时而非自己的手动拒绝。经常长时间离开的话可以加 `--yolo`/`-y` 自动批准工具调用
-- Auth：修复 OAuth 用户因并发实例的 refresh token 轮换竞态被反复要求 `/login` 的问题——当另一个并发运行的 kimi-cli 实例（终端、VS Code 插件或 `kimi -p` 一次性命令）合法地轮换了 refresh token，当前实例手里过期的 refresh 请求会从服务端拿回 401，“别的实例是否刚轮换过”的磁盘检查与 `delete_tokens` 调用之间存在 TOCTOU 竞态，即使磁盘上马上会被写入一份有效的新 token，凭证文件也会被误删，迫使用户重新登录；现在依旧清理内存缓存（真正失效的 token 会在下一次请求时浮现），但保留文件，让并发实例刚写入的新 token 有机会被恢复，最终的 `/login` 仍会原子覆盖该文件
+- Auth：修复 OAuth 用户因并发实例的 refresh token 轮换竞态被反复要求 `/login` 的问题——当另一个并发运行的 consilium 实例（终端、VS Code 插件或 `kimi -p` 一次性命令）合法地轮换了 refresh token，当前实例手里过期的 refresh 请求会从服务端拿回 401，“别的实例是否刚轮换过”的磁盘检查与 `delete_tokens` 调用之间存在 TOCTOU 竞态，即使磁盘上马上会被写入一份有效的新 token，凭证文件也会被误删，迫使用户重新登录；现在依旧清理内存缓存（真正失效的 token 会在下一次请求时浮现），但保留文件，让并发实例刚写入的新 token 有机会被恢复，最终的 `/login` 仍会原子覆盖该文件
 - Kosong：修复 Anthropic 供应商将并行工具结果拆分到多个 user message 的问题——现在会将仅包含工具结果的连续 user message 合并为单条消息，以符合 Anthropic Messages API 规范（assistant 一轮中的所有 `tool_use` 必须在同一条 user message 内回答）；修复了严格兼容后端（如 DeepSeek `/anthropic` 接口）返回 400 错误的问题，并避免官方后端静默地引导模型放弃并行工具调用
 
 ## 1.37.0 (2026-04-20)
@@ -112,7 +112,7 @@
 ## 1.31.0 (2026-04-10)
 
 - Core：限制 `list_directory` 输出为深度受限的树形结构，防止大目录导致 token 超限——将无上限的扁平列表替换为 2 级树（根级最多 30 条、每个子目录最多 10 条），按目录优先的字母序排列，截断处显示 `"... and N more"` 提示以引导模型进一步探索（修复 #1809）
-- Shell：新增交互式 Shell 启动时的阻断式更新提醒——当检测到有新版本可用（来自已有的后台检查缓存）时，在 Shell 加载之前显示阻断提示，提供 `[Enter]` 立即升级、`[q]` 暂时跳过下次继续提醒、`[s]` 跳过该版本后续提醒；支持 `KIMI_CLI_NO_AUTO_UPDATE` 环境变量；替代了之前可用更新的重复 toast 通知
+- Shell：新增交互式 Shell 启动时的阻断式更新提醒——当检测到有新版本可用（来自已有的后台检查缓存）时，在 Shell 加载之前显示阻断提示，提供 `[Enter]` 立即升级、`[q]` 暂时跳过下次继续提醒、`[s]` 跳过该版本后续提醒；支持 `CONSILIUM_CLI_NO_AUTO_UPDATE` 环境变量；替代了之前可用更新的重复 toast 通知
 - Auth：加固 OAuth 令牌刷新以防止不必要的重新登录——401 错误现在会自动触发令牌刷新并重试，而非强制 `/login`；多个同时运行的 CLI 实例通过跨进程文件锁协调刷新以避免竞争条件；令牌持久化使用原子写入配合 `fsync` 防止损坏；新增动态刷新阈值、令牌刷新过程中的 5xx 重试，以及正确的令牌吊销清理
 - Core：修复模型响应仅包含思考内容时 agent loop 静默停止的问题——将仅含思考内容（无文本或工具调用）的响应检测为不完整响应错误并自动重试
 - Core：修复长时间 streaming 过程中网络断连导致崩溃的问题——当 OpenAI SDK 在流式传输中途抛出基类 `APIError`（而非 `APIConnectionError`）时，现在能正确识别为可重试错误，自动触发重试和连接恢复，而不再直接崩溃退出
@@ -128,7 +128,7 @@
 - Core：改进错误诊断——丰富内部日志覆盖，在 `kimi export` 导出的归档中包含相关日志文件和系统信息，并为常见错误（认证、网络、超时、配额）提供可操作的提示消息
 - Shell：当工作目录在会话期间不可访问时优雅退出并显示崩溃报告——检测 CWD 丢失场景（外置硬盘拔出、目录被删除或文件系统卸载），打印包含会话 ID 和工作目录的恢复面板后干净退出
 - Shell：使用 `git ls-files` 进行 `@` 文件引用发现——文件补全器现在优先使用 `git ls-files --recurse-submodules` 查询文件列表（5 秒超时），非 Git 仓库则回退到 `os.walk`；此修复解决了大型仓库（如包含 6.5 万+文件的 apache/superset）中 1000 文件限制导致字母顺序靠后的目录无法访问的问题（修复 #1375）
-- Core：新增共享的 `file_filter` 模块——通过 `src/kimi_cli/utils/file_filter.py` 统一 Shell 和 Web 的文件引用逻辑，提供一致的路径过滤、忽略目录排除和 Git 感知文件发现
+- Core：新增共享的 `file_filter` 模块——通过 `src/consilium/utils/file_filter.py` 统一 Shell 和 Web 的文件引用逻辑，提供一致的路径过滤、忽略目录排除和 Git 感知文件发现
 - Shell：防止文件引用 scope 参数的路径遍历——文件补全器请求中的 `scope` 参数现在会经过验证，防止目录遍历攻击
 - Web：恢复文件浏览器 API 中的未过滤目录列表——文件浏览器端点不再应用 Git 感知过滤，确保 Web UI 文件选择器中显示所有文件
 - Todo：重构 `SetTodoList` 工具，支持状态持久化并防止工具调用风暴——待办事项现在会持久化到会话状态（主 Agent）和独立状态文件（子 Agent）；新增查询模式（省略 `todos` 参数可读取当前状态）和清空模式（传 `[]` 清空）；工具描述中增加了防风暴指导，防止在没有实际进展的情况下反复调用（修复 #1710）
@@ -146,18 +146,18 @@
 - Core：修复并行 foreground 子 Agent 审批请求导致会话挂死的问题——在交互式 Shell 模式下，`_set_active_approval_sink` 不再将待处理的审批请求 flush 到 live view sink（该 sink 无法渲染审批弹窗）；请求保留在 pending 队列中由 prompt modal 路径处理；同时为 `wait_for_response` 增加 300 秒超时，确保未被 resolve 的审批请求最终抛出 `ApprovalCancelledError` 而非永久挂起
 - CLI：新增 `--session`/`--resume`（`-S`/`-r`）参数用于恢复会话——不带参数时打开交互式会话选择器（仅 Shell UI）；带会话 ID 时恢复指定会话；以统一的可选值参数设计替代了被回退的 `--pick-session`/`--list-sessions`
 - CLI：新增 CJK 安全的 `shorten()` 工具函数——替换所有 `textwrap.shorten` 调用，使不含空格的中日韩文本能优雅截断，而非被折叠成仅剩省略号
-- Core：修复当通用目录（如 `~/.config/agents/skills/`）存在但为空时，品牌目录（如 `~/.kimi/skills/`）中的 Skills 静默消失的问题——Skill 目录发现现在独立搜索品牌组和通用组目录并合并结果，而非在所有候选目录中找到第一个就停止
-- Core：新增 `merge_all_available_skills` 配置项——启用后，所有存在的品牌目录（`~/.kimi/skills/`、`~/.claude/skills/`、`~/.codex/skills/`）中的 Skills 都会被加载并合并，而非仅使用找到的第一个；同名 Skill 按 kimi > claude > codex 的优先级解析；默认关闭
-- CLI：新增 `--plan` 启动参数和 `default_plan_mode` 配置项——通过 `kimi --plan` 或在 `~/.kimi/config.toml` 中设置 `default_plan_mode = true` 可让新会话直接进入计划模式；恢复的会话保留其原有的计划模式状态
+- Core：修复当通用目录（如 `~/.config/agents/skills/`）存在但为空时，品牌目录（如 `~/.consilium/skills/`）中的 Skills 静默消失的问题——Skill 目录发现现在独立搜索品牌组和通用组目录并合并结果，而非在所有候选目录中找到第一个就停止
+- Core：新增 `merge_all_available_skills` 配置项——启用后，所有存在的品牌目录（`~/.consilium/skills/`、`~/.claude/skills/`、`~/.codex/skills/`）中的 Skills 都会被加载并合并，而非仅使用找到的第一个；同名 Skill 按 kimi > claude > codex 的优先级解析；默认关闭
+- CLI：新增 `--plan` 启动参数和 `default_plan_mode` 配置项——通过 `kimi --plan` 或在 `~/.consilium/config.toml` 中设置 `default_plan_mode = true` 可让新会话直接进入计划模式；恢复的会话保留其原有的计划模式状态
 - Shell：新增 `/undo` 和 `/fork` 命令用于会话分支——`/undo` 支持选择一个历史轮次并 fork 出新会话，被选中轮次的用户消息会预填到输入框供重新编辑；`/fork` 将当前完整对话历史复制到新会话；原会话始终保留不丢失
 - CLI：新增 `-r` 作为 `--session` 的简写别名，并在会话退出时输出恢复提示（`kimi -r <session-id>`）——覆盖正常退出、Ctrl-C、`/undo`、`/fork` 和 `/sessions` 切换等场景，确保用户始终能找到回到会话的方式
 - Core：修复 `custom_headers` 未传递给非 Kimi provider 的问题——OpenAI、Anthropic、Google GenAI 和 Vertex AI provider 现在能正确转发 `providers.*.custom_headers` 中配置的自定义请求头
 
 ## 1.29.0 (2026-04-01)
 
-- Core：支持层级化 `AGENTS.md` 加载——CLI 现在会从 git 项目根目录到工作目录逐层发现并合并 `AGENTS.md` 文件，包括每层目录中的 `.kimi/AGENTS.md`；在 32 KiB 预算上限下，更深层目录的文件优先保留，确保最具体的指令不会被截断
+- Core：支持层级化 `AGENTS.md` 加载——CLI 现在会从 git 项目根目录到工作目录逐层发现并合并 `AGENTS.md` 文件，包括每层目录中的 `.consilium/AGENTS.md`；在 32 KiB 预算上限下，更深层目录的文件优先保留，确保最具体的指令不会被截断
 - Core：修复空会话在退出后残留在磁盘上的问题——创建但未使用的会话现在会在所有退出路径（失败退出、会话切换、异常错误）中被清理，而不仅限于成功退出
-- Shell：新增 `KIMI_CLI_PASTE_CHAR_THRESHOLD` 和 `KIMI_CLI_PASTE_LINE_THRESHOLD` 环境变量，控制粘贴文本折叠为占位符的阈值——降低这些阈值可规避部分终端（如通过 SSH 连接的 XShell）在粘贴多行文本后 CJK 输入法失效的问题
+- Shell：新增 `CONSILIUM_CLI_PASTE_CHAR_THRESHOLD` 和 `CONSILIUM_CLI_PASTE_LINE_THRESHOLD` 环境变量，控制粘贴文本折叠为占位符的阈值——降低这些阈值可规避部分终端（如通过 SSH 连接的 XShell）在粘贴多行文本后 CJK 输入法失效的问题
 - Shell：修复不支持 truecolor 的终端（如 Xshell）上 diff 面板渲染异常的问题——`render_to_ansi` 不再硬编码 24 位色；Rich 现在通过 `COLORTERM`/`TERM` 环境变量自动检测终端颜色能力
 - Web：修复 CLI 升级后浏览器缓存旧 `index.html` 导致白屏的问题——服务端现在对 HTML 返回 `Cache-Control: no-cache`，对带 hash 的静态资源返回 `immutable`，防止因 chunk 文件名变更而产生 404
 - Core：修复 Windows 上文件写入时 LF 被转换为 CRLF 的问题——`writetext` 现在以 `newline=""` 打开文件，防止 Python 的通用换行符转换将 `\n` 静默转为 `\r\n`
@@ -183,7 +183,7 @@
 - Grep：新增 Token 效率优化——默认 `head_limit` 为 250 并支持 `offset` 分页、启用 `--hidden` 搜索同时排除 VCS 目录、`files_with_matches` 按修改时间排序、输出相对路径、非 content 模式限制最大列宽 500
 - Grep：content 模式的 `line_number`（`-n`）现在默认为 `true`——默认包含行号，以便模型引用精确的代码位置
 - Grep：`count_matches` 模式现在在 message 中包含汇总信息——例如 "Found 30 total occurrences across 10 files."
-- ACP：修复通过 `kimi-code` 或 `kimi-cli` 入口启动 ACP 时 `ValueError: list.index(x): x not in list` 崩溃的问题（如 JetBrains AI Assistant 场景）
+- ACP：修复通过 `kimi-code` 或 `consilium` 入口启动 ACP 时 `ValueError: list.index(x): x not in list` 崩溃的问题（如 JetBrains AI Assistant 场景）
 - Core：修复 OpenAI 兼容 API（如 One API）在多轮对话中返回 400 错误的问题——当服务端默认返回 `reasoning_content` 时，现在会在历史消息包含思考内容且配置了 `reasoning_key` 的情况下自动设置 `reasoning_effort` 为 `"medium"`
 - Shell：新增 `/theme` 命令和深色/浅色主题支持——使用浅色终端背景的用户可通过 `/theme light` 或在 `config.toml` 中设置 `theme = "light"` 切换到浅色配色方案；diff 高亮、任务浏览器、提示符 UI 和 MCP 状态颜色均会跟随所选主题自动适配
 - Core：修复压缩前上下文溢出问题——工具结果的 Token 数现在会被估算并纳入自动压缩触发检查，防止大量工具输出在 API 调用间隙将上下文推超模型限制时出现"exceeded model token limit"错误
@@ -240,7 +240,7 @@
 
 ## 1.25.0 (2026-03-23)
 
-- Core：新增插件系统（Skills + Tools）——插件通过 `plugin.json` 为 Kimi Code CLI 扩展自定义工具；工具是在独立子进程中运行的命令，其 stdout 返回给 Agent；插件支持通过 `inject` 配置自动注入凭证
+- Core：新增插件系统（Skills + Tools）——插件通过 `plugin.json` 为 Consilium CLI 扩展自定义工具；工具是在独立子进程中运行的命令，其 stdout 返回给 Agent；插件支持通过 `inject` 配置自动注入凭证
 - Core：支持多插件仓库——`kimi plugin install` 接受带 subpath 的 Git URL，从 monorepo 中安装特定插件（如 `https://github.com/org/repo.git/plugins/my-plugin`）；当未提供 subpath 且根目录无 `plugin.json` 时，CLI 会列出直接子目录中可用的插件
 - Core：统一插件凭证注入——插件可在 `plugin.json` 中声明 `inject` 字段，从主机的 LLM 提供商配置接收 `api_key` 和 `base_url`；支持 OAuth 托管 token 和静态 API key 两种凭证类型
 - Core：新增 `Agent` 工具支持子 Agent 委派——Agent 现在可以创建持久的子 Agent 实例，内置三种类型（`coder`、`explore`、`plan`）处理聚焦的子任务；每个实例在会话内维护独立的上下文历史，支持前台或后台运行并自动汇总结果
@@ -263,11 +263,11 @@
 
 - Shell：提高长文本粘贴自动折叠阈值至 1000 字符或 15 行（之前为 300 字符或 3 行），改善语音/无键盘输入等场景下的体验
 - Core：Plan 模式现在支持多选方案——当 Agent 的计划包含多个不同路径时，`ExitPlanMode` 可展示 2–3 个带标签的选项供用户选择执行哪一个方案；用户选择的方案会作为选定路径返回给 Agent
-- Core：跨进程重启持久化 Plan 会话 ID 和文件路径——Plan 会话标识符和文件 slug 保存到 `SessionState`，重启 Kimi Code 后会继续使用 `~/.kimi/plans/` 下的同一计划文件，而非创建新文件
+- Core：跨进程重启持久化 Plan 会话 ID 和文件路径——Plan 会话标识符和文件 slug 保存到 `SessionState`，重启 Consilium 后会继续使用 `~/.consilium/plans/` 下的同一计划文件，而非创建新文件
 - Core：Plan 模式现在支持增量编辑计划文件——Agent 可以使用 `StrReplaceFile` 精准更新计划文件的特定部分，而无需通过 `WriteFile` 重写整个文件；同时非计划文件的编辑现在会被直接阻止，而非弹出审批请求
 - Core：延迟 MCP 启动并展示加载进度——MCP 服务器现在在 Shell UI 启动后异步初始化，并提供实时进度指示器显示连接状态；Shell 在状态区域显示连接中和就绪状态，Web 显示服务器连接状态
 - Core：优化轻量级启动路径——对 CLI 子命令和版本元数据实现延迟加载，显著缩短 `--version` 和 `--help` 等常用命令的启动时间
-- Build：修复 Nix `FileCollisionError` for `bin/kimi`——从 `kimi-code` 包中移除重复的入口点，使 `kimi-cli` 独占 `bin/kimi`
+- Build：修复 Nix `FileCollisionError` for `bin/kimi`——从 `kimi-code` 包中移除重复的入口点，使 `consilium` 独占 `bin/kimi`
 - Shell：Agent 运行期间保留用户未提交的输入——在模型运行时在提示符中键入的文本不再在轮次结束时丢失，用户可以按回车键将草稿作为下一条消息提交
 - Shell：修复 Agent 运行结束后 Ctrl-C 和 Ctrl-D 无法正常工作的问题——键盘中断和 EOF 信号被静默吞没，而非显示提示信息或退出 Shell
 
@@ -304,7 +304,7 @@
 - Core：修复工具触发的 Plan 模式变更未正确反映在 StatusUpdate 中的问题——在 `EnterPlanMode`/`ExitPlanMode` 工具执行后发送更新的 `StatusUpdate`，确保客户端看到最新状态
 - Core：修复部分 Linux 系统（如内核版本 6.8.0-101）上 HTTP 请求头包含尾部空白/换行符导致连接错误的问题——发送前对 ASCII 请求头值执行空白裁剪
 - Core：修复 OpenAI Responses provider 隐式发送 `reasoning.effort=null` 导致需要推理的 Responses 兼容端点报错的问题——现在仅在显式设置时才发送推理参数
-- Vis：新增会话下载、导入、导出与删除功能——在会话浏览器和详情页支持一键 ZIP 下载，支持将 ZIP 文件导入到独立的 `~/.kimi/imported_sessions/` 目录并通过"Imported"筛选器切换查看，新增 `kimi export <session_id>` CLI 命令，支持删除导入的会话并提供 AlertDialog 二次确认
+- Vis：新增会话下载、导入、导出与删除功能——在会话浏览器和详情页支持一键 ZIP 下载，支持将 ZIP 文件导入到独立的 `~/.consilium/imported_sessions/` 目录并通过"Imported"筛选器切换查看，新增 `kimi export <session_id>` CLI 命令，支持删除导入的会话并提供 AlertDialog 二次确认
 - Core：修复对话包含媒体内容（图片、音频、视频）时上下文压缩失败的问题——将过滤策略从黑名单（排除 `ThinkPart`）改为白名单（仅保留 `TextPart`），防止不支持的内容类型被发送到压缩 API
 - Web：修复 `@` 文件提及索引在切换会话或工作区文件变更后不刷新的问题——切换会话时重置索引，30 秒过期自动刷新，输入路径前缀可查找超出 500 文件上限的文件
 
@@ -341,7 +341,7 @@
 - Core：新增 `--add-dir` CLI 选项和 `/add-dir` 斜杠命令，支持将额外目录添加到工作区范围——添加的目录可被所有文件工具（读取、写入、glob、替换）访问，跨会话持久化保存，并在系统提示词中展示
 - Shell：新增 `Ctrl-O` 快捷键，在外部编辑器中编辑当前输入内容（`$VISUAL`/`$EDITOR`），支持自动检测 VS Code、Vim、Vi 或 Nano
 - Shell：新增 `/editor` 斜杠命令，可交互式配置和切换默认外部编辑器，设置持久保存到配置文件
-- Shell：新增 `/new` 斜杠命令，无需重启 Kimi Code CLI 即可创建并切换到新会话
+- Shell：新增 `/new` 斜杠命令，无需重启 Consilium CLI 即可创建并切换到新会话
 - Wire：当客户端不支持 `supports_question` 能力时，自动隐藏 `AskUserQuestion` 工具，避免 LLM 调用不受支持的交互
 - Core：在压缩后估算上下文 Token 数量，使上下文用量百分比不再显示为 0%
 - Web：上下文用量百分比显示精确到一位小数，提升精度
@@ -354,7 +354,7 @@
 - Shell：为多问题面板添加标签式导航——使用左右方向键或 Tab 键在问题间切换，并以可视化指示器区分已答、当前和待答状态，重新访问已答问题时自动恢复选择状态
 - Shell：在问题面板中支持使用空格键提交单选问题
 - Web：为多问题对话框添加标签式导航，支持可点击标签栏、键盘导航，以及重新访问已答问题时恢复选择状态
-- Core：将进程标题设置为 "Kimi Code"（在 `ps` / 活动监视器 / 终端标签页标题中可见），并将 Web Worker 子进程标记为 "kimi-code-worker"
+- Core：将进程标题设置为 "Consilium"（在 `ps` / 活动监视器 / 终端标签页标题中可见），并将 Web Worker 子进程标记为 "kimi-code-worker"
 
 ## 1.14.0 (2026-02-26)
 
@@ -476,7 +476,7 @@
 
 - Shell：合并 `/login` 和 `/setup` 命令，`/setup` 现为 `/login` 的别名
 - Shell：`/usage` 命令现在显示剩余配额百分比；添加 `/status` 别名
-- Config：添加 `KIMI_SHARE_DIR` 环境变量，用于自定义共享目录路径（默认 `~/.kimi`）
+- Config：添加 `CONSILIUM_SHARE_DIR` 环境变量，用于自定义共享目录路径（默认 `~/.consilium`）
 - Web：新增 Web UI，支持基于浏览器的交互
 - CLI：添加 `kimi web` 子命令以启动 Web UI 服务器
 - Auth：修复设备名称或操作系统版本包含非 ASCII 字符时的编码错误
@@ -563,7 +563,7 @@
 
 ## 0.79 (2026-01-19)
 
-- Skills：添加项目级 Skills 支持，从 `.agents/skills/`（或 `.kimi/skills/`、`.claude/skills/`）发现
+- Skills：添加项目级 Skills 支持，从 `.agents/skills/`（或 `.consilium/skills/`、`.claude/skills/`）发现
 - Skills：统一 Skills 发现机制，采用分层加载（内置 → 用户 → 项目）；用户级 Skills 现在优先使用 `~/.config/agents/skills/`
 - Shell：斜杠命令自动补全支持模糊匹配
 - Shell：增强审批请求预览，显示 Shell 命令和 Diff 内容，使用 `Ctrl-E` 展开完整内容
@@ -600,7 +600,7 @@
 ## 0.75 (2026-01-09)
 
 - Tool：改进 `ReadFile` 工具描述
-- Skills：添加内置 `kimi-cli-help` Skill，解答 Kimi Code CLI 使用和配置问题
+- Skills：添加内置 `consilium-help` Skill，解答 Consilium CLI 使用和配置问题
 
 ## 0.74 (2026-01-09)
 
@@ -616,7 +616,7 @@
 - MCP：确保 MCP 工具加载完成后再开始 Agent 循环
 - Wire：修复 Wire 模式无法接受有效 `cancel` 请求的问题
 - Setup：`/model` 命令现在可以切换所选供应商的所有可用模型
-- Lib：从 `kimi_cli.wire.types` 重新导出所有 Wire 消息类型，作为 `kimi_cli.wire.message` 的替代
+- Lib：从 `consilium.wire.types` 重新导出所有 Wire 消息类型，作为 `consilium.wire.message` 的替代
 - Loop：添加 `max_ralph_iterations` 循环控制配置，限制额外的 Ralph 迭代次数
 - Config：将循环控制配置中的 `max_steps_per_run` 重命名为 `max_steps_per_turn`（向后兼容）
 - CLI：添加 `--max-steps-per-turn`、`--max-retries-per-step` 和 `--max-ralph-iterations` 选项，覆盖循环控制配置
@@ -643,10 +643,10 @@
 
 ## 0.69 (2025-12-29)
 
-- Core：支持在 `~/.kimi/skills` 或 `~/.claude/skills` 中发现 Skills
+- Core：支持在 `~/.consilium/skills` 或 `~/.claude/skills` 中发现 Skills
 - Python：降低最低 Python 版本要求至 3.12
-- Nix：添加 flake 打包支持；可通过 `nix profile install .#kimi-cli` 安装或 `nix run .#kimi-cli` 运行
-- CLI：添加 `kimi-cli` 脚本别名；可通过 `uvx kimi-cli` 运行
+- Nix：添加 flake 打包支持；可通过 `nix profile install .#consilium` 安装或 `nix run .#consilium` 运行
+- CLI：添加 `consilium` 脚本别名；可通过 `uvx consilium` 运行
 - Lib：将 LLM 配置验证移入 `create_llm`，配置缺失时返回 `None`
 
 ## 0.68 (2025-12-24)
@@ -674,9 +674,9 @@
 - Lib：在 `StatusUpdate` Wire 消息中提供 `token_usage` 和 `message_id`
 - Lib：添加 `KimiToolset.load_tools` 方法，支持依赖注入加载工具
 - Lib：添加 `KimiToolset.load_mcp_tools` 方法，加载 MCP 工具
-- Lib：将 `MCPTool` 从 `kimi_cli.tools.mcp` 移至 `kimi_cli.soul.toolset`
+- Lib：将 `MCPTool` 从 `consilium.tools.mcp` 移至 `consilium.soul.toolset`
 - Lib：添加 `InvalidToolError`、`MCPConfigError` 和 `MCPRuntimeError` 异常类
-- Lib：使 Kimi Code CLI 详细异常类扩展 `ValueError` 或 `RuntimeError`
+- Lib：使 Consilium CLI 详细异常类扩展 `ValueError` 或 `RuntimeError`
 - Lib：`KimiCLI.create` 和 `load_agent` 的 `mcp_configs` 参数支持传入验证后的 `list[fastmcp.mcp_config.MCPConfig]`
 - Lib：修复 `KimiCLI.create`、`load_agent`、`KimiToolset.load_tools` 和 `KimiToolset.load_mcp_tools` 的异常抛出
 - LLM：添加 `vertexai` 供应商类型，支持 Vertex AI
@@ -696,14 +696,14 @@
 - CLI：退出时删除空会话，列表中忽略上下文文件为空的会话
 - UI：改进会话回放
 - Lib：在 `LLM` 类中添加 `model_config: LLMModel | None` 和 `provider_config: LLMProvider | None` 属性
-- MetaCmd：添加 `/usage` 元命令，为 Kimi Code 用户显示 API 使用情况
+- MetaCmd：添加 `/usage` 元命令，为 Consilium 用户显示 API 使用情况
 
 ## 0.64 (2025-12-15)
 
 - UI：修复 Windows 上 UTF-16 代理字符输入问题
 - Core：添加 `/sessions` 元命令，列出现有会话并切换到选中的会话
 - CLI：添加 `--session/-S` 选项，指定要恢复的会话 ID
-- MCP：添加 `kimi mcp` 子命令组，管理全局 MCP 配置文件 `~/.kimi/mcp.json`
+- MCP：添加 `kimi mcp` 子命令组，管理全局 MCP 配置文件 `~/.consilium/mcp.json`
 
 ## 0.63 (2025-12-12)
 
@@ -737,12 +737,12 @@
 
 ## 0.59 (2025-11-28)
 
-- Core：将上下文文件位置移至 `.kimi/sessions/{workdir_md5}/{session_id}/context.jsonl`
-- Lib：将 `WireMessage` 类型别名移至 `kimi_cli.wire.message`
-- Lib：添加 `kimi_cli.wire.message.Request` 类型别名，用于请求消息（目前仅包含 `ApprovalRequest`）
-- Lib：添加 `kimi_cli.wire.message.is_event`、`is_request` 和 `is_wire_message` 工具函数，检查 Wire 消息类型
-- Lib：添加 `kimi_cli.wire.serde` 模块，用于 Wire 消息的序列化和反序列化
-- Lib：修改 `StatusUpdate` Wire 消息，不再使用 `kimi_cli.soul.StatusSnapshot`
+- Core：将上下文文件位置移至 `.consilium/sessions/{workdir_md5}/{session_id}/context.jsonl`
+- Lib：将 `WireMessage` 类型别名移至 `consilium.wire.message`
+- Lib：添加 `consilium.wire.message.Request` 类型别名，用于请求消息（目前仅包含 `ApprovalRequest`）
+- Lib：添加 `consilium.wire.message.is_event`、`is_request` 和 `is_wire_message` 工具函数，检查 Wire 消息类型
+- Lib：添加 `consilium.wire.serde` 模块，用于 Wire 消息的序列化和反序列化
+- Lib：修改 `StatusUpdate` Wire 消息，不再使用 `consilium.soul.StatusSnapshot`
 - Core：在会话目录中记录 Wire 消息到 JSONL 文件
 - Core：引入 `TurnBegin` Wire 消息，标记每个 Agent 轮次的开始
 - UI：Shell 模式下用面板重新打印用户输入
@@ -761,7 +761,7 @@
 - Core：修复使用 `extend` 时 Agent 规格文件的字段继承问题
 - Core：支持在子代理中使用 MCP 工具
 - Tool：添加 `CreateSubagent` 工具，动态创建子代理（默认 Agent 中未启用）
-- Tool：Kimi Code 方案在 `FetchURL` 工具中使用 MoonshotFetch 服务
+- Tool：Consilium 方案在 `FetchURL` 工具中使用 MoonshotFetch 服务
 - Tool：截断 Grep 工具输出，避免超出 token 限制
 
 ## 0.57 (2025-11-20)
@@ -770,7 +770,7 @@
 - UI：改进审批请求措辞
 - Tool：移除 `PatchFile` 工具
 - Tool：将 `Bash`/`CMD` 工具重命名为 `Shell` 工具
-- Tool：将 `Task` 工具移至 `kimi_cli.tools.multiagent` 模块
+- Tool：将 `Task` 工具移至 `consilium.tools.multiagent` 模块
 
 ## 0.56 (2025-11-19)
 
@@ -778,7 +778,7 @@
 
 ## 0.55 (2025-11-18)
 
-- Lib：添加 `kimi_cli.app.enable_logging` 函数，直接使用 `KimiCLI` 类时启用日志
+- Lib：添加 `consilium.app.enable_logging` 函数，直接使用 `KimiCLI` 类时启用日志
 - Core：修复 Agent 规格文件中的相对路径解析
 - Core：防止 LLM API 连接失败时 panic
 - Tool：优化 `FetchURL` 工具，改进内容提取
@@ -789,9 +789,9 @@
 
 ## 0.54 (2025-11-13)
 
-- Lib：将 `WireMessage` 从 `kimi_cli.wire.message` 移至 `kimi_cli.wire`
+- Lib：将 `WireMessage` 从 `consilium.wire.message` 移至 `consilium.wire`
 - Print：修复 `stream-json` 输出格式缺少最后一条助手消息的问题
-- UI：当 API 密钥被 `KIMI_API_KEY` 环境变量覆盖时添加警告
+- UI：当 API 密钥被 `CONSILIUM_API_KEY` 环境变量覆盖时添加警告
 - UI：审批请求时发出提示音
 - Core：修复 Windows 上的上下文压缩和清除问题
 
@@ -817,7 +817,7 @@
 ## 0.51 (2025-11-08)
 
 - Lib：将 `Soul.model` 重命名为 `Soul.model_name`
-- Lib：将 `LLMModelCapability` 重命名为 `ModelCapability` 并移至 `kimi_cli.llm`
+- Lib：将 `LLMModelCapability` 重命名为 `ModelCapability` 并移至 `consilium.llm`
 - Lib：在 `ModelCapability` 中添加 `"thinking"`
 - Lib：移除 `LLM.supports_image_in` 属性
 - Lib：添加必需的 `Soul.model_capabilities` 属性
@@ -856,7 +856,7 @@
 
 ## 0.45 (2025-10-31)
 
-- 允许 `KIMI_MODEL_CAPABILITIES` 环境变量覆盖模型能力
+- 允许 `CONSILIUM_MODEL_CAPABILITIES` 环境变量覆盖模型能力
 - 添加 `--no-markdown` 选项禁用 Markdown 渲染
 - 支持 `openai_responses` LLM 供应商类型
 
@@ -993,7 +993,7 @@
 
 ## 0.25 (2025-10-11)
 
-- 将包名从 `ensoul` 重命名为 `kimi-cli`
+- 将包名从 `ensoul` 重命名为 `consilium`
 - 将 `ENSOUL_*` 内置系统提示词参数重命名为 `KIMI_*`
 - 进一步解耦 `App` 与 `Soul`
 - 拆分 `Soul` 协议和 `KimiSoul` 实现以提高模块化

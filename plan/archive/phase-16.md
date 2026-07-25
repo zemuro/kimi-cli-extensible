@@ -2,7 +2,7 @@
 
 ## Summary
 
-The extension's quota overlay (Phase 7.6) polls a `GetQuota` bridge method, but the CLI side has no implementation — the extension handler throws "not implemented." This phase adds a lightweight CLI endpoint that returns quota information, either from the Kimi Code platform API (if available) or from local `TokenTracker` data.
+The extension's quota overlay (Phase 7.6) polls a `GetQuota` bridge method, but the CLI side has no implementation — the extension handler throws "not implemented." This phase adds a lightweight CLI endpoint that returns quota information, either from the Consilium platform API (if available) or from local `TokenTracker` data.
 
 **Prerequisites:** Phase 7.6 (quota overlay UI in extension), Phase 1 (Token Tracker).
 
@@ -16,7 +16,7 @@ The extension's quota overlay (Phase 7.6) polls a `GetQuota` bridge method, but 
 Extension quota overlay (every 60s)
   └── bridge.getQuota()
         └── CLI wire handler: get_quota()
-              ├── Option A: Query Kimi Code platform API (if platform user)
+              ├── Option A: Query Consilium platform API (if platform user)
               ├── Option B: Return TokenTracker session summary
               └── Fallback: Return null (overlay hides gracefully)
 ```
@@ -108,7 +108,7 @@ async def handle_get_quota(params: dict, ctx: WireContext) -> dict | None:
 
 ## Sub-Phase 16.4: Platform API Integration (Optional)
 
-If the user has Kimi Code platform credentials, query the real quota API (same endpoint used by `(slash)usage`).
+If the user has Consilium platform credentials, query the real quota API (same endpoint used by `(slash)usage`).
 
 ```python
 try:

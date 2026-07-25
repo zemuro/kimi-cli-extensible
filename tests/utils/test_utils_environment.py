@@ -56,7 +56,7 @@ async def test_environment_detection_windows_with_env_override(monkeypatch):
     monkeypatch.setattr(platform, "system", lambda: "Windows")
     monkeypatch.setattr(platform, "machine", lambda: "AMD64")
     monkeypatch.setattr(platform, "version", lambda: "10.0.19044")
-    monkeypatch.setenv("KIMI_CLI_GIT_BASH_PATH", r"D:\custom\bash.exe")
+    monkeypatch.setenv("CONSILIUM_CLI_GIT_BASH_PATH", r"D:\custom\bash.exe")
 
     async def _mock_is_file(self: KaosPath) -> bool:
         return str(self) == r"D:\custom\bash.exe"
@@ -74,7 +74,7 @@ async def test_environment_detection_windows_invalid_override_raises(monkeypatch
     monkeypatch.setattr(platform, "system", lambda: "Windows")
     monkeypatch.setattr(platform, "machine", lambda: "AMD64")
     monkeypatch.setattr(platform, "version", lambda: "10.0.19044")
-    monkeypatch.setenv("KIMI_CLI_GIT_BASH_PATH", r"D:\nonexistent\bash.exe")
+    monkeypatch.setenv("CONSILIUM_CLI_GIT_BASH_PATH", r"D:\nonexistent\bash.exe")
 
     async def _mock_is_file(self: KaosPath) -> bool:
         return False
@@ -84,7 +84,7 @@ async def test_environment_detection_windows_invalid_override_raises(monkeypatch
     with pytest.raises(GitBashNotFoundError) as excinfo:
         await Environment.detect()
 
-    assert "KIMI_CLI_GIT_BASH_PATH" in str(excinfo.value)
+    assert "CONSILIUM_CLI_GIT_BASH_PATH" in str(excinfo.value)
     assert "D:\\nonexistent\\bash.exe" in str(excinfo.value)
 
 
@@ -93,7 +93,7 @@ async def test_environment_detection_windows_via_where_git(monkeypatch):
     monkeypatch.setattr(platform, "system", lambda: "Windows")
     monkeypatch.setattr(platform, "machine", lambda: "AMD64")
     monkeypatch.setattr(platform, "version", lambda: "10.0.19044")
-    monkeypatch.delenv("KIMI_CLI_GIT_BASH_PATH", raising=False)
+    monkeypatch.delenv("CONSILIUM_CLI_GIT_BASH_PATH", raising=False)
 
     # Simulate where.exe git -> C:\Program Files\Git\cmd\git.exe
     import shutil
@@ -119,7 +119,7 @@ async def test_environment_detection_windows_checks_all_where_git_matches(monkey
     monkeypatch.setattr(platform, "system", lambda: "Windows")
     monkeypatch.setattr(platform, "machine", lambda: "AMD64")
     monkeypatch.setattr(platform, "version", lambda: "10.0.19044")
-    monkeypatch.delenv("KIMI_CLI_GIT_BASH_PATH", raising=False)
+    monkeypatch.delenv("CONSILIUM_CLI_GIT_BASH_PATH", raising=False)
 
     shim_git = r"C:\Users\me\scoop\shims\git.exe"
 
@@ -156,7 +156,7 @@ async def test_environment_detection_windows_resolves_shim_only_git(monkeypatch)
     monkeypatch.setattr(platform, "system", lambda: "Windows")
     monkeypatch.setattr(platform, "machine", lambda: "AMD64")
     monkeypatch.setattr(platform, "version", lambda: "10.0.19044")
-    monkeypatch.delenv("KIMI_CLI_GIT_BASH_PATH", raising=False)
+    monkeypatch.delenv("CONSILIUM_CLI_GIT_BASH_PATH", raising=False)
 
     shim_git = r"C:\Users\me\scoop\shims\git.exe"
 
@@ -194,7 +194,7 @@ async def test_environment_detection_windows_default_install_location(monkeypatc
     monkeypatch.setattr(platform, "system", lambda: "Windows")
     monkeypatch.setattr(platform, "machine", lambda: "AMD64")
     monkeypatch.setattr(platform, "version", lambda: "10.0.19044")
-    monkeypatch.delenv("KIMI_CLI_GIT_BASH_PATH", raising=False)
+    monkeypatch.delenv("CONSILIUM_CLI_GIT_BASH_PATH", raising=False)
 
     import shutil
 
@@ -218,7 +218,7 @@ async def test_environment_detection_windows_no_git_bash_anywhere(monkeypatch):
     monkeypatch.setattr(platform, "system", lambda: "Windows")
     monkeypatch.setattr(platform, "machine", lambda: "AMD64")
     monkeypatch.setattr(platform, "version", lambda: "10.0.19044")
-    monkeypatch.delenv("KIMI_CLI_GIT_BASH_PATH", raising=False)
+    monkeypatch.delenv("CONSILIUM_CLI_GIT_BASH_PATH", raising=False)
 
     import shutil
 
@@ -234,13 +234,13 @@ async def test_environment_detection_windows_no_git_bash_anywhere(monkeypatch):
 
     msg = str(excinfo.value)
     assert "Git for Windows" in msg
-    assert "KIMI_CLI_GIT_BASH_PATH" in msg
+    assert "CONSILIUM_CLI_GIT_BASH_PATH" in msg
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="Skipping test on Windows")
 async def test_find_git_bash_path_directly(monkeypatch):
     """Direct unit test for the helper, without going through Environment.detect()."""
-    monkeypatch.setenv("KIMI_CLI_GIT_BASH_PATH", r"E:\git\bash.exe")
+    monkeypatch.setenv("CONSILIUM_CLI_GIT_BASH_PATH", r"E:\git\bash.exe")
 
     async def _mock_is_file(self: KaosPath) -> bool:
         return str(self) == r"E:\git\bash.exe"

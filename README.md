@@ -194,6 +194,26 @@ Precedence: `CLI flags > env vars > config file > defaults`.
 | `tool_choice` | anthropic | Tool choice configuration |
 | `extra_headers` | anthropic | Extra HTTP headers |
 
+### OpenRouter Configuration
+
+You can configure OpenRouter by defining a custom provider of type `openai_responses` and configuring custom headers for OpenRouter requirement:
+
+```toml
+[providers.openrouter]
+type = "openai_responses"
+base_url = "https://openrouter.ai/api/v1"
+api_key = "your-openrouter-api-key"
+
+[providers.openrouter.custom_headers]
+"HTTP-Referer" = "https://github.com/zemuro/consilium"
+"X-Title" = "Consilium Agent"
+
+[models.openrouter-deepseek]
+provider = "openrouter"
+model = "deepseek/deepseek-chat"
+max_context_size = 64000
+```
+
 See [`MODEL_OPTIONS_RESEARCH.md`](./MODEL_OPTIONS_RESEARCH.md) for the full technical breakdown.
 
 ---
@@ -210,6 +230,53 @@ warn_tokens_ratio = 0.8
 ```
 
 Warnings are emitted at 80%; hard limits stop the subagent gracefully and return partial results.
+
+## Per-Subagent Overrides
+
+Tune temperature, token budget, tool-call budget, and timeout independently for each builtin subagent type. Resolution order is the same as global settings:
+
+`CLI flags > env vars > config file > global defaults`.
+
+### Config file (`~/.consilium/config.toml`)
+
+```toml
+[subagents.overrides.explore]
+temperature = 0.7
+max_tokens_per_task = 80_000
+max_tool_calls_per_task = 100
+timeout_seconds = 900
+
+[subagents.overrides.coder]
+temperature = 0.4
+max_tokens_per_task = 16_384
+max_tool_calls_per_task = 40
+timeout_seconds = 600
+```
+
+### Environment variables
+
+```sh
+export CONSILIUM_SUBAGENT_CODER_TEMPERATURE=0.4
+export CONSILIUM_SUBAGENT_EXPLORE_MAX_TOKENS_PER_TASK=4096
+export CONSILIUM_SUBAGENT_PLAN_EDITOR_TIMEOUT_SECONDS=120
+```
+
+### CLI flags
+
+```sh
+consilium --subagent-coder-temperature 0.4 \
+          --subagent-explore-max-tool-calls-per-task 50 \
+          --subagent-plan-editor-timeout-seconds 120
+```
+
+Supported override fields for every builtin type (`coder`, `explore`, `plan`, `plan_editor`, `plan_reviewer`):
+
+| Field | Description | Global default |
+|---|---|---|
+| `temperature` | Sampling temperature (0–2) | Model's configured temperature |
+| `max_tokens_per_task` | Hard token limit per task | `subagents.budget.max_tokens_per_task` |
+| `max_tool_calls_per_task` | Hard tool-call limit per task | `subagents.budget.max_tool_calls_per_task` |
+| `timeout_seconds` | Adaptive timeout ceiling | `subagents.timeout_seconds` |
 
 ---
 

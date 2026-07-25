@@ -34,7 +34,7 @@ uv add 'kosong[contrib]'
 import asyncio
 
 import kosong
-from kosong.chat_provider.kimi import Kimi
+from kosong.chat_provider.consilium import Kimi
 from kosong.message import Message
 
 
@@ -69,7 +69,7 @@ import asyncio
 
 import kosong
 from kosong.chat_provider import StreamedMessagePart
-from kosong.chat_provider.kimi import Kimi
+from kosong.chat_provider.consilium import Kimi
 from kosong.message import Message
 
 
@@ -110,7 +110,7 @@ from pydantic import BaseModel
 
 import kosong
 from kosong import StepResult
-from kosong.chat_provider.kimi import Kimi
+from kosong.chat_provider.consilium import Kimi
 from kosong.message import Message
 from kosong.tooling import CallableTool2, ToolOk, ToolReturnValue
 from kosong.tooling.simple import SimpleToolset
@@ -162,8 +162,8 @@ asyncio.run(main())
 Kosong comes with a builtin demo agent that you can run locally. To start the demo, run:
 
 ```sh
-export KIMI_BASE_URL="https://api.moonshot.ai/v1"
-export KIMI_API_KEY="your_kimi_api_key"
+export CONSILIUM_BASE_URL="https://api.moonshot.ai/v1"
+export CONSILIUM_API_KEY="your_kimi_api_key"
 
 uv run python -m kosong kimi --with-bash
 ```

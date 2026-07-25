@@ -27,7 +27,7 @@ def set_terminal_title(title: str) -> None:
         pass
 
 
-def init_process_name(name: str = "Kimi Code") -> None:
+def init_process_name(name: str = "Consilium") -> None:
     """Initialize process name: OS process title + terminal tab title."""
     set_process_title(name)
     set_terminal_title(name)

@@ -24,7 +24,7 @@ SkillType = Literal["standard", "flow"]
 SkillScope = Literal["builtin", "user", "project", "extra"]
 """Where a skill was discovered from.
 
-- ``builtin``: bundled with kimi-cli
+- ``builtin``: bundled with consilium
 - ``user``: from the user's home (``~/.consilium/skills``, ``~/.agents/skills``, ...)
 - ``project``: from the current project's working directory
   (``<work_dir>/.consilium/skills``, ``<work_dir>/.agents/skills``, ...)
@@ -90,10 +90,10 @@ def _get_project_brand_skills_dir_candidates(work_dir: KaosPath) -> tuple[KaosPa
     """
     Get project-level brand skills directory candidates in priority order.
 
-    Brand group: ``.kimi/skills`` > ``.claude/skills`` > ``.codex/skills``
+    Brand group: ``.consilium/skills`` > ``.claude/skills`` > ``.codex/skills``
     """
     return (
-        work_dir / ".kimi" / "skills",
+        work_dir / ".consilium" / "skills",
         work_dir / ".claude" / "skills",
         work_dir / ".codex" / "skills",
     )
@@ -153,7 +153,7 @@ async def find_project_skills_dirs(
     Return project-level skills directories from both brand and generic groups.
 
     Discovery starts at the **project root** (the nearest ``.git`` ancestor
-    of ``work_dir``), so launching kimi-cli from a subdirectory — for example
+    of ``work_dir``), so launching consilium from a subdirectory — for example
     a monorepo package — still surfaces skills defined at the repository root.
     Falls back to ``work_dir`` itself when no ``.git`` marker is found, to
     avoid accidentally walking up into unrelated parent trees.

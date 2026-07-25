@@ -48,7 +48,7 @@ class EnterPlanMode(CallableTool2[Params]):
         *,
         is_yolo: Callable[[], bool] | None = None,
     ) -> None:
-        """Late-bind soul callbacks after KimiSoul is constructed."""
+        """Late-bind soul callbacks after ConsiliumSoul is constructed."""
         self._toggle_callback = toggle_callback
         self._plan_file_path_getter = plan_file_path_getter
         self._plan_mode_checker = plan_mode_checker

@@ -4,7 +4,7 @@
 Agent Tracing Visualizer 目前为技术预览版（Technical Preview），功能和界面可能在后续版本中发生变化。
 :::
 
-Agent Tracing Visualizer 是一个基于浏览器的可视化仪表板，用于检查和分析 Kimi Code CLI 的会话追踪数据。它可以帮助你理解 Agent 的行为、查看 Wire 事件时间线、分析上下文使用情况，以及浏览历史会话。
+Agent Tracing Visualizer 是一个基于浏览器的可视化仪表板，用于检查和分析 Consilium CLI 的会话追踪数据。它可以帮助你理解 Agent 的行为、查看 Wire 事件时间线、分析上下文使用情况，以及浏览历史会话。
 
 ## 启动
 
@@ -70,7 +70,7 @@ kimi vis -n
 
 ### 会话导入
 
-支持将 ZIP 格式的会话数据导入到 Visualizer 中查看。导入的会话存储在独立的 `~/.kimi/imported_sessions/` 目录中，不会与正常会话混淆。
+支持将 ZIP 格式的会话数据导入到 Visualizer 中查看。导入的会话存储在独立的 `~/.consilium/imported_sessions/` 目录中，不会与正常会话混淆。
 
 在会话浏览器中可以通过 "Imported" 筛选器切换查看导入的会话。导入的会话支持删除操作，删除前会弹出确认对话框。
 

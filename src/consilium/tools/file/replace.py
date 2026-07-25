@@ -47,7 +47,7 @@ class StrReplaceFile(CallableTool2[Params]):
 
     def __init__(self, runtime: Runtime, approval: Approval):
         super().__init__()
-        self._work_dir = runtime.builtin_args.KIMI_WORK_DIR
+        self._work_dir = runtime.builtin_args.CONSILIUM_WORK_DIR
         self._additional_dirs = runtime.additional_dirs
         self._approval = approval
         self._plan_mode_checker: Callable[[], bool] | None = None

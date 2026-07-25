@@ -197,7 +197,7 @@ class ChaosChatProvider:
         cls, chaos_config: ChaosConfig | None = None, **kwargs: Any
     ) -> "ChaosChatProvider":
         """Helper to wrap a Kimi provider without changing caller sites."""
-        from kosong.chat_provider.kimi import Kimi
+        from kosong.chat_provider.consilium import Kimi
 
         return cls(Kimi(**kwargs), chaos_config=chaos_config)
 

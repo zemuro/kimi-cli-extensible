@@ -113,9 +113,9 @@ class PythonTool:
         # Environment
         env = os.environ.copy()
         env["PYTHONIOENCODING"] = "utf-8"
-        env["KIMI_WORK_DIR"] = str(self.work_dir)
+        env["CONSILIUM_WORK_DIR"] = str(self.work_dir)
         if restricted:
-            env["KIMI_PYTHON_RESTRICTED"] = "1"
+            env["CONSILIUM_PYTHON_RESTRICTED"] = "1"
             env["PYTHONPATH"] = str(self.work_dir)
             env["PYTHONNOUSERSITE"] = "1"
 
@@ -163,7 +163,7 @@ class PythonTool:
 import builtins
 import os
 _original_open = builtins.open
-_WORK_DIR = os.environ.get("KIMI_WORK_DIR", ".")
+_WORK_DIR = os.environ.get("CONSILIUM_WORK_DIR", ".")
 
 def _restricted_open(path, *args, **kwargs):
     abs_path = os.path.abspath(path)

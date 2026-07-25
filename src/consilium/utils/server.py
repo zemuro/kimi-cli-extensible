@@ -1,4 +1,4 @@
-"""Shared utilities for kimi vis and kimi web server startup."""
+"""Shared utilities for consilium vis and consilium web server startup."""
 
 from __future__ import annotations
 

@@ -15,8 +15,8 @@ Status: Implemented
 
 ## 背景与动机
 
-当前 Wire 协议（`docs/zh/customization/wire-mode.md` + `src/kimi_cli/wire/*`,
-`src/kimi_cli/ui/wire/*`）只包含：
+当前 Wire 协议（`docs/zh/customization/wire-mode.md` + `src/consilium/wire/*`,
+`src/consilium/ui/wire/*`）只包含：
 
 - `prompt`/`cancel`（client -> server）
 - `event`/`request`（server -> client；`request` 仅用于审批）
@@ -130,7 +130,7 @@ interface ExternalTool {
   "id": "init-1",
   "result": {
     "protocol_version": "1.1",
-    "server": {"name": "kimi-cli", "version": "0.68.0"},
+    "server": {"name": "consilium", "version": "0.68.0"},
     "slash_commands": [
       {"name": "init", "description": "Analyze the codebase ...", "aliases": []},
       {"name": "compact", "description": "Compact the context", "aliases": []}
@@ -166,7 +166,7 @@ interface SlashCommand {
 备注：
 
 - `slash_commands` 仅包含 soul-level 命令：
-  `src/kimi_cli/soul/slash.py` registry + 动态 skills（`KimiSoul._register_skill_commands`）。
+  `src/consilium/soul/slash.py` registry + 动态 skills（`KimiSoul._register_skill_commands`）。
 - `external_tools` 的接受/拒绝结果可选，用于反馈命名冲突或 schema 校验失败。
 
 ## ExternalToolCall 与 ApprovalResponse
@@ -300,23 +300,23 @@ Client -> Server:
 ## 实施步骤（建议）
 
 1. 协议与类型层
-   - `src/kimi_cli/wire/types.py`：
+   - `src/consilium/wire/types.py`：
      - `Request = ApprovalRequest | ToolCallRequest`。
      - 新增 `ApprovalResponse`（保留旧 `ApprovalRequestResolved` 类型名兼容）。
-   - `src/kimi_cli/wire/serde.py` 无需改动（由 Envelope 支持新类型）。
+   - `src/consilium/wire/serde.py` 无需改动（由 Envelope 支持新类型）。
 2. JSON-RPC 层
-   - `src/kimi_cli/ui/wire/jsonrpc.py`：
+   - `src/consilium/ui/wire/jsonrpc.py`：
      - 添加 `JSONRPCInitializeMessage`。
      - `JSONRPCInMessage`/`OutMessage` 增加 `initialize`。
 3. Wire 服务端
-   - `src/kimi_cli/ui/wire/__init__.py`：
+   - `src/consilium/ui/wire/__init__.py`：
      - 实现 `_handle_initialize`。
      - 增强 `_pending_requests` 以支持 `ToolCallRequest`。
 4. 工具层
-   - `src/kimi_cli/soul/toolset.py`：
+   - `src/consilium/soul/toolset.py`：
      - 新增 `WireExternalTool`，内部通过 Wire 请求执行。
 5. 协议版本与文档
-   - `src/kimi_cli/ui/wire/protocol.py` 提升协议版本。
+   - `src/consilium/ui/wire/protocol.py` 提升协议版本。
    - 更新 `docs/zh/customization/wire-mode.md` 并新增 external tools 章节。
 
 ## 最终效果与用法
@@ -328,7 +328,7 @@ Client -> Server:
 
 ## 关键参考位置
 
-- Wire 协议与类型：`src/kimi_cli/wire/types.py`, `src/kimi_cli/wire/serde.py`
-- Wire JSON-RPC：`src/kimi_cli/ui/wire/jsonrpc.py`, `src/kimi_cli/ui/wire/__init__.py`
-- Slash commands：`src/kimi_cli/soul/slash.py`, `src/kimi_cli/utils/slashcmd.py`
+- Wire 协议与类型：`src/consilium/wire/types.py`, `src/consilium/wire/serde.py`
+- Wire JSON-RPC：`src/consilium/ui/wire/jsonrpc.py`, `src/consilium/ui/wire/__init__.py`
+- Slash commands：`src/consilium/soul/slash.py`, `src/consilium/utils/slashcmd.py`
 - Wire 文档：`docs/zh/customization/wire-mode.md`

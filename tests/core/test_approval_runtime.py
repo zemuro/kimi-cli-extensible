@@ -17,7 +17,7 @@ from consilium.approval_runtime import (
 from consilium.soul import RunCancelled, run_soul
 from consilium.soul.agent import Agent as SoulAgent
 from consilium.soul.context import Context
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.utils.aioqueue import QueueShutDown
 from consilium.wire import Wire
 from consilium.wire.root_hub import RootWireHub
@@ -311,10 +311,10 @@ async def test_kimisoul_run_preserves_existing_approval_source(
     async def fake_ensure_fresh(_runtime):
         return None
 
-    monkeypatch.setattr(KimiSoul, "_turn", fake_turn)
+    monkeypatch.setattr(ConsiliumSoul, "_turn", fake_turn)
     monkeypatch.setattr(runtime.oauth, "ensure_fresh", fake_ensure_fresh)
 
-    soul = KimiSoul(
+    soul = ConsiliumSoul(
         SoulAgent(
             name="test",
             system_prompt="test prompt",
@@ -375,10 +375,10 @@ async def test_kimisoul_run_cancels_own_foreground_approvals_on_cancel(
     async def fake_ensure_fresh(_runtime):
         return None
 
-    monkeypatch.setattr(KimiSoul, "_turn", fake_turn)
+    monkeypatch.setattr(ConsiliumSoul, "_turn", fake_turn)
     monkeypatch.setattr(runtime.oauth, "ensure_fresh", fake_ensure_fresh)
 
-    soul = KimiSoul(
+    soul = ConsiliumSoul(
         SoulAgent(
             name="test",
             system_prompt="test prompt",

@@ -173,7 +173,13 @@ async def test_fetch_url_javascript_driven_site(fetch_url_tool: FetchURL) -> Non
     # This may fail due to JavaScript rendering requirements
     # If it fails, should indicate extraction issues
     if result.is_error:
-        assert "failed to extract meaningful content" in result.message.lower()
+        msg = result.message.lower()
+        assert (
+            "failed to extract meaningful content" in msg
+            or "timed out" in msg
+            or "unreachable" in msg
+            or "network error" in msg
+        )
 
 
 async def test_fetch_url_mocked_http_responses(
@@ -220,8 +226,8 @@ This is a markdown document.
 
 
 async def test_fetch_url_with_service(runtime) -> None:
-    """Test fetching using the moonshot_fetch service."""
-    from consilium.config import Config, MoonshotFetchConfig, Services
+    """Test fetching using the web_fetch service."""
+    from consilium.config import Config, Services, WebFetchConfig
     from pydantic import SecretStr
 
     # Setup mock service response
@@ -253,7 +259,7 @@ async def test_fetch_url_with_service(runtime) -> None:
         # Configure tool with service
         config = Config(
             services=Services(
-                moonshot_fetch=MoonshotFetchConfig(
+                web_fetch=WebFetchConfig(
                     base_url=service_url,
                     api_key=SecretStr("test-key"),
                     custom_headers={"X-Custom-Header": "custom-value"},

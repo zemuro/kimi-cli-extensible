@@ -11,7 +11,7 @@ from kosong.chat_provider import StreamedMessagePart, ThinkingEffort, TokenUsage
 from kosong.message import Message, TextPart
 from kosong.tooling.empty import EmptyToolset
 
-from consilium.app import KimiCLI
+from consilium.app import ConsiliumCLI
 from consilium.approval_runtime import ApprovalSource, get_current_approval_source_or_none
 from consilium.background import TaskRuntime, TaskSpec
 from consilium.llm import LLM
@@ -19,7 +19,7 @@ from consilium.notifications import NotificationEvent
 from consilium.soul import RunCancelled, StatusSnapshot, _current_wire, run_soul
 from consilium.soul.agent import Agent, Runtime
 from consilium.soul.context import Context
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.utils.aioqueue import QueueShutDown
 from consilium.wire import Wire
 from consilium.wire.types import ApprovalRequest, ApprovalResponse, Notification
@@ -92,10 +92,10 @@ def _runtime_with_llm(runtime: Runtime, llm: LLM) -> Runtime:
     )
 
 
-def _make_soul(runtime: Runtime, tmp_path: Path) -> tuple[KimiSoul, Context]:
+def _make_soul(runtime: Runtime, tmp_path: Path) -> tuple[ConsiliumSoul, Context]:
     llm = LLM(
         chat_provider=_SequenceProvider([TextPart(text="done")]),
-        max_context_size=100_000,
+        max_context_size=1_000_000,
         capabilities=set(),
     )
     agent = Agent(
@@ -105,7 +105,7 @@ def _make_soul(runtime: Runtime, tmp_path: Path) -> tuple[KimiSoul, Context]:
         runtime=_runtime_with_llm(runtime, llm),
     )
     context = Context(file_backend=tmp_path / "history.jsonl")
-    return KimiSoul(agent, context=context), context
+    return ConsiliumSoul(agent, context=context), context
 
 
 def _write_completed_task(runtime: Runtime, task_id: str) -> None:
@@ -239,7 +239,7 @@ async def test_consilium_run_yields_root_hub_approvals(runtime: Runtime) -> None
                 source=ApprovalSource(kind="foreground_turn", id="turn-run-1"),
             )
 
-    cli = KimiCLI(_ApprovalOnlySoul(runtime), runtime, {})  # type: ignore[arg-type]
+    cli = ConsiliumCLI(_ApprovalOnlySoul(runtime), runtime, {})  # type: ignore[arg-type]
 
     seen: list[ApprovalRequest] = []
     async for msg in cli.run("ping", asyncio.Event()):
@@ -300,7 +300,7 @@ async def test_consilium_run_bridges_approval_resolution_back_to_runtime(runtime
             )
 
     soul = _ApprovalRoundTripSoul(runtime)
-    cli = KimiCLI(soul, runtime, {})  # type: ignore[arg-type]
+    cli = ConsiliumCLI(soul, runtime, {})  # type: ignore[arg-type]
 
     seen_responses: list[ApprovalResponse] = []
 
@@ -349,10 +349,10 @@ async def test_consilium_run_cancels_abandoned_approval_stream(
     async def fake_ensure_fresh(_runtime):
         return None
 
-    monkeypatch.setattr(KimiSoul, "_turn", fake_turn)
+    monkeypatch.setattr(ConsiliumSoul, "_turn", fake_turn)
     monkeypatch.setattr(runtime.oauth, "ensure_fresh", fake_ensure_fresh)
 
-    soul = KimiSoul(
+    soul = ConsiliumSoul(
         Agent(
             name="Approval Stream Agent",
             system_prompt="System prompt.",
@@ -361,7 +361,7 @@ async def test_consilium_run_cancels_abandoned_approval_stream(
         ),
         context=Context(file_backend=tmp_path / "history.jsonl"),
     )
-    cli = KimiCLI(soul, runtime, {})
+    cli = ConsiliumCLI(soul, runtime, {})
     cancel_event = asyncio.Event()
     stream = cli.run("ping", cancel_event)
 
@@ -409,10 +409,10 @@ async def test_consilium_run_propagates_external_cancel_event(
     async def fake_ensure_fresh(_runtime):
         return None
 
-    monkeypatch.setattr(KimiSoul, "_turn", fake_turn)
+    monkeypatch.setattr(ConsiliumSoul, "_turn", fake_turn)
     monkeypatch.setattr(runtime.oauth, "ensure_fresh", fake_ensure_fresh)
 
-    soul = KimiSoul(
+    soul = ConsiliumSoul(
         Agent(
             name="Approval Stream Agent",
             system_prompt="System prompt.",
@@ -421,7 +421,7 @@ async def test_consilium_run_propagates_external_cancel_event(
         ),
         context=Context(file_backend=tmp_path / "history.jsonl"),
     )
-    cli = KimiCLI(soul, runtime, {})
+    cli = ConsiliumCLI(soul, runtime, {})
     cancel_event = asyncio.Event()
     stream = cli.run("ping", cancel_event)
 
@@ -493,7 +493,7 @@ async def test_consilium_run_replays_pending_approvals_from_previous_turn(runtim
             )
 
     soul = _PendingApprovalSoul(runtime)
-    cli = KimiCLI(soul, runtime, {})  # type: ignore[arg-type]
+    cli = ConsiliumCLI(soul, runtime, {})  # type: ignore[arg-type]
 
     seen_requests: list[ApprovalRequest] = []
 

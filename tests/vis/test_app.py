@@ -13,7 +13,7 @@ def test_vis_sessions_include_session_dir(
     monkeypatch,
     tmp_path: Path,
 ) -> None:
-    monkeypatch.setenv("KIMI_SHARE_DIR", str(tmp_path))
+    monkeypatch.setenv("CONSILIUM_SHARE_DIR", str(tmp_path))
 
     work_dir = tmp_path / "project"
     work_dir.mkdir()

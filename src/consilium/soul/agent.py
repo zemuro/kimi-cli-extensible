@@ -16,7 +16,7 @@ from consilium.agentspec import load_agent_spec
 from consilium.approval_runtime import ApprovalRuntime
 from consilium.auth.oauth import OAuthManager
 from consilium.background import BackgroundTaskManager
-from consilium.config import Config
+from consilium.config import Config, SubagentOverrideConfig
 from consilium.exception import MCPConfigError, SystemPromptTemplateError
 from consilium.llm import LLM
 from consilium.notifications import NotificationManager
@@ -30,7 +30,7 @@ from consilium.skill import (
 )
 from consilium.soul.approval import Approval, ApprovalState
 from consilium.soul.denwarenji import DenwaRenji
-from consilium.soul.toolset import KimiToolset
+from consilium.soul.toolset import ConsiliumToolset
 from consilium.subagents.models import AgentTypeDefinition, ToolPolicy
 from consilium.subagents.registry import LaborMarket
 from consilium.subagents.store import SubagentStore
@@ -47,21 +47,21 @@ if TYPE_CHECKING:
 class BuiltinSystemPromptArgs:
     """Builtin system prompt arguments."""
 
-    KIMI_NOW: str
+    CONSILIUM_NOW: str
     """The current datetime."""
-    KIMI_WORK_DIR: KaosPath
+    CONSILIUM_WORK_DIR: KaosPath
     """The absolute path of current working directory."""
-    KIMI_WORK_DIR_LS: str
+    CONSILIUM_WORK_DIR_LS: str
     """The directory listing of current working directory."""
-    KIMI_AGENTS_MD: str  # TODO: move to first message from system prompt
+    CONSILIUM_AGENTS_MD: str  # TODO: move to first message from system prompt
     """The merged content of AGENTS.md files (from project root to work_dir)."""
-    KIMI_SKILLS: str
+    CONSILIUM_SKILLS: str
     """Formatted information about available skills."""
-    KIMI_ADDITIONAL_DIRS_INFO: str
+    CONSILIUM_ADDITIONAL_DIRS_INFO: str
     """Formatted information about additional directories in the workspace."""
-    KIMI_OS: str
+    CONSILIUM_OS: str
     """The operating system kind, e.g. 'Windows', 'macOS', 'Linux'."""
-    KIMI_SHELL: str
+    CONSILIUM_SHELL: str
     """The shell executable used by the Shell tool, e.g. 'bash (`/bin/bash`)'."""
 
 
@@ -89,12 +89,12 @@ async def load_agents_md(work_dir: KaosPath) -> str | None:
 
     For each directory on the path, the following candidates are checked in order:
 
-    1. ``.kimi/AGENTS.md``  — project-local kimi config (highest priority)
+    1. ``.consilium/AGENTS.md``  — project-local kimi config (highest priority)
     2. ``AGENTS.md``        — standard location
     3. ``agents.md``        — lowercase variant (mutually exclusive with 2)
 
-    Within a single directory, ``.kimi/AGENTS.md`` and ``AGENTS.md``/``agents.md``
-    are **both** loaded (with ``.kimi/`` first), but ``AGENTS.md`` and ``agents.md``
+    Within a single directory, ``.consilium/AGENTS.md`` and ``AGENTS.md``/``agents.md``
+    are **both** loaded (with ``.consilium/`` first), but ``AGENTS.md`` and ``agents.md``
     are mutually exclusive (uppercase wins).
 
     All discovered files are concatenated root→leaf, separated by ``\\n\\n``, with
@@ -108,8 +108,8 @@ async def load_agents_md(work_dir: KaosPath) -> str | None:
     # Phase 1: collect all candidate files (root → leaf order)
     discovered: list[tuple[KaosPath, str]] = []  # (path, content)
     for d in dirs:
-        # .kimi/AGENTS.md is always checked independently (can coexist with root-level file)
-        kimi_path = d / ".kimi" / "AGENTS.md"
+        # .consilium/AGENTS.md is always checked independently (can coexist with root-level file)
+        kimi_path = d / ".consilium" / "AGENTS.md"
         # AGENTS.md and agents.md are mutually exclusive (uppercase wins)
         root_candidates = [d / "AGENTS.md", d / "agents.md"]
 
@@ -191,12 +191,13 @@ class Runtime:
     root_wire_hub: RootWireHub | None = None
     subagent_id: str | None = None
     subagent_type: str | None = None
-    subagent_role_overrides: dict[str, Path] = field(default_factory=dict)
+    subagent_role_overrides: dict[str, Path] = field(default_factory=lambda: {})
+    subagent_overrides: dict[str, SubagentOverrideConfig] = field(default_factory=lambda: {})
     role: Literal["root", "subagent"] = "root"
     ui_mode: str = "shell"
     resumed: bool = False
     hook_engine: Any = None
-    """HookEngine instance, set by KimiCLI after soul creation."""
+    """HookEngine instance, set by ConsiliumCLI after soul creation."""
 
     def __post_init__(self) -> None:
         if self.subagent_store is None:
@@ -220,6 +221,7 @@ class Runtime:
         runtime_afk: bool = False,
         skills_dirs: list[KaosPath] | None = None,
         subagent_role_overrides: dict[str, Path] | None = None,
+        subagent_overrides: dict[str, SubagentOverrideConfig] | None = None,
     ) -> Runtime:
         ls_output, agents_md, environment = await asyncio.gather(
             list_directory(session.work_dir),
@@ -306,14 +308,14 @@ class Runtime:
             llm=llm,
             session=session,
             builtin_args=BuiltinSystemPromptArgs(
-                KIMI_NOW=datetime.now().astimezone().isoformat(),
-                KIMI_WORK_DIR=session.work_dir,
-                KIMI_WORK_DIR_LS=ls_output,
-                KIMI_AGENTS_MD=agents_md or "",
-                KIMI_SKILLS=skills_formatted or "No skills found.",
-                KIMI_ADDITIONAL_DIRS_INFO=additional_dirs_info,
-                KIMI_OS=environment.os_kind,
-                KIMI_SHELL=f"{environment.shell_name} (`{environment.shell_path}`)",
+                CONSILIUM_NOW=datetime.now().astimezone().isoformat(),
+                CONSILIUM_WORK_DIR=session.work_dir,
+                CONSILIUM_WORK_DIR_LS=ls_output,
+                CONSILIUM_AGENTS_MD=agents_md or "",
+                CONSILIUM_SKILLS=skills_formatted or "No skills found.",
+                CONSILIUM_ADDITIONAL_DIRS_INFO=additional_dirs_info,
+                CONSILIUM_OS=environment.os_kind,
+                CONSILIUM_SHELL=f"{environment.shell_name} (`{environment.shell_path}`)",
             ),
             denwa_renji=DenwaRenji(),
             approval=Approval(state=approval_state),
@@ -337,6 +339,7 @@ class Runtime:
             root_wire_hub=RootWireHub(),
             role="root",
             subagent_role_overrides=subagent_role_overrides or {},
+            subagent_overrides=subagent_overrides or {},
         )
 
     def copy_for_subagent(
@@ -345,10 +348,11 @@ class Runtime:
         agent_id: str,
         subagent_type: str,
         llm_override: LLM | None = None,
+        config: Config | None = None,
     ) -> Runtime:
         """Clone runtime for a subagent."""
         return Runtime(
-            config=self.config,
+            config=config if config is not None else self.config,
             oauth=self.oauth,
             llm=llm_override if llm_override is not None else self.llm,
             session=self.session,
@@ -369,6 +373,7 @@ class Runtime:
             subagent_id=agent_id,
             subagent_type=subagent_type,
             subagent_role_overrides=self.subagent_role_overrides,
+            subagent_overrides=self.subagent_overrides,
             role="subagent",
         )
 
@@ -396,12 +401,12 @@ async def load_agent(
 
     Raises:
         FileNotFoundError: When the agent file is not found.
-        AgentSpecError(KimiCLIException, ValueError): When the agent specification is invalid.
-        SystemPromptTemplateError(KimiCLIException, ValueError): When the system prompt template
+        AgentSpecError(ConsiliumCLIException, ValueError): When the agent specification is invalid.
+        SystemPromptTemplateError(ConsiliumCLIException, ValueError): When the system prompt template
             is invalid.
-        InvalidToolError(KimiCLIException, ValueError): When any tool cannot be loaded.
-        MCPConfigError(KimiCLIException, ValueError): When any MCP configuration is invalid.
-        MCPRuntimeError(KimiCLIException, RuntimeError): When any MCP server cannot be connected.
+        InvalidToolError(ConsiliumCLIException, ValueError): When any tool cannot be loaded.
+        MCPConfigError(ConsiliumCLIException, ValueError): When any MCP configuration is invalid.
+        MCPRuntimeError(ConsiliumCLIException, RuntimeError): When any MCP server cannot be connected.
     """
     logger.info("Loading agent: {agent_file}", agent_file=agent_file)
     agent_spec = load_agent_spec(agent_file)
@@ -460,9 +465,9 @@ async def load_agent(
             )
         )
 
-    toolset = KimiToolset()
+    toolset = ConsiliumToolset()
     tool_deps = {
-        KimiToolset: toolset,
+        ConsiliumToolset: toolset,
         Runtime: runtime,
         # TODO: remove all the following dependencies and use Runtime instead
         Config: runtime.config,

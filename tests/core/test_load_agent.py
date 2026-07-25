@@ -16,7 +16,7 @@ from consilium.session import Session
 from consilium.soul.agent import BuiltinSystemPromptArgs, Runtime, _load_system_prompt, load_agent
 from consilium.soul.approval import Approval
 from consilium.soul.denwarenji import DenwaRenji
-from consilium.soul.toolset import KimiToolset
+from consilium.soul.toolset import ConsiliumToolset
 from consilium.utils.environment import Environment
 
 
@@ -26,7 +26,7 @@ def test_load_system_prompt(system_prompt_file: Path, builtin_args: BuiltinSyste
 
     assert "Test system prompt with " in prompt
     assert "1970-01-01" in prompt  # Should contain the actual timestamp
-    assert builtin_args.KIMI_NOW in prompt
+    assert builtin_args.CONSILIUM_NOW in prompt
     assert "test_value" in prompt
 
 
@@ -46,8 +46,8 @@ def test_system_prompt_contains_platform_info(builtin_args: BuiltinSystemPromptA
     )
 
     # System prompt must include OS kind and shell info
-    assert builtin_args.KIMI_OS in prompt
-    assert builtin_args.KIMI_SHELL in prompt
+    assert builtin_args.CONSILIUM_OS in prompt
+    assert builtin_args.CONSILIUM_SHELL in prompt
 
 
 _WINDOWS_SHELL_HINT = "Use Unix shell syntax inside Shell commands"
@@ -70,14 +70,14 @@ def test_system_prompt_renders_os_and_shell(temp_work_dir, os_kind, shell, expec
     from consilium.agentspec import DEFAULT_AGENT_FILE
 
     args = BuiltinSystemPromptArgs(
-        KIMI_NOW="1970-01-01T00:00:00+00:00",
-        KIMI_WORK_DIR=temp_work_dir,
-        KIMI_WORK_DIR_LS="Test ls content",
-        KIMI_AGENTS_MD="Test agents content",
-        KIMI_SKILLS="No skills found.",
-        KIMI_ADDITIONAL_DIRS_INFO="",
-        KIMI_OS=os_kind,
-        KIMI_SHELL=shell,
+        CONSILIUM_NOW="1970-01-01T00:00:00+00:00",
+        CONSILIUM_WORK_DIR=temp_work_dir,
+        CONSILIUM_WORK_DIR_LS="Test ls content",
+        CONSILIUM_AGENTS_MD="Test agents content",
+        CONSILIUM_SKILLS="No skills found.",
+        CONSILIUM_ADDITIONAL_DIRS_INFO="",
+        CONSILIUM_OS=os_kind,
+        CONSILIUM_SHELL=shell,
     )
     prompt = _load_system_prompt(
         DEFAULT_AGENT_FILE.parent / "system.md",
@@ -98,12 +98,12 @@ def test_load_system_prompt_allows_literal_dollar(builtin_args: BuiltinSystemPro
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir = Path(tmpdir)
         system_md = tmpdir / "system.md"
-        system_md.write_text("Price is $100, path $PATH, time ${KIMI_NOW}.")
+        system_md.write_text("Price is $100, path $PATH, time ${CONSILIUM_NOW}.")
         prompt = _load_system_prompt(system_md, {}, builtin_args)
 
     assert "$100" in prompt
     assert "$PATH" in prompt
-    assert builtin_args.KIMI_NOW in prompt
+    assert builtin_args.CONSILIUM_NOW in prompt
 
 
 def test_load_system_prompt_include(builtin_args: BuiltinSystemPromptArgs):
@@ -134,7 +134,7 @@ def test_load_system_prompt_missing_arg_raises(builtin_args: BuiltinSystemPrompt
 def test_load_tools_valid(runtime: Runtime):
     """Test loading valid tools."""
     tool_paths = ["consilium.tools.think:Think", "consilium.tools.shell:Shell"]
-    toolset = KimiToolset()
+    toolset = ConsiliumToolset()
     toolset.load_tools(
         tool_paths,
         {
@@ -153,7 +153,7 @@ def test_load_tools_valid(runtime: Runtime):
 def test_load_tools_invalid(runtime: Runtime):
     """Test loading with invalid tool paths."""
     tool_paths = ["consilium.tools.nonexistent:Tool", "consilium.tools.think:Think"]
-    toolset = KimiToolset()
+    toolset = ConsiliumToolset()
     try:
         toolset.load_tools(
             tool_paths,
@@ -220,7 +220,7 @@ async def test_load_agent_starts_mcp_in_background(runtime: Runtime, monkeypatch
     async def fake_load_mcp_tools(self, mcp_configs, runtime, in_background: bool = True):
         called["in_background"] = in_background
 
-    monkeypatch.setattr(KimiToolset, "load_mcp_tools", fake_load_mcp_tools)
+    monkeypatch.setattr(ConsiliumToolset, "load_mcp_tools", fake_load_mcp_tools)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir = Path(tmpdir)
@@ -246,8 +246,8 @@ async def test_load_agent_can_defer_mcp_loading(runtime: Runtime, monkeypatch):
     def fake_defer_mcp_tool_loading(self, mcp_configs, runtime):
         called["defer_called"] = True
 
-    monkeypatch.setattr(KimiToolset, "load_mcp_tools", fake_load_mcp_tools)
-    monkeypatch.setattr(KimiToolset, "defer_mcp_tool_loading", fake_defer_mcp_tool_loading)
+    monkeypatch.setattr(ConsiliumToolset, "load_mcp_tools", fake_load_mcp_tools)
+    monkeypatch.setattr(ConsiliumToolset, "defer_mcp_tool_loading", fake_defer_mcp_tool_loading)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir = Path(tmpdir)
@@ -299,6 +299,6 @@ def system_prompt_file() -> Generator[Path, Any, Any]:
         tmpdir = Path(tmpdir)
 
         system_md = tmpdir / "system.md"
-        system_md.write_text("Test system prompt with ${KIMI_NOW} and ${CUSTOM_ARG}")
+        system_md.write_text("Test system prompt with ${CONSILIUM_NOW} and ${CUSTOM_ARG}")
 
         yield system_md

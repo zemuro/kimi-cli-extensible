@@ -2,7 +2,7 @@
 
 > Last updated: 2026-05-29
 
-This document tracks what has been built and what is planned for the `kimi-cli-extensible` fork.
+This document tracks what has been built and what is planned for the `consilium-extensible` fork.
 
 For implementation details, see `scratch/implementation_plan.md`.
 
@@ -107,7 +107,7 @@ Full pipeline test: Think generates plan → pushes to Do → Do audits → impl
 
 Convert token usage to USD for user-facing displays. Defer until extension UI work (Phase 5).
 
-### Kimi Code Platform Quota Overlay
+### Consilium Platform Quota Overlay
 **Status:** Deferred.  
 **Effort:** 1 day (backend) + 2 days (UI).  
 **Blocker:** Phase 5 extension UI.  

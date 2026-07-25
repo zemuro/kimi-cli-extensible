@@ -10,13 +10,13 @@ from kosong.tooling.empty import EmptyToolset
 from consilium.soul.agent import Agent, Runtime
 from consilium.soul.context import Context
 from consilium.soul.dynamic_injection import DynamicInjection, DynamicInjectionProvider
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.soul.slash import afk as afk_slash
 from consilium.soul.slash import yolo as yolo_slash
 from consilium.wire.types import TextPart
 
 
-def _make_soul(runtime: Runtime, tmp_path: Path) -> KimiSoul:
+def _make_soul(runtime: Runtime, tmp_path: Path) -> ConsiliumSoul:
     # The shared `approval` fixture in conftest defaults to yolo=True; reset both
     # flags so each test starts from a clean state.
     runtime.approval.set_yolo(False)
@@ -27,10 +27,10 @@ def _make_soul(runtime: Runtime, tmp_path: Path) -> KimiSoul:
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    return KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    return ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
 
 
-async def _run(fn, soul: KimiSoul, args: str = "") -> None:
+async def _run(fn, soul: ConsiliumSoul, args: str = "") -> None:
     result = fn(soul, args)
     if result is not None:
         await result

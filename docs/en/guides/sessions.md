@@ -1,10 +1,10 @@
 # Sessions and Context
 
-Kimi Code CLI automatically saves your conversation history, allowing you to continue previous work at any time.
+Consilium CLI automatically saves your conversation history, allowing you to continue previous work at any time.
 
 ## Session resuming
 
-Each time you start Kimi Code CLI, a new session is created. While running, you can also enter the `/new` command to create and switch to a new session at any time, without exiting the program.
+Each time you start Consilium CLI, a new session is created. While running, you can also enter the `/new` command to create and switch to a new session at any time, without exiting the program.
 
 If you want to continue a previous conversation, there are several ways:
 
@@ -48,7 +48,7 @@ The list shows each session's title and last update time, helping you find the c
 
 **Resume hint on exit**
 
-When a session exits — whether through normal exit, `Ctrl-C` interruption, `/undo`, `/fork`, `/sessions` switch, or other scenarios — Kimi Code CLI automatically prints a resume command hint:
+When a session exits — whether through normal exit, `Ctrl-C` interruption, `/undo`, `/fork`, `/sessions` switch, or other scenarios — Consilium CLI automatically prints a resume command hint:
 
 ```
 To resume this session: kimi -r <session-id>
@@ -58,11 +58,11 @@ You can copy this command directly and run it in your terminal next time to quic
 
 **Startup replay**
 
-When you continue an existing session, Kimi Code CLI will replay the previous conversation history so you can quickly understand the context. During replay, previous messages and AI responses will be displayed.
+When you continue an existing session, Consilium CLI will replay the previous conversation history so you can quickly understand the context. During replay, previous messages and AI responses will be displayed.
 
 ## Session state persistence
 
-In addition to conversation history, Kimi Code CLI also automatically saves and restores the session's runtime state. When you resume a session, the following states are automatically restored:
+In addition to conversation history, Consilium CLI also automatically saves and restores the session's runtime state. When you resume a session, the following states are automatically restored:
 
 - **Approval decisions**: YOLO and AFK mode on/off status, operation types approved via "allow for this session"
 - **Plan mode**: Plan mode on/off status
@@ -73,7 +73,7 @@ This means you don't need to reconfigure these settings each time you resume a s
 
 ## Export and import
 
-Kimi Code CLI supports exporting session context to a file, or importing context from external files and other sessions.
+Consilium CLI supports exporting session context to a file, or importing context from external files and other sessions.
 
 **Export a session**
 
@@ -106,7 +106,7 @@ Exported files may contain sensitive information (such as code snippets, file pa
 
 ## Clear and compact
 
-As the conversation progresses, the context grows longer. Kimi Code CLI will automatically compress the context when needed to ensure the conversation can continue.
+As the conversation progresses, the context grows longer. Consilium CLI will automatically compress the context when needed to ensure the conversation can continue.
 
 You can also manually manage the context using slash commands:
 

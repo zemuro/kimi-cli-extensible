@@ -14,11 +14,11 @@
 
 | Surface | Current | New |
 |---------|---------|-----|
-| Package name | `kimi-cli` | `consilium` |
-| Python module | `kimi_cli` | `consilium` |
+| Package name | `consilium` | `consilium` |
+| Python module | `consilium` | `consilium` |
 | CLI command | `kimi` | `consilium` |
-| Config directory | `~/.kimi` | `~/.consilium` |
-| Description | "Kimi Code CLI" | "Consilium CLI" |
+| Config directory | `~/.consilium` | `~/.consilium` |
+| Description | "Consilium CLI" | "Consilium CLI" |
 
 ### OUT of scope (internal)
 
@@ -38,34 +38,34 @@
 
 | Field | Current | New |
 |-------|---------|-----|
-| `[project].name` | `kimi-cli` | `consilium` |
-| `[project].description` | `Kimi Code CLI...` | `Consilium CLI agent` |
-| `[tool.uv.build-backend].module-name` | `kimi_cli` | `consilium` |
-| `[project.scripts].kimi` | `kimi_cli.__main__:main` | `consilium.cli:main` |
-| `[project.scripts].kimi-cli` | `kimi_cli.__main__:main` | *(remove)* |
-| `[tool.pyright].strict` | `src/kimi_cli/**/*.py` | `src/consilium/**/*.py` |
+| `[project].name` | `consilium` | `consilium` |
+| `[project].description` | `Consilium CLI...` | `Consilium CLI agent` |
+| `[tool.uv.build-backend].module-name` | `consilium` | `consilium` |
+| `[project.scripts].consilium` | `consilium.__main__:main` | `consilium.cli:main` |
+| `[project.scripts].consilium-cli` | `consilium.__main__:main` | *(remove)* |
+| `[tool.pyright].strict` | `src/consilium/**/*.py` | `src/consilium/**/*.py` |
 
 ### 2. Directory rename
 
 ```bash
-git mv src/kimi_cli src/consilium
+git mv src/consilium src/consilium
 ```
 
 ### 3. Import renames
 
-Only rename `kimi_cli` → `consilium` in Python imports. Use targeted regex:
+Only rename `consilium` → `consilium` in Python imports. Use targeted regex:
 
 ```bash
-sed -i 's/^from kimi_cli\./from consilium./g' ...
-sed -i 's/^import kimi_cli/import consilium/g' ...
-sed -i 's/kimi_cli\./consilium./g' ...
+sed -i 's/^from consilium\./from consilium./g' ...
+sed -i 's/^import consilium/import consilium/g' ...
+sed -i 's/consilium\./consilium./g' ...
 ```
 
 **Do NOT** bulk-replace `"kimi"` as a bare word.
 
 ### 4. Config path renames (19 references)
 
-Replace `~/.kimi` → `~/.consilium` in path constants:
+Replace `~/.consilium` → `~/.consilium` in path constants:
 - `src/consilium/cli/__init__.py`
 - `src/consilium/think/storage.py`
 - `src/consilium/do/journal.py`
@@ -77,7 +77,7 @@ Replace `~/.kimi` → `~/.consilium` in path constants:
 
 ### 5. `README.md`
 
-Replace "Kimi CLI" / "kimi-cli" with "Consilium" in headings and usage examples.
+Replace "Consilium CLI" / "consilium" with "Consilium" in headings and usage examples.
 
 ---
 
@@ -100,7 +100,7 @@ See `../kimi_extension_mod/plan/phase-rename.md` for extension-specific renames 
 
 ## Rollback
 
-Single commit revert. `~/.kimi/` and `~/.consilium/` are separate directories.
+Single commit revert. `~/.consilium/` and `~/.consilium/` are separate directories.
 
 ---
 

@@ -29,9 +29,12 @@ class ThinkSubagentSpawner:
         subagent_type: str,
         prompt: str,
         description: str | None = None,
-        timeout: int = 300,
     ) -> str:
-        """Spawn a foreground subagent of any type. Blocks until completion."""
+        """Spawn a foreground subagent of any type. Blocks until completion.
+
+        The runner's AdaptiveTimer is the single source of timeout truth; this
+        spawner no longer wraps the runner in an additional asyncio.wait_for.
+        """
         runner = ForegroundSubagentRunner(self._runtime)
         req = ForegroundRunRequest(
             description=description or f"Think {subagent_type}",
@@ -40,7 +43,7 @@ class ThinkSubagentSpawner:
             model=None,
             resume=None,
         )
-        result = await asyncio.wait_for(runner.run(req), timeout=timeout)
+        result = await runner.run(req)
         if result.is_error:
             return f"[{subagent_type.capitalize()} Failed] {result.message}"
 
@@ -50,20 +53,18 @@ class ThinkSubagentSpawner:
             return " ".join(getattr(p, "text", "") for p in result.output)
         return str(result.output)
 
-    async def explore(self, prompt: str, timeout: int = 300) -> str:
+    async def explore(self, prompt: str) -> str:
         """Foreground deep-dive. Blocks until completion. Returns summary."""
-        return await self.spawn("explore", prompt, description="Think explore", timeout=timeout)
+        return await self.spawn("explore", prompt, description="Think explore")
 
-    async def plan_edit(self, prompt: str, timeout: int = 300) -> str:
+    async def plan_edit(self, prompt: str) -> str:
         """Spawn a plan_editor subagent. Blocks until completion. Returns summary."""
         # Ensure plan/ directory exists
         from pathlib import Path
         Path("plan").mkdir(exist_ok=True)
         Path("plan/reports").mkdir(exist_ok=True)
         Path("plan/reviews").mkdir(exist_ok=True)
-        return await self.spawn(
-            "plan_editor", prompt, description="Think plan edit", timeout=timeout
-        )
+        return await self.spawn("plan_editor", prompt, description="Think plan edit")
 
     async def investigate(self, question: str, angles: list[str]) -> InvestigateResult:
         """Spawn parallel background subagents, one per angle, and collect results."""

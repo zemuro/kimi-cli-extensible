@@ -4,7 +4,7 @@ Agent 定义了 AI 的行为方式，包括系统提示词、可用工具和子 
 
 ## 内置 Agent
 
-Kimi Code CLI 提供两个内置 Agent。启动时可以通过 `--agent` 参数选择：
+Consilium CLI 提供两个内置 Agent。启动时可以通过 `--agent` 参数选择：
 
 ```sh
 kimi --agent okabe
@@ -36,9 +36,9 @@ agent:
   name: my-agent
   system_prompt_path: ./system.md
   tools:
-    - "kimi_cli.tools.shell:Shell"
-    - "kimi_cli.tools.file:ReadFile"
-    - "kimi_cli.tools.file:WriteFile"
+    - "consilium.tools.shell:Shell"
+    - "consilium.tools.file:ReadFile"
+    - "consilium.tools.file:WriteFile"
 ```
 
 **继承与覆盖**
@@ -51,8 +51,8 @@ agent:
   extend: default  # 继承默认 Agent
   system_prompt_path: ./my-prompt.md  # 覆盖系统提示词
   exclude_tools:  # 排除某些工具
-    - "kimi_cli.tools.web:SearchWeb"
-    - "kimi_cli.tools.web:FetchURL"
+    - "consilium.tools.web:SearchWeb"
+    - "consilium.tools.web:FetchURL"
 ```
 
 `extend: default` 会继承内置的默认 Agent。你也可以指定相对路径继承其他 Agent 文件。
@@ -75,12 +75,12 @@ agent:
 
 | 变量 | 说明 |
 |------|------|
-| `${KIMI_NOW}` | 当前时间（ISO 格式） |
-| `${KIMI_WORK_DIR}` | 工作目录路径 |
-| `${KIMI_WORK_DIR_LS}` | 工作目录文件列表 |
-| `${KIMI_AGENTS_MD}` | 从项目根目录到工作目录逐层合并的 `AGENTS.md` 内容（包括 `.kimi/AGENTS.md`） |
-| `${KIMI_SKILLS}` | 加载的 Skills 列表 |
-| `${KIMI_ADDITIONAL_DIRS_INFO}` | 通过 `--add-dir` 或 `/add-dir` 添加的额外目录信息 |
+| `${CONSILIUM_NOW}` | 当前时间（ISO 格式） |
+| `${CONSILIUM_WORK_DIR}` | 工作目录路径 |
+| `${CONSILIUM_WORK_DIR_LS}` | 工作目录文件列表 |
+| `${CONSILIUM_AGENTS_MD}` | 从项目根目录到工作目录逐层合并的 `AGENTS.md` 内容（包括 `.consilium/AGENTS.md`） |
+| `${CONSILIUM_SKILLS}` | 加载的 Skills 列表 |
+| `${CONSILIUM_ADDITIONAL_DIRS_INFO}` | 通过 `--add-dir` 或 `/add-dir` 添加的额外目录信息 |
 
 你也可以通过 `system_prompt_args` 定义自定义参数：
 
@@ -97,9 +97,9 @@ agent:
 ```markdown
 # My Agent
 
-You are a helpful assistant. Current time: ${KIMI_NOW}.
+You are a helpful assistant. Current time: ${CONSILIUM_NOW}.
 
-Working directory: ${KIMI_WORK_DIR}
+Working directory: ${CONSILIUM_WORK_DIR}
 
 ${MY_VAR}
 ```
@@ -156,11 +156,11 @@ agent:
 
 ## 内置工具列表
 
-以下是 Kimi Code CLI 内置的所有工具。
+以下是 Consilium CLI 内置的所有工具。
 
 ### `Agent`
 
-- **路径**：`kimi_cli.tools.agent:Agent`
+- **路径**：`consilium.tools.agent:Agent`
 - **描述**：启动或恢复子 Agent 实例处理聚焦任务。内置三种子 Agent 类型：`coder`（通用软件工程）、`explore`（快速只读代码探索）、`plan`（实现规划与架构设计）。每个实例维护独立的上下文历史，支持前台或后台运行。
 
 | 参数 | 类型 | 说明 |
@@ -175,7 +175,7 @@ agent:
 
 ### `AskUserQuestion`
 
-- **路径**：`kimi_cli.tools.ask_user:AskUserQuestion`
+- **路径**：`consilium.tools.ask_user:AskUserQuestion`
 - **描述**：在执行过程中向用户展示结构化问题和选项，收集用户偏好或决策。适用于需要用户在多个方案中做出选择、解决模糊指令或收集需求信息的场景。不应过度使用——只在用户的选择真正影响后续操作时才调用。
 
 | 参数 | 类型 | 说明 |
@@ -190,7 +190,7 @@ agent:
 
 ### `SetTodoList`
 
-- **路径**：`kimi_cli.tools.todo:SetTodoList`
+- **路径**：`consilium.tools.todo:SetTodoList`
 - **描述**：管理待办事项列表，跟踪任务进度。支持三种使用模式：更新模式（传入 `todos` 数组替换整个列表）、查询模式（省略 `todos` 参数返回当前列表）和清空模式（传入空数组 `[]` 清空列表）。待办事项会持久化到会话状态。
 
 | 参数 | 类型 | 说明 |
@@ -201,7 +201,7 @@ agent:
 
 ### `Shell`
 
-- **路径**：`kimi_cli.tools.shell:Shell`
+- **路径**：`consilium.tools.shell:Shell`
 - **描述**：执行 Shell 命令。需要用户审批。根据操作系统使用配置的 Shell（类 Unix 平台使用 bash/sh，Windows 使用 Git Bash `bash.exe`）。
 
 | 参数 | 类型 | 说明 |
@@ -215,7 +215,7 @@ agent:
 
 ### `ReadFile`
 
-- **路径**：`kimi_cli.tools.file:ReadFile`
+- **路径**：`consilium.tools.file:ReadFile`
 - **描述**：读取文本文件内容。单次最多读取 1000 行，每行最多 2000 字符。工作目录外的文件需使用绝对路径。每次读取都会在消息中返回文件总行数。敏感文件（如 `.env`、SSH 私钥、云凭据）会被拒绝读取。
 
 | 参数 | 类型 | 说明 |
@@ -226,7 +226,7 @@ agent:
 
 ### `ReadMediaFile`
 
-- **路径**：`kimi_cli.tools.file:ReadMediaFile`
+- **路径**：`consilium.tools.file:ReadMediaFile`
 - **描述**：读取图片或视频文件。文件最大 100MB。仅当模型支持图片/视频输入时可用。工作目录外的文件需使用绝对路径。
 
 | 参数 | 类型 | 说明 |
@@ -235,7 +235,7 @@ agent:
 
 ### `Glob`
 
-- **路径**：`kimi_cli.tools.file:Glob`
+- **路径**：`consilium.tools.file:Glob`
 - **描述**：按模式匹配文件和目录。最多返回 1000 个匹配项，不允许以 `**` 开头的模式。支持搜索已发现的 Skill 根目录，路径中的 `~` 会自动展开为用户主目录。
 
 | 参数 | 类型 | 说明 |
@@ -246,7 +246,7 @@ agent:
 
 ### `Grep`
 
-- **路径**：`kimi_cli.tools.file:Grep`
+- **路径**：`consilium.tools.file:Grep`
 - **描述**：使用正则表达式搜索文件内容，基于 ripgrep 实现。默认搜索隐藏文件（dotfiles），但不搜索被 `.gitignore` 排除的文件。敏感文件（如 `.env`、SSH 私钥、云凭据）始终被过滤，即使设置了 `include_ignored` 也不会出现在结果中。
 
 | 参数 | 类型 | 说明 |
@@ -268,7 +268,7 @@ agent:
 
 ### `WriteFile`
 
-- **路径**：`kimi_cli.tools.file:WriteFile`
+- **路径**：`consilium.tools.file:WriteFile`
 - **描述**：写入文件。写入操作需要用户审批。写入工作目录外文件时，必须使用绝对路径。
 
 | 参数 | 类型 | 说明 |
@@ -279,7 +279,7 @@ agent:
 
 ### `StrReplaceFile`
 
-- **路径**：`kimi_cli.tools.file:StrReplaceFile`
+- **路径**：`consilium.tools.file:StrReplaceFile`
 - **描述**：使用字符串替换编辑文件。编辑操作需要用户审批。编辑工作目录外文件时，必须使用绝对路径。
 
 | 参数 | 类型 | 说明 |
@@ -292,8 +292,8 @@ agent:
 
 ### `SearchWeb`
 
-- **路径**：`kimi_cli.tools.web:SearchWeb`
-- **描述**：搜索网页。需要配置搜索服务（Kimi Code 平台自动配置）。
+- **路径**：`consilium.tools.web:SearchWeb`
+- **描述**：搜索网页。需要配置搜索服务（Consilium 平台自动配置）。
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
@@ -303,7 +303,7 @@ agent:
 
 ### `FetchURL`
 
-- **路径**：`kimi_cli.tools.web:FetchURL`
+- **路径**：`consilium.tools.web:FetchURL`
 - **描述**：抓取网页内容，返回提取的主要文本内容。如果配置了抓取服务会优先使用，否则使用本地 HTTP 请求。
 
 | 参数 | 类型 | 说明 |
@@ -312,7 +312,7 @@ agent:
 
 ### `Think`
 
-- **路径**：`kimi_cli.tools.think:Think`
+- **路径**：`consilium.tools.think:Think`
 - **描述**：让 Agent 记录思考过程，适用于复杂推理场景
 
 | 参数 | 类型 | 说明 |
@@ -321,7 +321,7 @@ agent:
 
 ### `SendDMail`
 
-- **路径**：`kimi_cli.tools.dmail:SendDMail`
+- **路径**：`consilium.tools.dmail:SendDMail`
 - **描述**：发送延迟消息（D-Mail），用于检查点回滚场景
 
 | 参数 | 类型 | 说明 |
@@ -331,14 +331,14 @@ agent:
 
 ### `EnterPlanMode`
 
-- **路径**：`kimi_cli.tools.plan.enter:EnterPlanMode`
+- **路径**：`consilium.tools.plan.enter:EnterPlanMode`
 - **描述**：请求进入 Plan 模式。调用后通常会向用户展示审批请求；如果会话处于 YOLO 或 AFK 模式则会自动批准进入。YOLO 只自动批准进入 Plan 模式，`ExitPlanMode` 仍会把最终方案展示给用户审批。仅在用户明确要求规划或存在重大架构歧义时使用。详见 [Plan 模式](../guides/interaction.md#plan-模式)。
 
 此工具不接受参数。
 
 ### `ExitPlanMode`
 
-- **路径**：`kimi_cli.tools.plan:ExitPlanMode`
+- **路径**：`consilium.tools.plan:ExitPlanMode`
 - **描述**：在 Plan 模式下完成方案后提交审批。调用前需先将方案写入 plan 文件，此工具会读取 plan 文件内容并展示给用户审批。用户可以选择某个实施路径（退出 Plan 模式并开始执行）、拒绝（保持 Plan 模式等待反馈）或提供修改意见。详见 [Plan 模式](../guides/interaction.md#plan-模式)。
 
 | 参数 | 类型 | 说明 |
@@ -347,7 +347,7 @@ agent:
 
 ### `TaskList`
 
-- **路径**：`kimi_cli.tools.background:TaskList`
+- **路径**：`consilium.tools.background:TaskList`
 - **描述**：列出当前会话中的后台任务。适用于上下文压缩后重新获取任务 ID，或检查哪些任务仍在运行。
 
 | 参数 | 类型 | 说明 |
@@ -357,7 +357,7 @@ agent:
 
 ### `TaskOutput`
 
-- **路径**：`kimi_cli.tools.background:TaskOutput`
+- **路径**：`consilium.tools.background:TaskOutput`
 - **描述**：获取后台任务的输出和状态。默认为非阻塞查询，返回当前状态和输出快照；如果输出被截断，可使用 `ReadFile` 分页读取完整日志。
 
 | 参数 | 类型 | 说明 |
@@ -368,7 +368,7 @@ agent:
 
 ### `TaskStop`
 
-- **路径**：`kimi_cli.tools.background:TaskStop`
+- **路径**：`consilium.tools.background:TaskStop`
 - **描述**：停止正在运行的后台任务。需要用户审批。仅在任务必须取消时使用；对于正常完成的任务，应等待自动通知。在 Plan 模式下不可用。
 
 | 参数 | 类型 | 说明 |

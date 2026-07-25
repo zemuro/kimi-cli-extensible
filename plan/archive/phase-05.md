@@ -16,7 +16,7 @@
 
 ## Existing Extension Architecture
 
-The `kimi_extension_mod` repo is a fork of MoonshotAI's Kimi Code: VS Code: extension with:
+The `kimi_extension_mod` repo is a fork of MoonshotAI's Consilium: VS Code: extension with:
 - `ProtocolClient` from `@moonshot-ai/kimi-agent-sdk` — wire protocol (JSON-RPC)
 - Single-panel webview (`ChatArea.tsx` + `InputArea.tsx`)
 - Extension ↔ Webview bridge via `shared/bridge.ts` (`Methods` + `Events`)
@@ -47,12 +47,12 @@ The extension already speaks wire protocol. Adding HTTP means:
 
 ## Phase 5A: Wire Protocol Extensions (This Repo)
 
-**Backend work in `src/kimi_cli/`**
+**Backend work in `src/consilium/`**
 
 ### New Wire Message Types
 
 ```python
-# src/kimi_cli/wire/types.py
+# src/consilium/wire/types.py
 
 class LogQueryRequest(BaseModel):
     """Extension requests log entries for a session."""
@@ -90,11 +90,11 @@ class TraceResponse(BaseModel):
 
 ### Wire Protocol Handlers
 
-In `src/kimi_cli/wire/server.py`, add handlers for the new request types:
+In `src/consilium/wire/server.py`, add handlers for the new request types:
 
 ```python
 async def _handle_log_query(self, request: LogQueryRequest) -> LogQueryResponse:
-    from kimi_cli.plan.persistent_log import PersistentLog
+    from consilium.plan.persistent_log import PersistentLog
     log = PersistentLog.for_session(request.session_id, request.log_owner)
     entries = log.find_entries_by_type(request.filter_type, after_id=request.after_id)
     return LogQueryResponse(

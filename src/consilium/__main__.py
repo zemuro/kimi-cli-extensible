@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 def _prog_name() -> str:
-    return Path(sys.argv[0]).name or "kimi"
+    return Path(sys.argv[0]).name or "consilium"
 
 
 def main(argv: Sequence[str] | None = None) -> int | str | None:

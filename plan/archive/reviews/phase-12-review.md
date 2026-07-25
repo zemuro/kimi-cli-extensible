@@ -1,6 +1,6 @@
 # Phase 12 Review: `/investigate` — Parallel Background Subagents
 
-**Reviewer:** Kimi Code CLI  
+**Reviewer:** Consilium CLI  
 **Date:** 2026-06-01  
 **Verdict:** 🟡 **Approved with 7 corrections**
 

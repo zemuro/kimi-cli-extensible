@@ -81,7 +81,7 @@ class TestParseDocsIndex:
 class TestDocsIndexCache:
     def test_roundtrip(self, tmp_path: Path) -> None:
         index = parse_docs_index(README_SAMPLE)
-        cache_path = tmp_path / ".kimi" / "docs_index.json"
+        cache_path = tmp_path / ".consilium" / "docs_index.json"
         write_docs_index_cache(index, cache_path)
         assert cache_path.exists()
 
@@ -90,7 +90,7 @@ class TestDocsIndexCache:
         assert loaded.documents[0].path == "architecture.md"
 
     def test_missing_cache_returns_empty(self, tmp_path: Path) -> None:
-        cache_path = tmp_path / ".kimi" / "docs_index.json"
+        cache_path = tmp_path / ".consilium" / "docs_index.json"
         loaded = read_docs_index_cache(cache_path)
         assert loaded.documents == []
 

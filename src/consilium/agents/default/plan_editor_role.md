@@ -20,14 +20,14 @@ ${plan_editor_conventions}
 
 ## Plan Directory Awareness
 
-The project's plan tree lives under `${KIMI_WORK_DIR}/plan/`:
+The project's plan tree lives under `${CONSILIUM_WORK_DIR}/plan/`:
 
-- `${KIMI_WORK_DIR}/plan/index.md` — master index and phase status table
-- `${KIMI_WORK_DIR}/plan/phase-NN.md` — phase specifications
-- `${KIMI_WORK_DIR}/plan/reports/` — implementation reports
-- `${KIMI_WORK_DIR}/plan/reviews/` — review documents and correction responses
+- `${CONSILIUM_WORK_DIR}/plan/index.md` — master index and phase status table
+- `${CONSILIUM_WORK_DIR}/plan/phase-NN.md` — phase specifications
+- `${CONSILIUM_WORK_DIR}/plan/reports/` — implementation reports
+- `${CONSILIUM_WORK_DIR}/plan/reviews/` — review documents and correction responses
 
-Before any coordinated action (`create`, `finalize`, `archive`, `correct`), read `${KIMI_WORK_DIR}/plan/index.md`. When updating the index, use `StrReplaceFile` to preserve existing rows, graphs, decisions, and notes.
+Before any coordinated action (`create`, `finalize`, `archive`, `correct`), read `${CONSILIUM_WORK_DIR}/plan/index.md`. When updating the index, use `StrReplaceFile` to preserve existing rows, graphs, decisions, and notes.
 
 ## Action System
 
@@ -41,7 +41,7 @@ The caller may specify an `action` to disambiguate intent. If no action is given
 | `archive` | Move a phase or document to an inactive state. | `plan/phase-NN.md`, obsolete review/report | Update the row's status to `archived` or `superseded`; append a note explaining why. Never delete files. |
 | `correct` | Produce a `correction_response` document addressing a 🟡 or 🔴 review. | `plan/reviews/phase-NN-corrections.md` | Add a link in the original review row or Notes section pointing to the correction response file. |
 
-Pass the action, document type, and target path in the prompt text, for example: `"action: create, document_type: phase_spec, target: ${KIMI_WORK_DIR}/plan/phase-11.md"`.
+Pass the action, document type, and target path in the prompt text, for example: `"action: create, document_type: phase_spec, target: ${CONSILIUM_WORK_DIR}/plan/phase-11.md"`.
 
 ## Document-Type Schemas
 
@@ -275,11 +275,11 @@ original_review_path: {{ABSOLUTE_PATH_TO_REVIEW}}
 
 ## Index Coordination
 
-`${KIMI_WORK_DIR}/plan/index.md` is the source of truth for the project phase list. Keep it synchronized according to these rules. Use `StrReplaceFile` for all index edits unless creating the index from scratch.
+`${CONSILIUM_WORK_DIR}/plan/index.md` is the source of truth for the project phase list. Keep it synchronized according to these rules. Use `StrReplaceFile` for all index edits unless creating the index from scratch.
 
 ### `create` of a `phase_spec`
 
-1. Read `${KIMI_WORK_DIR}/plan/index.md`.
+1. Read `${CONSILIUM_WORK_DIR}/plan/index.md`.
 2. Append a new row to the Phase Status Table: `| [{{PHASE}}]({{PHASE}}.md) | {{TITLE}} | planning | ⬜ |`.
 3. Update `current_phase` to the new phase number.
 4. Update `last_updated` to today's date (`YYYY-MM-DD`).
@@ -365,13 +365,13 @@ archived   archived/superseded
 ## Review/Correction Workflow
 
 1. **Initial review.** Do spawns `plan_editor` with `document_type: review`, `action: create`.
-   - Path: `${KIMI_WORK_DIR}/plan/reviews/phase-NN-review.md`
+   - Path: `${CONSILIUM_WORK_DIR}/plan/reviews/phase-NN-review.md`
    - Verdict: 🟢 / 🟡 / 🔴
 2. **Verdict actions:**
    - 🟢 — proceed; no correction response needed.
    - 🟡 — document corrections in `phase-NN-corrections.md`, proceed, and optionally request re-review.
    - 🔴 — stop; create `phase-NN-corrections.md` and hand back to Think.
-3. **Correction response.** `plan_editor` writes `${KIMI_WORK_DIR}/plan/reviews/phase-NN-corrections.md` with:
+3. **Correction response.** `plan_editor` writes `${CONSILIUM_WORK_DIR}/plan/reviews/phase-NN-corrections.md` with:
    - `document_type: correction_response`
    - `original_review_path` frontmatter key pointing to the review file
    - Section `Original Verdict` (🟡 or 🔴)
@@ -385,7 +385,7 @@ archived   archived/superseded
 
 ALL file references in documents you write MUST use absolute paths.
 
-Correct: `${KIMI_WORK_DIR}/src/bridge-handler.ts`
+Correct: `${CONSILIUM_WORK_DIR}/src/bridge-handler.ts`
 Incorrect: `src/bridge-handler.ts`, `./src/bridge-handler.ts`, or `../src/bridge-handler.ts`
 
 Historical note: `phase_spec` historically omitted `document_type`. All new phase specs must include it.

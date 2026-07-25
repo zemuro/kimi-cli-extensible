@@ -160,13 +160,13 @@ async def test_user_input_wins_over_simultaneous_bg_event():
 
 
 # -------------------------------------------------------------------
-# Disabled watcher: non-KimiSoul path
+# Disabled watcher: non-ConsiliumSoul path
 # -------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 async def test_disabled_watcher_just_awaits_idle():
-    """When watcher is disabled (no KimiSoul), it behaves as plain get()."""
+    """When watcher is disabled (no ConsiliumSoul), it behaves as plain get()."""
     watcher = _BackgroundCompletionWatcher.__new__(_BackgroundCompletionWatcher)
     watcher._event = None
     watcher._notifications = None

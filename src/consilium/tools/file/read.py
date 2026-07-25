@@ -75,7 +75,7 @@ class ReadFile(CallableTool2[Params]):
         )
         super().__init__(description=description)
         self._runtime = runtime
-        self._work_dir = runtime.builtin_args.KIMI_WORK_DIR
+        self._work_dir = runtime.builtin_args.CONSILIUM_WORK_DIR
         self._additional_dirs = runtime.additional_dirs
 
     async def _validate_path(self, path: KaosPath) -> ToolError | None:

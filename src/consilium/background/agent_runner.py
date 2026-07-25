@@ -14,7 +14,7 @@ from consilium.approval_runtime import (
     set_current_approval_source,
 )
 from consilium.soul import RunCancelled
-from consilium.soul.kimisoul import StepOutcome
+from consilium.soul.consiliumsoul import StepOutcome
 from consilium.subagents.budget_tracker import BudgetStatus, SubagentBudgetTracker
 from consilium.subagents.builder import SubagentBuilder
 from consilium.subagents.core import SubagentRunSpec, prepare_soul

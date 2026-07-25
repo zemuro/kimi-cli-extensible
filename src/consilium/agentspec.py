@@ -19,6 +19,15 @@ def get_agents_dir() -> Path:
 
 DEFAULT_AGENT_FILE = get_agents_dir() / "default" / "agent.yaml"
 OKABE_AGENT_FILE = get_agents_dir() / "okabe" / "agent.yaml"
+WORKSPACE_AGENT_FILE = Path(".consilium") / "agents" / "agent.yaml"
+
+
+def find_workspace_agent_file(work_dir: Path) -> Path | None:
+    """Return the workspace-level agent file if it exists, otherwise None."""
+    candidate = work_dir / WORKSPACE_AGENT_FILE
+    if candidate.is_file():
+        return candidate
+    return None
 
 
 class Inherit(NamedTuple):

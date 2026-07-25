@@ -1,34 +1,34 @@
 # Rebasing from Upstream
 
-This fork (`kimi-cli-extensible`) tracks [MoonshotAI/kimi-cli](https://github.com/MoonshotAI/kimi-cli). Every upstream release requires manual merge resolution in a small set of files.
+This fork (`consilium-extensible`) tracks [MoonshotAI/consilium](https://github.com/MoonshotAI/consilium). Every upstream release requires manual merge resolution in a small set of files.
 
 ## Files That Will Conflict Every Time
 
-### `src/kimi_cli/agents/default/system.md`
+### `src/consilium/agents/default/system.md`
 **Upstream:** Monolithic 160-line system prompt.  
 **Ours:** Single-line assembly marker (`<!-- assembled-from-sections -->`).
 
-**Resolution:** Always keep our marker. If upstream adds new content to `system.md`, port it to the appropriate section under `src/kimi_cli/prompts/system/`.
+**Resolution:** Always keep our marker. If upstream adds new content to `system.md`, port it to the appropriate section under `src/consilium/prompts/system/`.
 
-### `src/kimi_cli/soul/agent.py`
+### `src/consilium/soul/agent.py`
 **Upstream:** `_load_system_prompt()` loads `system.md` verbatim.  
 **Ours:** Detects assembly marker and dispatches to `assemble_system_prompt()`.
 
 **Resolution:** Keep our loader logic. Merge upstream changes to the surrounding `Runtime` creation or agent dataclass code.
 
-### `src/kimi_cli/agentspec.py`
+### `src/consilium/agentspec.py`
 **Upstream:** YAML spec loader without file-based prompt fields.  
 **Ours:** Added `system_prompt_args_files` and `when_to_use_file`.
 
 **Resolution:** Keep our fields. Upstream schema additions usually merge cleanly because we only appended new optional fields.
 
-### `src/kimi_cli/config.py`
+### `src/consilium/config.py`
 **Upstream:** `Config` and `LLMModel` Pydantic models.  
 **Ours:** Added `system_prompt_overrides`, `GenerationConfig`, and `LLMModel.generation`.
 
 **Resolution:** Keep our fields. Merge upstream validators into `validate_model()`.
 
-### `src/kimi_cli/llm.py`
+### `src/consilium/llm.py`
 **Upstream:** `create_llm()` with Kimi env vars and thinking logic.  
 **Ours:** Added `_generation_kwargs_for_provider()`, `_map_cli_override()`, and `generation_overrides` parameter.
 
@@ -64,13 +64,13 @@ If upstream modifies `system.md`, diff their new version against the old one, th
 
 | If upstream changed... | Apply to... |
 |---|---|
-| Agent identity / role | `src/kimi_cli/prompts/system/identity.md` |
-| Tool use / message handling | `src/kimi_cli/prompts/system/prompt_and_tool_use.md` |
-| Coding guidelines | `src/kimi_cli/prompts/system/coding_guidelines.md` |
-| Research / multimedia | `src/kimi_cli/prompts/system/research_guidelines.md` |
-| Shell / OS / environment | `src/kimi_cli/prompts/system/working_environment.md` |
-| AGENTS.md conventions | `src/kimi_cli/prompts/system/project_info.md` |
-| Skills | `src/kimi_cli/prompts/system/skills.md` |
-| Final reminders | `src/kimi_cli/prompts/system/ultimate_reminders.md` |
+| Agent identity / role | `src/consilium/prompts/system/identity.md` |
+| Tool use / message handling | `src/consilium/prompts/system/prompt_and_tool_use.md` |
+| Coding guidelines | `src/consilium/prompts/system/coding_guidelines.md` |
+| Research / multimedia | `src/consilium/prompts/system/research_guidelines.md` |
+| Shell / OS / environment | `src/consilium/prompts/system/working_environment.md` |
+| AGENTS.md conventions | `src/consilium/prompts/system/project_info.md` |
+| Skills | `src/consilium/prompts/system/skills.md` |
+| Final reminders | `src/consilium/prompts/system/ultimate_reminders.md` |
 
-If upstream added an entirely new topic, create a new section file and add it to `DEFAULT_SECTION_ORDER` in `src/kimi_cli/prompts/system/__init__.py`.
+If upstream added an entirely new topic, create a new section file and add it to `DEFAULT_SECTION_ORDER` in `src/consilium/prompts/system/__init__.py`.

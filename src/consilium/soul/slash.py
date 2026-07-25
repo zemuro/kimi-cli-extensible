@@ -22,11 +22,11 @@ from consilium.utils.slashcmd import SlashCommandRegistry
 from consilium.wire.types import StatusUpdate, TextPart
 
 if TYPE_CHECKING:
-    from consilium.soul.kimisoul import KimiSoul
+    from consilium.soul.consiliumsoul import ConsiliumSoul
 
-type SoulSlashCmdFunc = Callable[[KimiSoul, str], None | Awaitable[None]]
+type SoulSlashCmdFunc = Callable[[ConsiliumSoul, str], None | Awaitable[None]]
 """
-A function that runs as a KimiSoul-level slash command.
+A function that runs as a ConsiliumSoul-level slash command.
 
 Raises:
     Any exception that can be raised by `Soul.run`.
@@ -36,16 +36,16 @@ registry = SlashCommandRegistry[SoulSlashCmdFunc]()
 
 
 @registry.command
-async def init(soul: KimiSoul, args: str):
+async def init(soul: ConsiliumSoul, args: str):
     """Analyze the codebase and generate an `AGENTS.md` file"""
-    from consilium.soul.kimisoul import KimiSoul
+    from consilium.soul.consiliumsoul import ConsiliumSoul
 
     with tempfile.TemporaryDirectory() as temp_dir:
         tmp_context = Context(file_backend=Path(temp_dir) / "context.jsonl")
-        tmp_soul = KimiSoul(soul.agent, context=tmp_context)
+        tmp_soul = ConsiliumSoul(soul.agent, context=tmp_context)
         await tmp_soul.run(prompts.INIT)
 
-    agents_md = await load_agents_md(soul.runtime.builtin_args.KIMI_WORK_DIR)
+    agents_md = await load_agents_md(soul.runtime.builtin_args.CONSILIUM_WORK_DIR)
     system_message = system(Template(prompts.INIT_COMPLETE).substitute(agents_md=agents_md or ""))
     await soul.context.append_message(Message(role="user", content=[system_message]))
     from consilium.telemetry import track
@@ -54,7 +54,7 @@ async def init(soul: KimiSoul, args: str):
 
 
 @registry.command
-async def compact(soul: KimiSoul, args: str):
+async def compact(soul: ConsiliumSoul, args: str):
     """Compact the context (optionally with a custom focus, e.g. /compact keep db discussions)"""
     if soul.context.n_checkpoints == 0:
         wire_send(TextPart(text="The context is empty."))
@@ -75,7 +75,7 @@ async def compact(soul: KimiSoul, args: str):
 
 
 @registry.command(aliases=["reset"])
-async def clear(soul: KimiSoul, args: str):
+async def clear(soul: ConsiliumSoul, args: str):
     """Clear the context"""
     logger.info("Running `/clear`")
     await soul.context.clear()
@@ -92,7 +92,7 @@ async def clear(soul: KimiSoul, args: str):
 
 
 @registry.command
-async def yolo(soul: KimiSoul, args: str):
+async def yolo(soul: ConsiliumSoul, args: str):
     """Toggle YOLO mode (auto-approve all actions)"""
     from consilium.telemetry import track
 
@@ -120,7 +120,7 @@ async def yolo(soul: KimiSoul, args: str):
 
 
 @registry.command
-async def afk(soul: KimiSoul, args: str):
+async def afk(soul: ConsiliumSoul, args: str):
     """Toggle afk mode (auto-dismiss AskUserQuestion, auto-approve tool calls)"""
     from consilium.telemetry import track
 
@@ -154,7 +154,7 @@ async def afk(soul: KimiSoul, args: str):
 
 
 @registry.command
-async def plan(soul: KimiSoul, args: str):
+async def plan(soul: ConsiliumSoul, args: str):
     """Toggle plan mode. Usage: /plan [on|off|view|clear]"""
     subcmd = args.strip().lower()
 
@@ -195,7 +195,7 @@ async def plan(soul: KimiSoul, args: str):
 
 
 @registry.command(name="add-dir")
-async def add_dir(soul: KimiSoul, args: str):
+async def add_dir(soul: ConsiliumSoul, args: str):
     """Add a directory to the workspace. Usage: /add-dir <path>. Run without args to list added dirs"""  # noqa: E501
 
 
@@ -227,7 +227,7 @@ async def add_dir(soul: KimiSoul, args: str):
         return
 
     # Check if it's within the work_dir (already accessible)
-    work_dir = soul.runtime.builtin_args.KIMI_WORK_DIR
+    work_dir = soul.runtime.builtin_args.CONSILIUM_WORK_DIR
     if is_within_directory(path, work_dir):
         wire_send(TextPart(text=f"Directory is already within the working directory: {path}"))
         return
@@ -267,7 +267,7 @@ async def add_dir(soul: KimiSoul, args: str):
 
 
 @registry.command
-async def export(soul: KimiSoul, args: str):
+async def export(soul: ConsiliumSoul, args: str):
     """Export current session context to a markdown file"""
     from consilium.utils.export import perform_export
 
@@ -295,7 +295,7 @@ async def export(soul: KimiSoul, args: str):
 
 
 @registry.command(name="import")
-async def import_context(soul: KimiSoul, args: str):
+async def import_context(soul: ConsiliumSoul, args: str):
     """Import context from a file or session ID"""
     from consilium.utils.export import perform_import
 
@@ -340,7 +340,7 @@ class SessionAborted(Exception):
 
 
 @registry.command
-async def commit(soul: KimiSoul, args: str) -> None:
+async def commit(soul: ConsiliumSoul, args: str) -> None:
     """Create an intermediate git commit with the current changes."""
     from consilium.do.registry import get_do_session
 
@@ -358,7 +358,7 @@ async def commit(soul: KimiSoul, args: str) -> None:
 
 
 @registry.command
-async def abort(soul: KimiSoul, args: str) -> None:
+async def abort(soul: ConsiliumSoul, args: str) -> None:
     """Abort the session and revert to the initial git state."""
     from consilium.do.registry import get_do_session, unregister_do_session
 
@@ -379,7 +379,7 @@ async def abort(soul: KimiSoul, args: str) -> None:
 
 
 @registry.command
-async def status(soul: KimiSoul, args: str) -> None:
+async def status(soul: ConsiliumSoul, args: str) -> None:
     """Show current git status and session versioning info."""
     from consilium.do.registry import get_do_session
 
@@ -401,7 +401,7 @@ async def status(soul: KimiSoul, args: str) -> None:
 
 
 @registry.command
-async def complete(soul: KimiSoul, args: str) -> None:
+async def complete(soul: ConsiliumSoul, args: str) -> None:
     """Mark the current phase as complete.
 
     Writes a completion report and updates the plan index.
@@ -469,7 +469,7 @@ async def complete(soul: KimiSoul, args: str) -> None:
 
 
 @registry.command
-async def inject(soul: KimiSoul, args: str) -> None:
+async def inject(soul: ConsiliumSoul, args: str) -> None:
     """Inject a message into the Do-mode context. Usage: /inject <text> or /inject {"role":"user","content":"..."}"""
     if not args.strip():
         wire_send(TextPart(text="Usage: /inject <text> or /inject {\"role\":\"user\",\"content\":\"...\"}"))

@@ -21,12 +21,12 @@ from consilium.ui.shell.console import console
 from consilium.utils.aiohttp import new_client_session
 from consilium.utils.logging import logger
 
-BASE_URL = "https://cdn.kimi.com/binaries/kimi-cli"
+BASE_URL = "https://cdn.consilium.com/binaries/consilium"
 LATEST_VERSION_URL = f"{BASE_URL}/latest"
 INSTALL_DIR = Path.home() / ".local" / "bin"
 
 # Upgrade command shown in toast notifications. Can be overridden by wrappers
-UPGRADE_COMMAND = "uv tool upgrade kimi-cli"
+UPGRADE_COMMAND = "uv tool upgrade consilium"
 
 
 class UpdateResult(Enum):
@@ -91,8 +91,8 @@ async def do_update(*, print: bool = True, check_only: bool = False) -> UpdateRe
 
 LATEST_VERSION_FILE = get_share_dir() / "latest_version.txt"
 SKIPPED_VERSION_FILE = get_share_dir() / "skipped_version.txt"
-CHANGELOG_URL_ZH = "https://moonshotai.github.io/kimi-cli/zh/release-notes/changelog.html"
-CHANGELOG_URL_EN = "https://moonshotai.github.io/kimi-cli/en/release-notes/changelog.html"
+CHANGELOG_URL_ZH = "https://moonshotai.github.io/consilium/zh/release-notes/changelog.html"
+CHANGELOG_URL_EN = "https://moonshotai.github.io/consilium/en/release-notes/changelog.html"
 
 
 def _read_key() -> str:
@@ -123,7 +123,7 @@ def check_update_gate() -> None:
     from consilium.constant import VERSION as current_version
     from consilium.utils.envvar import get_env_bool
 
-    if get_env_bool("KIMI_CLI_NO_AUTO_UPDATE"):
+    if get_env_bool("CONSILIUM_CLI_NO_AUTO_UPDATE"):
         return
     if not sys.stdin.isatty() or not sys.stdout.isatty():
         return
@@ -171,7 +171,7 @@ def _run_update_gate(current_version: str, latest_version: str) -> None:
     console.print(
         Panel(
             body,
-            title="[bold]kimi-cli update available[/bold]",
+            title="[bold]consilium update available[/bold]",
             border_style="yellow",
             expand=False,
             padding=(1, 2),
@@ -207,7 +207,7 @@ def _run_update_gate(current_version: str, latest_version: str) -> None:
             sys.exit(1)
         console.print()
         if result.returncode == 0:
-            console.print("[green]Upgrade complete! Run kimi-cli to start the new version.[/green]")
+            console.print("[green]Upgrade complete! Run consilium to start the new version.[/green]")
         else:
             console.print("[red]Upgrade failed. Please try running manually:[/red]")
             console.print(f"  {UPGRADE_COMMAND}")
@@ -273,7 +273,7 @@ async def _do_update(*, print: bool, check_only: bool) -> UpdateResult:
         filename = f"kimi-{latest_version}-{target}.tar.gz"
         download_url = f"{BASE_URL}/{latest_version}/{filename}"
 
-        with tempfile.TemporaryDirectory(prefix="kimi-cli-") as tmpdir:
+        with tempfile.TemporaryDirectory(prefix="consilium-") as tmpdir:
             tar_path = os.path.join(tmpdir, filename)
 
             logger.info("Downloading from {download_url}...", download_url=download_url)
@@ -333,7 +333,7 @@ async def _do_update(*, print: bool, check_only: bool) -> UpdateResult:
                 return UpdateResult.FAILED
 
     _print("[green]Updated successfully![/green]")
-    _print("[yellow]Restart Kimi Code CLI to use the new version.[/yellow]")
+    _print("[yellow]Restart Consilium CLI to use the new version.[/yellow]")
     return UpdateResult.UPDATED
 
 

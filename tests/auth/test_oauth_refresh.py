@@ -53,7 +53,7 @@ def _make_config() -> Config:
         api_key=SecretStr(""),
         oauth=OAuthRef(storage="file", key="oauth/kimi-code"),
     )
-    model = LLMModel(provider="managed:kimi-code", model="test-model", max_context_size=100_000)
+    model = LLMModel(provider="managed:kimi-code", model="test-model", max_context_size=1_000_000)
     return Config(
         default_model="managed:kimi-code/test-model",
         providers={"managed:kimi-code": provider},
@@ -393,7 +393,7 @@ async def test_unauthorized_must_not_delete_credentials_file(tmp_path, monkeypat
     the file between the check and the deletion, and wiping it would cause
     permanent auth loss even though a valid token is sitting on disk.
     """
-    monkeypatch.setenv("KIMI_SHARE_DIR", str(tmp_path))
+    monkeypatch.setenv("CONSILIUM_SHARE_DIR", str(tmp_path))
     _save_to_file("oauth/kimi-code", _make_token(refresh="R1", expires_in=100))
     cred = tmp_path / "credentials" / "kimi-code.json"
     assert cred.exists()
@@ -426,7 +426,7 @@ async def test_unauthorized_non_force_must_not_delete_credentials_file(tmp_path,
     still must not delete the credentials file on a single 401 — a concurrent
     manager may have just rotated the token.
     """
-    monkeypatch.setenv("KIMI_SHARE_DIR", str(tmp_path))
+    monkeypatch.setenv("CONSILIUM_SHARE_DIR", str(tmp_path))
     _save_to_file("oauth/kimi-code", _make_token(refresh="R1", expires_in=100))
     cred = tmp_path / "credentials" / "kimi-code.json"
     assert cred.exists()
@@ -457,7 +457,7 @@ async def test_rejected_refresh_token_cooldown_skips_background_retry(tmp_path, 
     """After a confirmed refresh 401, the same persisted refresh token should
     not be retried again immediately by the background-refresh path.
     """
-    monkeypatch.setenv("KIMI_SHARE_DIR", str(tmp_path))
+    monkeypatch.setenv("CONSILIUM_SHARE_DIR", str(tmp_path))
     _save_to_file("oauth/kimi-code", _make_token(refresh="R1", expires_in=100))
 
     manager = OAuthManager(_make_config())
@@ -484,7 +484,7 @@ async def test_rejected_tombstone_cleared_when_concurrent_instance_rotated(tmp_p
     after we marked the old one rejected, the tombstone must clear and the
     new token must be picked up without going to the network.
     """
-    monkeypatch.setenv("KIMI_SHARE_DIR", str(tmp_path))
+    monkeypatch.setenv("CONSILIUM_SHARE_DIR", str(tmp_path))
     _save_to_file("oauth/kimi-code", _make_token(refresh="R1", expires_in=100))
 
     manager = OAuthManager(_make_config())

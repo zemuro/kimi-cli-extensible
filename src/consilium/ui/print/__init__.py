@@ -27,7 +27,7 @@ from consilium.soul import (
     Soul,
     run_soul,
 )
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.ui.print.visualize import visualize
 from consilium.utils.logging import logger, open_original_stderr
 from consilium.utils.signals import install_sigint_handler
@@ -89,7 +89,7 @@ class Print:
                     logger.info("Running agent with command: {command}", command=command)
                     if self.output_format == "text" and not self.final_only:
                         print(command)
-                    runtime = self.soul.runtime if isinstance(self.soul, KimiSoul) else None
+                    runtime = self.soul.runtime if isinstance(self.soul, ConsiliumSoul) else None
                     await run_soul(
                         self.soul,
                         command,

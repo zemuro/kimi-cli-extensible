@@ -23,11 +23,11 @@ def test_augment_provider_with_env_vars_kimi(monkeypatch):
         capabilities=None,
     )
 
-    monkeypatch.setenv("KIMI_BASE_URL", "https://env.test/v1")
-    monkeypatch.setenv("KIMI_API_KEY", "env-key")
-    monkeypatch.setenv("KIMI_MODEL_NAME", "kimi-env-model")
-    monkeypatch.setenv("KIMI_MODEL_MAX_CONTEXT_SIZE", "8192")
-    monkeypatch.setenv("KIMI_MODEL_CAPABILITIES", "Image_In,THINKING,unknown")
+    monkeypatch.setenv("CONSILIUM_BASE_URL", "https://env.test/v1")
+    monkeypatch.setenv("CONSILIUM_API_KEY", "env-key")
+    monkeypatch.setenv("CONSILIUM_MODEL_NAME", "kimi-env-model")
+    monkeypatch.setenv("CONSILIUM_MODEL_MAX_CONTEXT_SIZE", "8192")
+    monkeypatch.setenv("CONSILIUM_MODEL_CAPABILITIES", "Image_In,THINKING,unknown")
 
     augment_provider_with_env_vars(provider, model)
 
@@ -61,9 +61,9 @@ def test_create_llm_kimi_model_parameters(monkeypatch):
         capabilities=None,
     )
 
-    monkeypatch.setenv("KIMI_MODEL_TEMPERATURE", "0.2")
-    monkeypatch.setenv("KIMI_MODEL_TOP_P", "0.8")
-    monkeypatch.setenv("KIMI_MODEL_MAX_TOKENS", "1234")
+    monkeypatch.setenv("CONSILIUM_MODEL_TEMPERATURE", "0.2")
+    monkeypatch.setenv("CONSILIUM_MODEL_TOP_P", "0.8")
+    monkeypatch.setenv("CONSILIUM_MODEL_MAX_TOKENS", "1234")
 
     llm = create_llm(provider, model)
     assert llm is not None
@@ -426,9 +426,9 @@ def _make_kimi_plain_model() -> tuple[LLMProvider, LLMModel]:
 
 
 def test_create_llm_kimi_thinking_keep_not_set_omits_field(monkeypatch):
-    """When KIMI_MODEL_THINKING_KEEP is unset, extra_body.thinking must not
+    """When CONSILIUM_MODEL_THINKING_KEEP is unset, extra_body.thinking must not
     contain a ``keep`` key, even for always-thinking models."""
-    monkeypatch.delenv("KIMI_MODEL_THINKING_KEEP", raising=False)
+    monkeypatch.delenv("CONSILIUM_MODEL_THINKING_KEEP", raising=False)
     provider, model = _make_kimi_thinking_model()
 
     llm = create_llm(provider, model)
@@ -443,8 +443,8 @@ def test_create_llm_kimi_thinking_keep_not_set_omits_field(monkeypatch):
 
 def test_create_llm_kimi_thinking_keep_empty_string_omits_field(monkeypatch):
     """An empty-string env value must be treated as unset (consistent with
-    other KIMI_MODEL_* envs that use walrus-truthy reads)."""
-    monkeypatch.setenv("KIMI_MODEL_THINKING_KEEP", "")
+    other CONSILIUM_MODEL_* envs that use walrus-truthy reads)."""
+    monkeypatch.setenv("CONSILIUM_MODEL_THINKING_KEEP", "")
     provider, model = _make_kimi_thinking_model()
 
     llm = create_llm(provider, model)
@@ -457,10 +457,10 @@ def test_create_llm_kimi_thinking_keep_empty_string_omits_field(monkeypatch):
 
 
 def test_create_llm_kimi_thinking_keep_all_injects_field(monkeypatch):
-    """With a thinking-capable model and KIMI_MODEL_THINKING_KEEP=all, the
+    """With a thinking-capable model and CONSILIUM_MODEL_THINKING_KEEP=all, the
     provider's extra_body.thinking must carry both ``type`` (set by
     with_thinking) and ``keep`` (set by the env)."""
-    monkeypatch.setenv("KIMI_MODEL_THINKING_KEEP", "all")
+    monkeypatch.setenv("CONSILIUM_MODEL_THINKING_KEEP", "all")
     provider, model = _make_kimi_thinking_model()
 
     llm = create_llm(provider, model)
@@ -475,7 +475,7 @@ def test_create_llm_kimi_thinking_keep_all_injects_field(monkeypatch):
 def test_create_llm_kimi_thinking_keep_arbitrary_value_passes_through(monkeypatch):
     """Non-'all' values must be forwarded unchanged — no casing normalization,
     no validation. The Moonshot API is the source of truth."""
-    monkeypatch.setenv("KIMI_MODEL_THINKING_KEEP", "xYz")
+    monkeypatch.setenv("CONSILIUM_MODEL_THINKING_KEEP", "xYz")
     provider, model = _make_kimi_thinking_model()
 
     llm = create_llm(provider, model)
@@ -490,7 +490,7 @@ def test_create_llm_kimi_thinking_keep_skipped_when_thinking_off(monkeypatch):
     """When thinking=False (with_thinking("off")), keep must NOT be injected,
     even if the env is set. Avoids sending a `thinking.keep` without an
     accompanying `thinking.type` that the API actually honors."""
-    monkeypatch.setenv("KIMI_MODEL_THINKING_KEEP", "all")
+    monkeypatch.setenv("CONSILIUM_MODEL_THINKING_KEEP", "all")
     provider, model = _make_kimi_plain_model()
     # capabilities is None and model name has no "thinking"/"reason" marker, so
     # derive_model_capabilities returns an empty set. thinking=False then drives
@@ -507,7 +507,7 @@ def test_create_llm_kimi_thinking_keep_skipped_when_thinking_off(monkeypatch):
 def test_create_llm_kimi_thinking_keep_skipped_when_no_thinking_branch(monkeypatch):
     """When the model has no thinking capability and thinking is None, neither
     with_thinking branch runs — keep must also NOT be injected."""
-    monkeypatch.setenv("KIMI_MODEL_THINKING_KEEP", "all")
+    monkeypatch.setenv("CONSILIUM_MODEL_THINKING_KEEP", "all")
     provider, model = _make_kimi_plain_model()
 
     llm = create_llm(provider, model, thinking=None)
@@ -527,7 +527,7 @@ def test_create_llm_kimi_thinking_keep_injected_on_explicit_thinking_true(monkey
     ``thinking=True``. This exercises a different branch of
     ``"always_thinking" in capabilities or (thinking is True and "thinking" in capabilities)``
     than the always-thinking-name-based tests above."""
-    monkeypatch.setenv("KIMI_MODEL_THINKING_KEEP", "all")
+    monkeypatch.setenv("CONSILIUM_MODEL_THINKING_KEEP", "all")
     provider, model = _make_kimi_plain_model()
     # Model name has no "thinking"/"reason" marker, so derive_model_capabilities
     # returns an empty set; manually granting only the "thinking" capability
@@ -588,10 +588,10 @@ def test_create_llm_kimi_generation_config():
 
 
 def test_create_llm_kimi_env_overrides_config(monkeypatch):
-    """KIMI_MODEL_* env vars override config-based generation values."""
-    monkeypatch.setenv("KIMI_MODEL_TEMPERATURE", "0.2")
-    monkeypatch.setenv("KIMI_MODEL_TOP_P", "0.8")
-    monkeypatch.setenv("KIMI_MODEL_MAX_TOKENS", "1234")
+    """CONSILIUM_MODEL_* env vars override config-based generation values."""
+    monkeypatch.setenv("CONSILIUM_MODEL_TEMPERATURE", "0.2")
+    monkeypatch.setenv("CONSILIUM_MODEL_TOP_P", "0.8")
+    monkeypatch.setenv("CONSILIUM_MODEL_MAX_TOKENS", "1234")
 
     provider = LLMProvider(
         type="kimi",

@@ -5,8 +5,8 @@ status: implemented
 dependencies:
   - phase-08
 files_involved:
-  - src/kimi_cli/config.py
-  - src/kimi_cli/think/subagents.py
+  - src/consilium/config.py
+  - src/consilium/think/subagents.py
 ---
 
 **Status: STAGED — ready for implementation.**
@@ -39,7 +39,7 @@ warn_tokens_ratio = 0.8           # Warn at 80% of token limit
 warn_tool_calls_ratio = 0.8       # Warn at 80% of tool call limit
 ```
 
-These settings are stored in the external config file (`~/.kimi/config.toml`) alongside all other options.
+These settings are stored in the external config file (`~/.consilium/config.toml`) alongside all other options.
 
 #### 9.2 Enforcement points
 
@@ -74,8 +74,8 @@ or increase limits in config: [subagents.budget]
 #### 9.4 Config management
 
 The user specifically asked to look at how existing options are managed. All config lives in:
-- `src/kimi_cli/config.py` — Pydantic models
-- `~/.kimi/config.toml` — User-facing TOML file
+- `src/consilium/config.py` — Pydantic models
+- `~/.consilium/config.toml` — User-facing TOML file
 - Loaded via `load_config()` at app startup
 
 Budget settings should follow the same pattern:
@@ -87,7 +87,7 @@ Budget settings should follow the same pattern:
 
 #### 9.1 Config additions
 
-In `src/kimi_cli/config.py`, add to `SubagentsConfig`:
+In `src/consilium/config.py`, add to `SubagentsConfig`:
 
 ```python
 class SubagentBudgetConfig(BaseModel):
@@ -105,7 +105,7 @@ class SubagentsConfig(BaseModel):
 
 #### 9.2 KimiSoul usage hook
 
-In `src/kimi_cli/soul/kimisoul.py`, add to `KimiSoul`:
+In `src/consilium/soul/kimisoul.py`, add to `KimiSoul`:
 
 ```python
 def register_usage_hook(self, callback: Callable[[TokenUsage], None]) -> None:
@@ -126,7 +126,7 @@ for hook in self._usage_hooks:
 
 #### 9.3 Budget tracker
 
-Create `src/kimi_cli/subagents/budget_tracker.py`:
+Create `src/consilium/subagents/budget_tracker.py`:
 
 ```python
 class BudgetStatus(str, Enum):
@@ -185,7 +185,7 @@ class SubagentBudgetTracker:
 
 #### 9.4 Wire event for foreground warnings
 
-In `src/kimi_cli/wire/types.py`, add:
+In `src/consilium/wire/types.py`, add:
 
 ```python
 class SubagentBudgetWarningEvent(BaseModel):
@@ -199,7 +199,7 @@ class SubagentBudgetWarningEvent(BaseModel):
 
 #### 9.5 Integration with foreground subagent runner
 
-In `src/kimi_cli/subagents/runner.py` (`ForegroundSubagentRunner.run()`):
+In `src/consilium/subagents/runner.py` (`ForegroundSubagentRunner.run()`):
 
 ```python
 async def run(self, req: ForegroundRunRequest) -> SubagentRunResult:
@@ -227,7 +227,7 @@ async def _run_with_budget(self, soul, tracker, req):
 
 #### 9.6 Integration with background agent runner
 
-In `src/kimi_cli/background/agent_runner.py` (`BackgroundAgentRunner._run_core()`):
+In `src/consilium/background/agent_runner.py` (`BackgroundAgentRunner._run_core()`):
 
 Apply the same pattern as 9.5:
 1. Create `SubagentBudgetTracker` before `prepare_soul()`

@@ -15,20 +15,20 @@ from consilium.soul.agent import Agent, Runtime
 from consilium.soul.context import Context
 from consilium.soul.dynamic_injections.afk_mode import AfkModeInjectionProvider
 from consilium.soul.dynamic_injections.plan_mode import PlanModeInjectionProvider
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 
 
-def _make_soul(runtime: Runtime, tmp_path: Path) -> KimiSoul:
+def _make_soul(runtime: Runtime, tmp_path: Path) -> ConsiliumSoul:
     agent = Agent(
         name="Test Agent",
         system_prompt="Test system prompt.",
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    return KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    return ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
 
 
-def _provider_types(soul: KimiSoul) -> set[type]:
+def _provider_types(soul: ConsiliumSoul) -> set[type]:
     # Access the private list to introspect provider composition.
     return {type(p) for p in soul._injection_providers}  # pyright: ignore[reportPrivateUsage]
 

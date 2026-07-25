@@ -14,7 +14,7 @@ from consilium.web.api import sessions as sessions_api
 from consilium.web.models import GenerateTitleRequest
 
 if TYPE_CHECKING:
-    from consilium.web.runner.process import KimiCLIRunner
+    from consilium.web.runner.process import ConsiliumCLIRunner
 
 
 @pytest.fixture
@@ -47,7 +47,7 @@ class _FakeOAuthManager:
 
 
 class _FakeRunner:
-    """Stand-in for ``KimiCLIRunner`` for tests that bypass FastAPI dependency injection."""
+    """Stand-in for ``ConsiliumCLIRunner`` for tests that bypass FastAPI dependency injection."""
 
     def get_session(self, _session_id: UUID) -> None:
         return None
@@ -106,7 +106,7 @@ async def test_generate_title_preserves_concurrent_manual_title(
             user_message="debug the flaky web session rename issue",
             assistant_response="I'll inspect the session state writes.",
         ),
-        runner=cast("KimiCLIRunner", _FakeRunner()),
+        runner=cast("ConsiliumCLIRunner", _FakeRunner()),
     )
 
     state = load_session_state(session.dir)

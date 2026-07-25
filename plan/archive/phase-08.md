@@ -5,8 +5,8 @@ status: implemented
 dependencies:
   - phase-07
 files_involved:
-  - src/kimi_cli/plan/models.py
-  - src/kimi_cli/think/slash_commands.py
+  - src/consilium/plan/models.py
+  - src/consilium/think/slash_commands.py
 ---
 
 **Status: STAGED — ready for implementation.**
@@ -113,7 +113,7 @@ def parse_plan_file(path: Path) -> Plan:
 
 ### Implementation
 
-#### 8.1 Update `src/kimi_cli/plan/parser.py`
+#### 8.1 Update `src/consilium/plan/parser.py`
 
 Add `_parse_plan_directory()`:
 1. Read `index.md` for metadata and phase list
@@ -121,7 +121,7 @@ Add `_parse_plan_directory()`:
 3. Parse YAML frontmatter into `Phase` objects
 4. Cache parsed phases to avoid re-reading
 
-#### 8.2 Update `src/kimi_cli/plan/models.py`
+#### 8.2 Update `src/consilium/plan/models.py`
 
 Add `PlanDirectory` model:
 ```python
@@ -144,7 +144,7 @@ When `--phase` is specified:
 
 This reduces token usage from ~3000 lines to ~200 lines for large plans.
 
-#### 8.4 Update `src/kimi_cli/plan/validator.py`
+#### 8.4 Update `src/consilium/plan/validator.py`
 
 Validate that:
 - Every phase listed in index has a corresponding `.md` file

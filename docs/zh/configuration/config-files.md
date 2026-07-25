@@ -1,10 +1,10 @@
 # 配置文件
 
-Kimi Code CLI 使用配置文件管理 API 供应商、模型、服务和运行参数，支持 TOML 和 JSON 两种格式。
+Consilium CLI 使用配置文件管理 API 供应商、模型、服务和运行参数，支持 TOML 和 JSON 两种格式。
 
 ## 配置文件位置
 
-默认配置文件位于 `~/.kimi/config.toml`。首次运行时，如果配置文件不存在，Kimi Code CLI 会自动创建一个默认的配置文件。
+默认配置文件位于 `~/.consilium/config.toml`。首次运行时，如果配置文件不存在，Consilium CLI 会自动创建一个默认的配置文件。
 
 你可以通过 `--config-file` 参数指定其他配置文件（TOML 或 JSON 格式均可）：
 
@@ -12,7 +12,7 @@ Kimi Code CLI 使用配置文件管理 API 供应商、模型、服务和运行�
 kimi --config-file /path/to/config.toml
 ```
 
-在程序化调用 Kimi Code CLI 时，也可以通过 `--config` 参数直接传入完整的配置内容：
+在程序化调用 Consilium CLI 时，也可以通过 `--config` 参数直接传入完整的配置内容：
 
 ```sh
 kimi --config '{"default_model": "kimi-for-coding", "providers": {...}, "models": {...}}'
@@ -33,7 +33,7 @@ kimi --config '{"default_model": "kimi-for-coding", "providers": {...}, "models"
 | `theme` | `string` | 终端配色主题，可选 `"dark"` 或 `"light"`（默认为 `"dark"`） |
 | `show_thinking_stream` | `boolean` | 是否在 Live 区域以 6 行滚动预览方式实时展示模型的原始思考文本，并在 thinking 块结束时把完整思考内容（Markdown）写入历史记录（默认为 `true`；设为 `false` 则仅显示紧凑的 `Thinking ...` 指示器和一行 trace 总结） |
 | `merge_all_available_skills` | `boolean` | 是否合并所有品牌目录中的 Skills（默认为 `true`）；详见 [Skills 配置](../customization/skills.md) |
-| `telemetry` | `boolean` | 是否启用匿名遥测以帮助改进 kimi-cli（默认为 `true`；设为 `false` 可关闭） |
+| `telemetry` | `boolean` | 是否启用匿名遥测以帮助改进 consilium（默认为 `true`；设为 `false` 可关闭） |
 | `providers` | `table` | API 供应商配置 |
 | `models` | `table` | 模型配置 |
 | `loop_control` | `table` | Agent 循环控制参数 |
@@ -55,12 +55,12 @@ show_thinking_stream = true
 merge_all_available_skills = true
 telemetry = true
 
-[providers.kimi-for-coding]
+[providers.consilium-for-coding]
 type = "kimi"
-base_url = "https://api.kimi.com/coding/v1"
+base_url = "https://api.consilium.com/coding/v1"
 api_key = "sk-xxx"
 
-[models.kimi-for-coding]
+[models.consilium-for-coding]
 provider = "kimi-for-coding"
 model = "kimi-for-coding"
 max_context_size = 262144
@@ -78,11 +78,11 @@ keep_alive_on_exit = false
 agent_task_timeout_s = 900
 
 [services.moonshot_search]
-base_url = "https://api.kimi.com/coding/v1/search"
+base_url = "https://api.consilium.com/coding/v1/search"
 api_key = "sk-xxx"
 
 [services.moonshot_fetch]
-base_url = "https://api.kimi.com/coding/v1/fetch"
+base_url = "https://api.consilium.com/coding/v1/fetch"
 api_key = "sk-xxx"
 
 [mcp.client]
@@ -130,7 +130,7 @@ custom_headers = { "X-Custom-Header" = "value" }
 示例：
 
 ```toml
-[models.kimi-k2-thinking-turbo]
+[models.consilium-k2-thinking-turbo]
 provider = "moonshot-cn"
 model = "kimi-k2-thinking-turbo"
 max_context_size = 262144
@@ -173,7 +173,7 @@ capabilities = ["thinking"]
 
 ### `services`
 
-`services` 配置 Kimi Code CLI 使用的外部服务。
+`services` 配置 Consilium CLI 使用的外部服务。
 
 #### `moonshot_search`
 
@@ -196,7 +196,7 @@ capabilities = ["thinking"]
 | `custom_headers` | `table` | 否 | 请求时附加的自定义 HTTP 头 |
 
 ::: tip 提示
-使用 `/login` 命令配置 Kimi Code 平台时，搜索和抓取服务会自动配置。
+使用 `/login` 命令配置 Consilium 平台时，搜索和抓取服务会自动配置。
 :::
 
 ### `mcp`
@@ -217,7 +217,7 @@ capabilities = ["thinking"]
 [[hooks]]
 event = "PreToolUse"
 matcher = "Shell"
-command = ".kimi/hooks/safety-check.sh"
+command = ".consilium/hooks/safety-check.sh"
 timeout = 10
 
 [[hooks]]
@@ -235,6 +235,6 @@ command = "prettier --write"
 
 ## JSON 配置迁移
 
-如果 `~/.kimi/config.toml` 不存在但 `~/.kimi/config.json` 存在，Kimi Code CLI 会自动将 JSON 配置迁移到 TOML 格式，并将原文件备份为 `config.json.bak`。
+如果 `~/.consilium/config.toml` 不存在但 `~/.consilium/config.json` 存在，Consilium CLI 会自动将 JSON 配置迁移到 TOML 格式，并将原文件备份为 `config.json.bak`。
 
 `--config-file` 指定的配置文件根据扩展名自动选择解析方式。`--config` 传入的配置内容会先尝试按 JSON 解析，失败后再尝试 TOML。

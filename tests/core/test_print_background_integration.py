@@ -22,7 +22,7 @@ from consilium.background.models import TaskRuntime, TaskSpec
 from consilium.cli import ExitCode
 from consilium.config import BackgroundConfig, NotificationConfig
 from consilium.notifications.manager import NotificationManager
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.ui.print import Print
 from consilium.wire.file import WireFile
 
@@ -105,7 +105,7 @@ async def test_real_reconcile_publishes_notification_and_triggers_reentry(
     assert not notifications.has_pending_for_sink("llm")
 
     # Build a mock soul whose .runtime exposes the real manager/notifications
-    soul = AsyncMock(spec=KimiSoul)
+    soul = AsyncMock(spec=ConsiliumSoul)
     soul.runtime = MagicMock()
     soul.runtime.role = "root"
     soul.runtime.config.background.keep_alive_on_exit = False
@@ -170,7 +170,7 @@ async def test_real_reconcile_no_reentry_when_task_completes_without_notificatio
 
     _create_running_task(manager, "b-int-00002")
 
-    soul = AsyncMock(spec=KimiSoul)
+    soul = AsyncMock(spec=ConsiliumSoul)
     soul.runtime = MagicMock()
     soul.runtime.role = "root"
     soul.runtime.config.background.keep_alive_on_exit = False
@@ -222,7 +222,7 @@ async def test_real_reconcile_multiple_tasks(
     _create_running_task(manager, "b-int-00003")
     _create_running_task(manager, "b-int-00004")
 
-    soul = AsyncMock(spec=KimiSoul)
+    soul = AsyncMock(spec=ConsiliumSoul)
     soul.runtime = MagicMock()
     soul.runtime.role = "root"
     soul.runtime.config.background.keep_alive_on_exit = False
@@ -304,7 +304,7 @@ async def test_race_window_worker_finishes_between_reconcile_and_active_check(
 
     manager.has_active_tasks = racy_has_active  # type: ignore[method-assign]
 
-    soul = AsyncMock(spec=KimiSoul)
+    soul = AsyncMock(spec=ConsiliumSoul)
     soul.runtime = MagicMock()
     soul.runtime.role = "root"
     soul.runtime.config.background.keep_alive_on_exit = False

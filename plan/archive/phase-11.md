@@ -5,18 +5,18 @@ status: implemented
 dependencies:
   - phase-10
 files_involved:
-  - src/kimi_cli/plan/adr.py
-  - src/kimi_cli/plan/finding.py
-  - src/kimi_cli/plan/models.py
-  - src/kimi_cli/plan/dispatch.py
-  - src/kimi_cli/think/plan_synthesis.py
-  - src/kimi_cli/think/plan_commands.py
-  - src/kimi_cli/think/push.py
-  - src/kimi_cli/think/slash.py
-  - src/kimi_cli/soul/slash.py
-  - src/kimi_cli/do/journal.py
-  - src/kimi_cli/app.py
-  - src/kimi_cli/cli/__init__.py
+  - src/consilium/plan/adr.py
+  - src/consilium/plan/finding.py
+  - src/consilium/plan/models.py
+  - src/consilium/plan/dispatch.py
+  - src/consilium/think/plan_synthesis.py
+  - src/consilium/think/plan_commands.py
+  - src/consilium/think/push.py
+  - src/consilium/think/slash.py
+  - src/consilium/soul/slash.py
+  - src/consilium/do/journal.py
+  - src/consilium/app.py
+  - src/consilium/cli/__init__.py
 ---
 
 **Status: IMPLEMENTED — 1035 tests passing (41 new + 994 previous).**
@@ -30,7 +30,7 @@ files_involved:
 
 ### Problem
 
-**Upstream plan mode** (`--plan` flag) is tactical: "What do I do in this session?" It writes a single `~/.kimi/plans/{slug}.md` and discards it after execution.
+**Upstream plan mode** (`--plan` flag) is tactical: "What do I do in this session?" It writes a single `~/.consilium/plans/{slug}.md` and discards it after execution.
 
 **Think mode needs strategic planning:** "What's the architecture and phased roadmap for this project?" The plan lives in the project repo (`plan/`), is edited across sessions, and guides Do mode implementation.
 
@@ -50,7 +50,7 @@ files_involved:
 |---|---|
 | `/push-to-do` → writes conversation outbox JSON | `/push-to-do` → writes `dispatch.json` pointing to plan + phase |
 | Do loads conversation messages as context | Do loads plan document as context |
-| Think outbox (`~/.kimi/think_outbox/`) | Think outbox **deprecated** — removed in Phase 12 |
+| Think outbox (`~/.consilium/think_outbox/`) | Think outbox **deprecated** — removed in Phase 12 |
 | `--seed-from-think {session_id}` | `--seed-from-think` **deprecated** — use `--plan-file` + `--phase` |
 
 **New handoff flow:**
@@ -58,7 +58,7 @@ files_involved:
 Think mode:
   /plan init → creates plan/index.md + phase files
   ... (research, refine)
-  /push-to-do → writes ~/.kimi/dispatch.json
+  /push-to-do → writes ~/.consilium/dispatch.json
                   { plan_file: "plan/index.md",
                     target_phase: "phase-02",
                     action: "start_implement" }
@@ -275,7 +275,7 @@ If parsing fails or validation finds errors, show the user the raw LLM output an
 **Current behavior (to be deprecated):**
 ```python
 # think/push.py
-export_to_outbox(session) → ~/.kimi/think_outbox/{session_id}.json
+export_to_outbox(session) → ~/.consilium/think_outbox/{session_id}.json
 ```
 
 **New behavior:**
@@ -341,7 +341,7 @@ This keeps the plan index as the single source of truth for project status.
 
 #### 11.1 Think command module
 
-Create `src/kimi_cli/think/plan_commands.py`:
+Create `src/consilium/think/plan_commands.py`:
 - `slash_plan_init()` — plan synthesis
 - `slash_plan_status()` — parse and display plan status
 - `slash_plan_add_phase()` — add phase
@@ -351,14 +351,14 @@ Create `src/kimi_cli/think/plan_commands.py`:
 
 #### 11.2 Plan synthesis parser
 
-Create `src/kimi_cli/think/plan_synthesis.py`:
+Create `src/consilium/think/plan_synthesis.py`:
 - `synthesize_plan_from_conversation(messages) -> str` — formats LLM prompt
 - `parse_file_delimiters(text) -> dict[str, str]` — parses `=== FILE: ===` blocks
 - `write_plan_files(files: dict, work_dir: Path)` — writes to disk
 
 #### 11.3 ADR and finding templates
 
-Create `src/kimi_cli/plan/adr.py` and `src/kimi_cli/plan/finding.py`:
+Create `src/consilium/plan/adr.py` and `src/consilium/plan/finding.py`:
 - `render_adr()` / `render_finding()` — Markdown templates
 - `parse_adr()` / `parse_finding()` — for validation and indexing
 
@@ -382,7 +382,7 @@ Replace outbox-based export with plan-dispatch:
 
 **Blocker 1 resolution:** Do mode needs an explicit "finish implementing" signal. Users exit via `/exit` or Ctrl+C; there is no implicit completion detection.
 
-**`src/kimi_cli/soul/slash.py` (Do-mode slash commands):**
+**`src/consilium/soul/slash.py` (Do-mode slash commands):**
 ```python
 @registry.command
 async def complete(soul: KimiSoul, args: str):
@@ -391,7 +391,7 @@ async def complete(soul: KimiSoul, args: str):
     Writes a completion report and updates the plan index.
     Usage: /complete [notes]
     """
-    from kimi_cli.do.session import DoSession
+    from consilium.do.session import DoSession
     
     # DC-1: Mode guard — /complete is Do-mode only
     # Check if this soul has an associated DoSession
@@ -433,7 +433,7 @@ async def complete(soul: KimiSoul, args: str):
 
 def _find_do_session_for_soul(soul: KimiSoul) -> DoSession | None:
     """CI-1: Iterate the DoSession registry instead of using id(soul)."""
-    from kimi_cli.do.registry import _DO_SESSIONS
+    from consilium.do.registry import _DO_SESSIONS
     for do_session in _DO_SESSIONS.values():
         if do_session.soul is soul:
             return do_session
@@ -447,7 +447,7 @@ def _write_completion_report(
     notes: str,
 ) -> Path:
     """CI-3: Use unified timestamps (Phase 10), not datetime.now()."""
-    from kimi_cli.utils.timestamp import format_iso
+    from consilium.utils.timestamp import format_iso
     
     reports_dir = work_dir / "plan" / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
@@ -497,8 +497,8 @@ def _update_plan_index_status(
     if not index_file.exists():
         return
     
-    from kimi_cli.plan.parser import parse_plan_directory_from_path
-    from kimi_cli.plan.models import PlanDirectory
+    from consilium.plan.parser import parse_plan_directory_from_path
+    from consilium.plan.models import PlanDirectory
     
     plan_dir = parse_plan_directory_from_path(index_file)
     phase = plan_dir.get_phase(phase_id)
@@ -516,7 +516,7 @@ def _render_plan_index(plan_dir: PlanDirectory) -> str:
     """Render PlanDirectory back to index.md Markdown."""
     lines = ["---"]
     lines.append(f"plan_id: {plan_dir.metadata.plan_id}")
-    from kimi_cli.utils.timestamp import format_date
+    from consilium.utils.timestamp import format_date
     lines.append(f"last_updated: {format_date(time.time())}")
     lines.append("---")
     lines.append("")
@@ -544,7 +544,7 @@ def _render_plan_index(plan_dir: PlanDirectory) -> str:
 
 **Blocker 2 resolution:** `Dispatch` needs a `plan_file` field. Do mode cannot resolve a plan from `plan_id` alone without scanning the filesystem.
 
-**`src/kimi_cli/plan/models.py`:**
+**`src/consilium/plan/models.py`:**
 ```python
 class Dispatch(BaseModel):
     dispatch_id: str
@@ -558,7 +558,7 @@ class Dispatch(BaseModel):
     afk_mode: bool = False
 ```
 
-**`src/kimi_cli/plan/dispatch.py`:**
+**`src/consilium/plan/dispatch.py`:**
 ```python
 def write_dispatch(
     plan_id: str,
@@ -846,7 +846,7 @@ Guidelines:
 | Phase 11 | `--seed-from-think` works with deprecation warning |
 | Phase 12 | `--seed-from-think` removed entirely |
 
-**`src/kimi_cli/app.py`:**
+**`src/consilium/app.py`:**
 ```python
 if seed_from_think:
     logger.warning(
@@ -857,7 +857,7 @@ if seed_from_think:
     ...
 ```
 
-**`src/kimi_cli/think/push.py` — updated `/push-to-do` output:**
+**`src/consilium/think/push.py` — updated `/push-to-do` output:**
 ```python
 def slash_push_to_do(history, session, args):
     ...
@@ -869,13 +869,13 @@ def slash_push_to_do(history, session, args):
     )
 ```
 
-**`src/kimi_cli/cli/__init__.py`:** Add `deprecated=True` to `--seed-from-think` Typer option (if supported), or document in `--help` text.
+**`src/consilium/cli/__init__.py`:** Add `deprecated=True` to `--seed-from-think` Typer option (if supported), or document in `--help` text.
 
 #### 11.11 Overwrite behavior for `/plan init`
 
 **Blocker 5 resolution:** Slash commands cannot prompt for confirmation. Think REPL commands return `str`, not interactive dialogs.
 
-**`src/kimi_cli/think/plan_commands.py`:**
+**`src/consilium/think/plan_commands.py`:**
 ```python
 def _backup_plan_directory(plan_dir: Path) -> Path:
     """CI-4, CI-6: Copy (not move) the entire plan/ directory for backup.

@@ -23,11 +23,11 @@ Only write entries that are worth mentioning to users.
 - Shell: Restore markdown link highlighting (bright blue underlined text and cyan underlined URLs) and add underline separators to h2-h6 headings; adjust table rendering to use square box borders with visible edges
 - Core: Include completion timestamp and elapsed duration in background task terminal notifications, and add `finished_at` and `duration_s` to the notification payload for easier tracking
 - MCP: Stop FastMCP OAuth startup from printing Authlib deprecation warnings by upgrading the MCP client stack to FastMCP 3.2.4
-- MCP: Store OAuth MCP tokens in `~/.kimi/mcp-oauth/` using FastMCP 3's persistent storage API; users with existing OAuth MCP authorizations may need to run `kimi mcp auth <name>` once after upgrading
+- MCP: Store OAuth MCP tokens in `~/.consilium/mcp-oauth/` using FastMCP 3's persistent storage API; users with existing OAuth MCP authorizations may need to run `kimi mcp auth <name>` once after upgrading
 
 ## 1.42.0 (2026-05-11)
 
-- Shell: Switch the Windows shell backend from PowerShell to Git Bash, so the Shell tool now runs commands through `bash.exe` (POSIX semantics) instead of `powershell.exe`. Windows users get the same Unix-style command syntax (`&&`, `||`, `|`, `/dev/null`, `grep`, `sed`, etc.) as Linux/macOS. **Requires Git for Windows installed**: kimi-cli locates `bash.exe` via the `KIMI_CLI_GIT_BASH_PATH` env override → `where.exe git` → standard install paths (`C:\Program Files\Git\bin\bash.exe`); if none resolve, kimi-cli prints an install hint and exits at startup
+- Shell: Switch the Windows shell backend from PowerShell to Git Bash, so the Shell tool now runs commands through `bash.exe` (POSIX semantics) instead of `powershell.exe`. Windows users get the same Unix-style command syntax (`&&`, `||`, `|`, `/dev/null`, `grep`, `sed`, etc.) as Linux/macOS. **Requires Git for Windows installed**: consilium locates `bash.exe` via the `CONSILIUM_CLI_GIT_BASH_PATH` env override → `where.exe git` → standard install paths (`C:\Program Files\Git\bin\bash.exe`); if none resolve, consilium prints an install hint and exits at startup
 - Shell: Defend against hallucinated CMD-style `2>nul` redirects on Windows by rewriting them to `2>/dev/null` before reaching git-bash — without this defense git-bash would create a file literally named `nul` (a Windows reserved device name) that breaks `git add .` and `git clone`; on Linux/macOS, `>nul` is a legitimate redirect to a file named `nul` and is left untouched
 - File: Accept POSIX-form paths on Windows in `ReadFile`, `WriteFile`, `StrReplaceFile`, `Glob`, and `Grep` — these tools now recognize `/c/Users/foo` (Git Bash style), `/cygdrive/c/Users/foo` (Cygwin style), and `\\server\share` (UNC) in addition to native Windows paths, automatically converting to native form for filesystem operations
 - Shell: Clear partial streamed output when an LLM step is retried — previously, if a step failed mid-stream (e.g. rate limit or server error), the incomplete text and unfinished tool-call blocks from the aborted attempt would remain on screen and be mixed with the new attempt's output. The shell UI now discards the partial state and prints a retry banner showing the reason, attempt count, and wait time; print mode also discards buffered assistant messages on retry
@@ -59,23 +59,23 @@ Only write entries that are worth mentioning to users.
 
 ## 1.39.0 (2026-04-24)
 
-- Skill: Fix project-scope skills being ignored and user-scope skills silently winning name conflicts — the system prompt now groups discovered skills under `### Project` / `### User` / `### Extra` / `### Built-in` headings so the model can tell where each skill came from, and when the same name exists in multiple scopes the more specific scope wins (Project > User > Extra > Built-in) so a project's own `.kimi/skills/foo` or `.claude/skills/foo` correctly overrides a user-level or bundled `foo` instead of the other way around
+- Skill: Fix project-scope skills being ignored and user-scope skills silently winning name conflicts — the system prompt now groups discovered skills under `### Project` / `### User` / `### Extra` / `### Built-in` headings so the model can tell where each skill came from, and when the same name exists in multiple scopes the more specific scope wins (Project > User > Extra > Built-in) so a project's own `.consilium/skills/foo` or `.claude/skills/foo` correctly overrides a user-level or bundled `foo` instead of the other way around
 - Skill: Accept single-file `<name>.md` skills alongside the canonical `<name>/SKILL.md` subdirectory layout — useful when migrating a flat markdown collection into a skills directory; `name` defaults to the filename stem (frontmatter `name:` still wins if set), description follows the same three-step chain as subdirectory skills (frontmatter `description:` → first non-empty body line, capped at 240 characters → `"No description provided."` placeholder), and if a flat and a subdirectory skill share a name in the same directory the subdirectory wins with a warning
 - Skill: Add `extra_skill_dirs` config field for pulling in custom skill directories on top of the built-in / user / project auto-discovery — each entry may be an absolute path, a `~`-prefixed path (expanded against `$HOME`), or a path relative to the project root (the nearest `.git` ancestor of the work directory, not the current working directory); non-existent entries are silently skipped and symlink/trailing-slash duplicates canonicalize to a single root so a path listed twice or aliased to an already-discovered directory does not render twice in the system prompt
 - Skill: Harden discovery against `OSError` from `is_dir` / `iterdir` (for example when an `extra_skill_dirs` entry points at a directory with restricted permissions) — affected entries are logged and skipped instead of aborting the whole skill-discovery pass
 - Core: Fix DeepSeek V4 (and other OpenAI-compatible thinking-mode backends) returning 400 `The reasoning_content in the thinking mode must be passed back to the API` when a tool call follows a reasoning turn — `openai_legacy` providers now default `reasoning_key` to `"reasoning_content"` so the response's reasoning is stored in history and round-tripped automatically on subsequent turns. An optional `reasoning_key` field is also added to `LLMProvider` to override the field name (e.g. `"reasoning"` for non-standard gateways) or disable round-tripping entirely by setting it to `""`
 - Core: Add `skip_yolo_prompt_injection` config option to suppress the system reminder normally injected when yolo mode is active — useful when building custom applications on top of `KimiSoul` that do not need the non-interactive mode hint
-- Kimi: Add `KIMI_MODEL_THINKING_KEEP` environment variable that forwards its value verbatim to the Moonshot API as `thinking.keep`, enabling Preserved Thinking (e.g. `export KIMI_MODEL_THINKING_KEEP=all` to retain historical `reasoning_content` across turns); effective only for Moonshot models supporting Preserved Thinking (e.g. `kimi-k2.6` / `kimi-k2-thinking`), unset or empty string preserves the previous behavior and omits the field, and the override only applies when the current model is actually in thinking mode so the API never receives a `thinking.keep` without the companion `thinking.type`. Note that `keep=all` increases input tokens and API cost because history reasoning is resent
+- Kimi: Add `CONSILIUM_MODEL_THINKING_KEEP` environment variable that forwards its value verbatim to the Moonshot API as `thinking.keep`, enabling Preserved Thinking (e.g. `export CONSILIUM_MODEL_THINKING_KEEP=all` to retain historical `reasoning_content` across turns); effective only for Moonshot models supporting Preserved Thinking (e.g. `kimi-k2.6` / `kimi-k2-thinking`), unset or empty string preserves the previous behavior and omits the field, and the override only applies when the current model is actually in thinking mode so the API never receives a `thinking.keep` without the companion `thinking.type`. Note that `keep=all` increases input tokens and API cost because history reasoning is resent
 - Kosong: Fix `Kimi.with_extra_body` silently dropping previously set `thinking.type` when a later call added another `thinking.*` field — the `thinking` sub-dict is now merged field-by-field instead of shallow-replaced, so composing `with_thinking(...)` with `with_extra_body({"thinking": {...}})` preserves both contributions
 - Kosong: Fix Kimi provider sending empty `content` alongside `tool_calls`, which caused 400 "text content is empty" errors from the Moonshot API. When an assistant message has tool calls and its visible content is effectively empty (no text or only whitespace/think parts), the `content` field is now omitted entirely
 - Shell: Fix approval request feedback text cursor rendering — the block cursor now correctly renders at the actual cursor position instead of always being pinned to the end of the line; when the cursor is in the middle of the text, the character under the cursor is drawn with reverse video (mimicking a terminal's native block cursor)
 - Kosong: Fix Moonshot 400 `At path 'properties.X': type is not defined` when an MCP server exposes tools whose parameter schemas have enum-only or otherwise type-less properties (seen with the JetBrains Rider MCP's `truncateMode`) — the Kimi provider now patches each tool's schema in-flight to fill in a JSON Schema `type` (inferred from `enum`/`const` values when possible, else defaulted to `"string"`), so the whole session no longer fails every request with a schema validation error; OpenAI and Anthropic paths are unaffected
-- Skill: Project-scope skill discovery now walks up to the nearest `.git` ancestor before looking for `.kimi/skills` / `.claude/skills` / `.codex/skills` / `.agents/skills`, so skills defined at the repository root are picked up even when kimi-cli is launched from a subdirectory (for example inside a monorepo package). Falls back to the work directory itself when no `.git` marker is found, so we never walk up into an unrelated parent tree.
-- Skill: Change the default of `merge_all_available_skills` from `false` to `true`. kimi-cli now merges all existing user- and project-level brand skill directories (`.kimi/skills`, `.claude/skills`, `.codex/skills`) by default instead of only using the first one found, so users who keep skills in multiple brand directories — for example both `~/.kimi/skills` and `~/.claude/skills` — see every skill out of the box. **Behavior change**: users who previously relied on the first-match default can restore it by setting `merge_all_available_skills = false` in their config.
+- Skill: Project-scope skill discovery now walks up to the nearest `.git` ancestor before looking for `.consilium/skills` / `.claude/skills` / `.codex/skills` / `.agents/skills`, so skills defined at the repository root are picked up even when consilium is launched from a subdirectory (for example inside a monorepo package). Falls back to the work directory itself when no `.git` marker is found, so we never walk up into an unrelated parent tree.
+- Skill: Change the default of `merge_all_available_skills` from `false` to `true`. consilium now merges all existing user- and project-level brand skill directories (`.consilium/skills`, `.claude/skills`, `.codex/skills`) by default instead of only using the first one found, so users who keep skills in multiple brand directories — for example both `~/.consilium/skills` and `~/.claude/skills` — see every skill out of the box. **Behavior change**: users who previously relied on the first-match default can restore it by setting `merge_all_available_skills = false` in their config.
 
 ## 1.38.0 (2026-04-22)
 - Shell: Fix `Rejected by user` misleading message when an approval modal times out — after the 300s safety timeout, the tool call now rejects with `Rejected: approval timed out`, so users returning to their session after stepping away can tell the rejection was a timeout rather than a manual rejection. Pass `--yolo`/`-y` to auto-approve tool calls if you regularly leave sessions unattended
-- Auth: Fix OAuth users being forced to `/login` again after an unrelated refresh-token rotation race — when a concurrently-running kimi-cli instance (terminal, VS Code extension, or `kimi -p` one-shot) legitimately rotated the refresh token, the current instance's now-stale refresh request would come back with a 401, and a TOCTOU window between the "did another instance rotate?" disk check and the `delete_tokens` call could wipe the credentials file even though a valid rotated token was about to be written to it; the in-memory cache is still cleared so truly revoked tokens surface on the next request, but the file is preserved so a concurrent instance's freshly-rotated token can be recovered, and an eventual `/login` still overwrites it atomically
+- Auth: Fix OAuth users being forced to `/login` again after an unrelated refresh-token rotation race — when a concurrently-running consilium instance (terminal, VS Code extension, or `kimi -p` one-shot) legitimately rotated the refresh token, the current instance's now-stale refresh request would come back with a 401, and a TOCTOU window between the "did another instance rotate?" disk check and the `delete_tokens` call could wipe the credentials file even though a valid rotated token was about to be written to it; the in-memory cache is still cleared so truly revoked tokens surface on the next request, but the file is preserved so a concurrent instance's freshly-rotated token can be recovered, and an eventual `/login` still overwrites it atomically
 - Kosong: Fix parallel tool results being split into multiple user messages in Anthropic provider — consecutive tool-result-only user messages are now merged into a single message, complying with the Anthropic Messages API spec that all `tool_use` blocks in an assistant turn must be answered within one user message; this fixes 400 errors on strict Anthropic-compatible backends (e.g. DeepSeek `/anthropic` endpoint) and prevents the official backend from silently teaching the model to avoid parallel tool calls
 
 ## 1.37.0 (2026-04-20)
@@ -119,7 +119,7 @@ Only write entries that are worth mentioning to users.
 ## 1.31.0 (2026-04-10)
 
 - Core: Cap `list_directory` output as a depth-limited tree to prevent token-limit blowup in large directories — replaces the unbounded flat listing with a 2-level tree (root: 30 entries, child: 10 per subdirectory), dirs-first alphabetical sorting, and `"... and N more"` truncation hints so the model knows to explore further (fixes #1809)
-- Shell: Add blocking update gate on interactive shell startup — when a newer version is detected (from the existing background check cache), a blocking prompt appears before the shell loads, offering `[Enter]` to upgrade immediately, `[q]` to continue and be reminded next time, or `[s]` to skip reminders for that version; respects the `KIMI_CLI_NO_AUTO_UPDATE` environment variable; replaces the previous repeating toast notification for available updates
+- Shell: Add blocking update gate on interactive shell startup — when a newer version is detected (from the existing background check cache), a blocking prompt appears before the shell loads, offering `[Enter]` to upgrade immediately, `[q]` to continue and be reminded next time, or `[s]` to skip reminders for that version; respects the `CONSILIUM_CLI_NO_AUTO_UPDATE` environment variable; replaces the previous repeating toast notification for available updates
 - Auth: Harden OAuth token refresh to prevent unnecessary re-login — 401 errors now trigger automatic token refresh and retry instead of forcing `/login`; multiple simultaneous CLI instances coordinate refresh via a cross-process file lock to avoid race conditions; token persistence uses atomic writes with `fsync` to prevent corruption; adds dynamic refresh threshold, 5xx retry during token refresh, and proper token revocation cleanup
 - Core: Fix agent loop silently stopping when model response contains only thinking content — detect think-only responses (reasoning content with no text or tool calls) as an incomplete response error and retry automatically
 - Core: Fix crash on streaming mid-flight network disconnection — when the OpenAI SDK raises a base `APIError` (instead of `APIConnectionError`) during long-running streams, the error is now correctly classified as retryable, enabling automatic retry and connection recovery instead of an unrecoverable crash
@@ -135,7 +135,7 @@ Only write entries that are worth mentioning to users.
 - Core: Improve error diagnostics — enrich internal logging coverage, include relevant log files and system manifest in `kimi export` archives, and surface actionable error messages for common failures (auth, network, timeout, quota)
 - Shell: Gracefully exit with crash report when working directory becomes inaccessible during session — detects CWD loss (external drive unplugged, directory deleted, or filesystem unmounted) and prints a session recovery panel with session ID and work directory before exiting cleanly
 - Shell: Use `git ls-files` for `@` file mention discovery — file completer now queries `git ls-files --recurse-submodules` with a 5-second timeout as the primary discovery mechanism, falling back to `os.walk` for non-git repositories; this fixes large repositories (e.g., apache/superset with 65k+ files) where the 1000-file limit caused late-alphabetical directories to be unreachable (fixes #1375)
-- Core: Add shared `file_filter` module — unifies file mention logic between shell and web UIs via `src/kimi_cli/utils/file_filter.py`, providing consistent path filtering, ignored directory exclusion, and git-aware file discovery
+- Core: Add shared `file_filter` module — unifies file mention logic between shell and web UIs via `src/consilium/utils/file_filter.py`, providing consistent path filtering, ignored directory exclusion, and git-aware file discovery
 - Shell: Prevent path traversal in file mention scope parameter — the `scope` parameter in file completer requests is now validated to prevent directory traversal attacks
 - Web: Restore unfiltered directory listing in file browser API — file browser endpoint no longer applies git-aware filtering, ensuring all files are visible in the web UI file picker
 - Todo: Refactor SetTodoList to persist state and prevent tool call storms — todos are now persisted to session state (root agent) and independent state files (sub-agents); adds query mode (omit `todos` to read current state) and clear mode (pass `[]`); includes anti-storm guidance in tool description to prevent repeated calls without progress (fixes #1710)
@@ -153,18 +153,18 @@ Only write entries that are worth mentioning to users.
 - Core: Fix parallel foreground subagent approval requests hanging the session — in interactive shell mode, `_set_active_approval_sink` no longer flushes pending approval requests to the live view sink (which cannot render approval modals); requests stay in the pending queue for the prompt modal path; also adds a 300-second timeout to `wait_for_response` so that any unresolved approval request eventually raises `ApprovalCancelledError` instead of hanging forever
 - CLI: Add `--session`/`--resume` (`-S`/`-r`) flag to resume sessions — without an argument opens an interactive session picker (shell UI only); with a session ID resumes that specific session; replaces the reverted `--pick-session`/`--list-sessions` design with a unified optional-value flag
 - CLI: Add CJK-safe `shorten()` utility — replaces all `textwrap.shorten` calls so that CJK text without spaces is truncated gracefully instead of collapsing to just the placeholder
-- Core: Fix skills in brand directories (e.g. `~/.kimi/skills/`) silently disappearing when a generic directory (`~/.config/agents/skills/`) exists but is empty — skill directory discovery now searches brand and generic directory groups independently and merges both results, instead of stopping at the first existing directory across all candidates
-- Core: Add `merge_all_available_skills` config option — when enabled, skills from all existing brand directories (`~/.kimi/skills/`, `~/.claude/skills/`, `~/.codex/skills/`) are loaded and merged instead of using only the first one found; same-name skills follow priority order kimi > claude > codex; disabled by default
-- CLI: Add `--plan` flag and `default_plan_mode` config option — start new sessions in plan mode via `kimi --plan` or by setting `default_plan_mode = true` in `~/.kimi/config.toml`; resumed sessions preserve their existing plan mode state
+- Core: Fix skills in brand directories (e.g. `~/.consilium/skills/`) silently disappearing when a generic directory (`~/.config/agents/skills/`) exists but is empty — skill directory discovery now searches brand and generic directory groups independently and merges both results, instead of stopping at the first existing directory across all candidates
+- Core: Add `merge_all_available_skills` config option — when enabled, skills from all existing brand directories (`~/.consilium/skills/`, `~/.claude/skills/`, `~/.codex/skills/`) are loaded and merged instead of using only the first one found; same-name skills follow priority order kimi > claude > codex; disabled by default
+- CLI: Add `--plan` flag and `default_plan_mode` config option — start new sessions in plan mode via `kimi --plan` or by setting `default_plan_mode = true` in `~/.consilium/config.toml`; resumed sessions preserve their existing plan mode state
 - Shell: Add `/undo` and `/fork` commands for session forking — `/undo` lets you pick a previous turn and fork a new session with the selected message pre-filled for re-editing; `/fork` duplicates the entire session history into a new session; the original session is always preserved
 - CLI: Add `-r` as a short alias for `--session` and print a resume hint (`kimi -r <session-id>`) whenever a session exits — covers normal exit, Ctrl-C, `/undo`, `/fork`, and `/sessions` switch so users can always find their way back
 - Core: Fix `custom_headers` not being passed to non-Kimi providers — OpenAI, Anthropic, Google GenAI, and Vertex AI providers now correctly forward custom headers configured in `providers.*.custom_headers`
 
 ## 1.29.0 (2026-04-01)
 
-- Core: Support hierarchical `AGENTS.md` loading — the CLI now discovers and merges `AGENTS.md` files from the git project root down to the working directory, including `.kimi/AGENTS.md` at each level; deeper files take priority under a 32 KiB budget cap, ensuring the most specific instructions are never truncated
+- Core: Support hierarchical `AGENTS.md` loading — the CLI now discovers and merges `AGENTS.md` files from the git project root down to the working directory, including `.consilium/AGENTS.md` at each level; deeper files take priority under a 32 KiB budget cap, ensuring the most specific instructions are never truncated
 - Core: Fix empty sessions lingering on disk after exit — sessions created but never used are now cleaned up on all exit paths (failure exit, session switch, unexpected errors), not just on successful exit
-- Shell: Add `KIMI_CLI_PASTE_CHAR_THRESHOLD` and `KIMI_CLI_PASTE_LINE_THRESHOLD` environment variables to control when pasted text is folded into a placeholder — lowering these thresholds works around CJK input method breakage after multiline paste on some terminals (e.g., XShell over SSH)
+- Shell: Add `CONSILIUM_CLI_PASTE_CHAR_THRESHOLD` and `CONSILIUM_CLI_PASTE_LINE_THRESHOLD` environment variables to control when pasted text is folded into a placeholder — lowering these thresholds works around CJK input method breakage after multiline paste on some terminals (e.g., XShell over SSH)
 - Shell: Fix diff panel rendering corruption on terminals without truecolor support (e.g. Xshell) — `render_to_ansi` no longer hardcodes 24-bit color; Rich now auto-detects terminal capability via `COLORTERM`/`TERM` environment variables
 - Web: Fix white screen after CLI upgrade caused by browser caching stale `index.html` — the server now returns `Cache-Control: no-cache` for HTML and `immutable` for hashed assets, preventing 404s on renamed chunks
 - Core: Fix file write converting LF to CRLF on Windows — `writetext` now opens files with `newline=""` to prevent Python's universal newline translation from silently converting `\n` to `\r\n`
@@ -190,7 +190,7 @@ Only write entries that are worth mentioning to users.
 - Grep: Add token efficiency improvements — default `head_limit` of 250 with `offset` pagination, `--hidden` search with VCS directory exclusion, `files_with_matches` sorted by modification time, relative path output, and `--max-columns 500` for non-content modes
 - Grep: `line_number` (`-n`) now defaults to `true` in content mode — line numbers are included by default so the model can reference precise code locations
 - Grep: `count_matches` mode now includes a summary in the message — e.g. "Found 30 total occurrences across 10 files."
-- ACP: Fix `ValueError: list.index(x): x not in list` crash when ACP is launched via `kimi-code` or `kimi-cli` entry-points (e.g. JetBrains AI Assistant)
+- ACP: Fix `ValueError: list.index(x): x not in list` crash when ACP is launched via `kimi-code` or `consilium` entry-points (e.g. JetBrains AI Assistant)
 - Core: Fix OpenAI-compatible APIs (e.g. One API) returning 400 errors in multi-turn conversations when the server returns `reasoning_content` by default — `reasoning_effort` is now auto-set to `"medium"` when history contains thinking content and `reasoning_key` is configured
 - Shell: Add `/theme` command and dark/light theme support — users with light terminal backgrounds can now switch to a light color palette via `/theme light` or `theme = "light"` in `config.toml`; diff highlights, task browser, prompt UI, and MCP status colors all adapt to the selected theme
 - Core: Fix context overflow before compaction — tool result tokens are now estimated and included in the auto-compaction trigger check, preventing "exceeded model token limit" errors when large tool outputs push the context beyond the model limit between API calls
@@ -247,7 +247,7 @@ Only write entries that are worth mentioning to users.
 
 ## 1.25.0 (2026-03-23)
 
-- Core: Add plugin system (Skills + Tools) — plugins extend Kimi Code CLI with custom tools packaged as `plugin.json`; tools are commands that run in isolated subprocesses and return their stdout to the agent; plugins support automatic credential injection via `inject` configuration
+- Core: Add plugin system (Skills + Tools) — plugins extend Consilium CLI with custom tools packaged as `plugin.json`; tools are commands that run in isolated subprocesses and return their stdout to the agent; plugins support automatic credential injection via `inject` configuration
 - Core: Support multi-plugin repositories — `kimi plugin install` accepts git URLs with subpath to install a specific plugin from a monorepo (e.g., `https://github.com/org/repo.git/plugins/my-plugin`); when no subpath is provided and no root `plugin.json` exists, the CLI lists available plugins in immediate subdirectories
 - Core: Unify plugin credential injection — plugins can declare `inject` fields in `plugin.json` to receive `api_key` and `base_url` from the host's configured LLM provider; works with both OAuth-managed tokens and static API keys
 - Core: Add `Agent` tool for subagent delegation — the agent can now spawn persistent subagent instances with three built-in types (`coder`, `explore`, `plan`) to handle focused subtasks; each instance maintains its own context history within the session and can run in foreground or background with automatic result summarization
@@ -270,11 +270,11 @@ Only write entries that are worth mentioning to users.
 
 - Shell: Increase pasted text placeholder thresholds to 1000 characters or 15 lines (previously 300 characters or 3 lines), making voice/typeless workflows less disruptive
 - Core: Plan mode now supports multiple selectable approach options — when the agent's plan contains distinct alternative paths, `ExitPlanMode` can present 2–3 labeled choices for the user to pick which approach to execute; the chosen option is returned to the agent as the selected approach
-- Core: Persist plan session ID and file path across process restarts — the plan session identifier and file slug are saved to `SessionState`, so restarting Kimi Code mid-plan resumes the same plan file in `~/.kimi/plans/` instead of creating a new one
+- Core: Persist plan session ID and file path across process restarts — the plan session identifier and file slug are saved to `SessionState`, so restarting Consilium mid-plan resumes the same plan file in `~/.consilium/plans/` instead of creating a new one
 - Core: Plan mode now supports incremental plan edits — the agent can use `StrReplaceFile` to surgically update sections of the plan file instead of rewriting the entire file with `WriteFile`, and non-plan file edits are now hard-blocked rather than requiring approval
 - Core: Defer MCP startup and surface loading progress — MCP servers now initialize asynchronously after the shell UI starts, with live progress indicators showing connection status; Shell displays connecting and ready states in the status area, Web shows server connection status
 - Core: Optimize lightweight startup paths — implement lazy-loading for CLI subcommands and version metadata, significantly reducing startup time for common commands like `--version` and `--help`
-- Build: Fix Nix `FileCollisionError` for `bin/kimi` — remove duplicate entry point from `kimi-code` package so `kimi-cli` owns `bin/kimi` exclusively
+- Build: Fix Nix `FileCollisionError` for `bin/kimi` — remove duplicate entry point from `kimi-code` package so `consilium` owns `bin/kimi` exclusively
 - Shell: Preserve unsubmitted input across agent turns — text typed in the prompt while the agent is running is no longer lost when the turn ends; the user can press Enter to submit the draft as the next message
 - Shell: Fix Ctrl-C and Ctrl-D not working correctly after an agent run completes — keyboard interrupts and EOF were silently swallowed instead of showing the tip or exiting the shell
 
@@ -311,7 +311,7 @@ Only write entries that are worth mentioning to users.
 - Core: Fix StatusUpdate not reflecting plan mode changes triggered by tools — send a corrected `StatusUpdate` after `EnterPlanMode`/`ExitPlanMode` tool execution so the client sees the up-to-date state
 - Core: Fix HTTP header values containing trailing whitespace/newlines on certain Linux systems (e.g. kernel 6.8.0-101) causing connection errors — strip whitespace from ASCII header values before sending
 - Core: Fix OpenAI Responses provider sending implicit `reasoning.effort=null` which breaks Responses-compatible endpoints that require reasoning — reasoning parameters are now omitted unless explicitly set
-- Vis: Add session download, import, export and delete — one-click ZIP download from session explorer and detail page, ZIP import into a dedicated `~/.kimi/imported_sessions/` directory with "Imported" filter toggle, `kimi export <session_id>` CLI command, and delete support for imported sessions with AlertDialog confirmation
+- Vis: Add session download, import, export and delete — one-click ZIP download from session explorer and detail page, ZIP import into a dedicated `~/.consilium/imported_sessions/` directory with "Imported" filter toggle, `kimi export <session_id>` CLI command, and delete support for imported sessions with AlertDialog confirmation
 - Core: Fix context compaction failing when conversation contains media parts (images, audio, video) — switch from blacklist filtering (exclude `ThinkPart`) to whitelist filtering (only keep `TextPart`) to prevent unsupported content types from being sent to the compaction API
 - Web: Fix `@` file mention index not refreshing after switching sessions or when workspace files change — reset index on session switch, auto-refresh after 30s staleness, and support path-prefix search beyond the 500-file limit
 
@@ -348,7 +348,7 @@ Only write entries that are worth mentioning to users.
 - Core: Add `--add-dir` CLI option and `/add-dir` slash command to expand the workspace scope with additional directories — added directories are accessible to all file tools (read, write, glob, replace), persisted across sessions, and shown in the system prompt
 - Shell: Add `Ctrl-O` keyboard shortcut to open the current input in an external editor (`$VISUAL`/`$EDITOR`), with auto-detection fallback to VS Code, Vim, Vi, or Nano
 - Shell: Add `/editor` slash command to configure and switch the default external editor, with interactive selection and persistent config storage
-- Shell: Add `/new` slash command to create and switch to a new session without restarting Kimi Code CLI
+- Shell: Add `/new` slash command to create and switch to a new session without restarting Consilium CLI
 - Wire: Auto-hide `AskUserQuestion` tool when the client does not support the `supports_question` capability, preventing the LLM from invoking unsupported interactions
 - Core: Estimate context token count after compaction so context usage percentage is not reported as 0%
 - Web: Show context usage percentage with one decimal place for better precision
@@ -361,7 +361,7 @@ Only write entries that are worth mentioning to users.
 - Shell: Add tab-style navigation for multi-question panels — use Left/Right arrows or Tab to switch between questions, with visual indicators for answered, current, and pending states, and automatic state restoration when revisiting a question
 - Shell: Allow Space key to submit single-select questions in the question panel
 - Web: Add tab-style navigation for multi-question dialogs with clickable tab bar, keyboard navigation, and state restoration when revisiting a question
-- Core: Set process title to "Kimi Code" (visible in `ps` / Activity Monitor / terminal tab title) and label web worker subprocesses as "kimi-code-worker"
+- Core: Set process title to "Consilium" (visible in `ps` / Activity Monitor / terminal tab title) and label web worker subprocesses as "kimi-code-worker"
 
 ## 1.14.0 (2026-02-26)
 
@@ -483,7 +483,7 @@ Only write entries that are worth mentioning to users.
 
 - Shell: Merge `/login` and `/setup` commands; `/setup` is now an alias for `/login`
 - Shell: `/usage` now shows remaining quota percentage; add `/status` alias
-- Config: Add `KIMI_SHARE_DIR` environment variable to customize the share directory path (default: `~/.kimi`)
+- Config: Add `CONSILIUM_SHARE_DIR` environment variable to customize the share directory path (default: `~/.consilium`)
 - Web: Add new Web UI for browser-based interaction
 - CLI: Add `kimi web` subcommand to launch the Web UI server
 - Auth: Fix encoding error when device name or OS version contains non-ASCII characters
@@ -570,7 +570,7 @@ Only write entries that are worth mentioning to users.
 
 ## 0.79 (2026-01-19)
 
-- Skills: Add project-level skills support, discovered from `.agents/skills/` (or `.kimi/skills/`, `.claude/skills/`)
+- Skills: Add project-level skills support, discovered from `.agents/skills/` (or `.consilium/skills/`, `.claude/skills/`)
 - Skills: Unified skills discovery with layered loading (builtin → user → project); user-level skills now prefer `~/.config/agents/skills/`
 - Shell: Support fuzzy matching for slash command autocomplete
 - Shell: Enhanced approval request preview with shell command and diff content display, use `Ctrl-E` to expand full content
@@ -607,7 +607,7 @@ Only write entries that are worth mentioning to users.
 ## 0.75 (2026-01-09)
 
 - Tool: Improve `ReadFile` tool description
-- Skills: Add built-in `kimi-cli-help` skill to answer Kimi Code CLI usage and configuration questions
+- Skills: Add built-in `consilium-help` skill to answer Consilium CLI usage and configuration questions
 
 ## 0.74 (2026-01-09)
 
@@ -623,7 +623,7 @@ Only write entries that are worth mentioning to users.
 - MCP: Ensure MCP tools finish loading before starting the agent loop
 - Wire: Fix Wire mode failing to accept valid `cancel` requests
 - Setup: Allow `/model` to switch between all available models for the selected provider
-- Lib: Re-export all Wire message types from `kimi_cli.wire.types`, as a replacement of `kimi_cli.wire.message`
+- Lib: Re-export all Wire message types from `consilium.wire.types`, as a replacement of `consilium.wire.message`
 - Loop: Add `max_ralph_iterations` loop control config to limit extra Ralph iterations
 - Config: Rename `max_steps_per_run` to `max_steps_per_turn` in loop control config (backward-compatible)
 - CLI: Add `--max-steps-per-turn`, `--max-retries-per-step` and `--max-ralph-iterations` options to override loop control config
@@ -650,10 +650,10 @@ Only write entries that are worth mentioning to users.
 
 ## 0.69 (2025-12-29)
 
-- Core: Support discovering skills in `~/.kimi/skills` or `~/.claude/skills`
+- Core: Support discovering skills in `~/.consilium/skills` or `~/.claude/skills`
 - Python: Lower the minimum required Python version to 3.12
-- Nix: Add flake packaging; install with `nix profile install .#kimi-cli` or run `nix run .#kimi-cli`
-- CLI: Add `kimi-cli` script alias for invoking the CLI; can be run via `uvx kimi-cli`
+- Nix: Add flake packaging; install with `nix profile install .#consilium` or run `nix run .#consilium`
+- CLI: Add `consilium` script alias for invoking the CLI; can be run via `uvx consilium`
 - Lib: Move LLM config validation into `create_llm` and return `None` when missing config
 
 ## 0.68 (2025-12-24)
@@ -681,9 +681,9 @@ Only write entries that are worth mentioning to users.
 - Lib: Provide `token_usage` and `message_id` in `StatusUpdate` Wire message
 - Lib: Add `KimiToolset.load_tools` method to load tools with dependency injection
 - Lib: Add `KimiToolset.load_mcp_tools` method to load MCP tools
-- Lib: Move `MCPTool` from `kimi_cli.tools.mcp` to `kimi_cli.soul.toolset`
+- Lib: Move `MCPTool` from `consilium.tools.mcp` to `consilium.soul.toolset`
 - Lib: Add `InvalidToolError`, `MCPConfigError` and `MCPRuntimeError`
-- Lib: Make the detailed Kimi Code CLI exception classes extend `ValueError` or `RuntimeError`
+- Lib: Make the detailed Consilium CLI exception classes extend `ValueError` or `RuntimeError`
 - Lib: Allow passing validated `list[fastmcp.mcp_config.MCPConfig]` as `mcp_configs` for `KimiCLI.create` and `load_agent`
 - Lib: Fix exception raising for `KimiCLI.create`, `load_agent`, `KimiToolset.load_tools` and `KimiToolset.load_mcp_tools`
 - LLM: Add provider type `vertexai` to support Vertex AI
@@ -703,14 +703,14 @@ Only write entries that are worth mentioning to users.
 - CLI: Delete empty sessions on exit and ignore sessions whose context file is empty when listing
 - UI: Improve session replaying
 - Lib: Add `model_config: LLMModel | None` and `provider_config: LLMProvider | None` properties to `LLM` class
-- MetaCmd: Add `/usage` meta command to show API usage for Kimi Code users
+- MetaCmd: Add `/usage` meta command to show API usage for Consilium users
 
 ## 0.64 (2025-12-15)
 
 - UI: Fix UTF-16 surrogate characters input on Windows
 - Core: Add `/sessions` meta command to list existing sessions and switch to a selected one
 - CLI: Add `--session/-S` option to specify session ID to resume
-- MCP: Add `kimi mcp` subcommand group to manage global MCP config file `~/.kimi/mcp.json`
+- MCP: Add `kimi mcp` subcommand group to manage global MCP config file `~/.consilium/mcp.json`
 
 ## 0.63 (2025-12-12)
 
@@ -744,12 +744,12 @@ Only write entries that are worth mentioning to users.
 
 ## 0.59 (2025-11-28)
 
-- Core: Move context file location to `.kimi/sessions/{workdir_md5}/{session_id}/context.jsonl`
-- Lib: Move `WireMessage` type alias to `kimi_cli.wire.message`
-- Lib: Add `kimi_cli.wire.message.Request` type alias request messages (which currently only includes `ApprovalRequest`)
-- Lib: Add `kimi_cli.wire.message.is_event`, `is_request` and `is_wire_message` utility functions to check the type of wire messages
-- Lib: Add `kimi_cli.wire.serde` module for serialization and deserialization of wire messages
-- Lib: Change `StatusUpdate` Wire message to not using `kimi_cli.soul.StatusSnapshot`
+- Core: Move context file location to `.consilium/sessions/{workdir_md5}/{session_id}/context.jsonl`
+- Lib: Move `WireMessage` type alias to `consilium.wire.message`
+- Lib: Add `consilium.wire.message.Request` type alias request messages (which currently only includes `ApprovalRequest`)
+- Lib: Add `consilium.wire.message.is_event`, `is_request` and `is_wire_message` utility functions to check the type of wire messages
+- Lib: Add `consilium.wire.serde` module for serialization and deserialization of wire messages
+- Lib: Change `StatusUpdate` Wire message to not using `consilium.soul.StatusSnapshot`
 - Core: Record Wire messages to a JSONL file in session directory
 - Core: Introduce `TurnBegin` Wire message to mark the beginning of each agent turn
 - UI: Print user input again with a panel in shell mode
@@ -768,7 +768,7 @@ Only write entries that are worth mentioning to users.
 - Core: Fix field inheritance of agent spec files when using `extend`
 - Core: Support using MCP tools in subagents
 - Tool: Add `CreateSubagent` tool to create subagents dynamically (not enabled in default agent)
-- Tool: Use MoonshotFetch service in `FetchURL` tool for Kimi Code plan
+- Tool: Use MoonshotFetch service in `FetchURL` tool for Consilium plan
 - Tool: Truncate Grep tool output to avoid exceeding token limit
 
 ## 0.57 (2025-11-20)
@@ -777,7 +777,7 @@ Only write entries that are worth mentioning to users.
 - UI: Improve approval request wordings
 - Tool: Remove `PatchFile` tool
 - Tool: Rename `Bash`/`CMD` tool to `Shell` tool
-- Tool: Move `Task` tool to `kimi_cli.tools.multiagent` module
+- Tool: Move `Task` tool to `consilium.tools.multiagent` module
 
 ## 0.56 (2025-11-19)
 
@@ -785,7 +785,7 @@ Only write entries that are worth mentioning to users.
 
 ## 0.55 (2025-11-18)
 
-- Lib: Add `kimi_cli.app.enable_logging` function to enable logging when directly using `KimiCLI` class
+- Lib: Add `consilium.app.enable_logging` function to enable logging when directly using `KimiCLI` class
 - Core: Fix relative path resolution in agent spec files
 - Core: Prevent from panic when LLM API connection failed
 - Tool: Optimize `FetchURL` tool for better content extraction
@@ -796,9 +796,9 @@ Only write entries that are worth mentioning to users.
 
 ## 0.54 (2025-11-13)
 
-- Lib: Move `WireMessage` from `kimi_cli.wire.message` to `kimi_cli.wire`
+- Lib: Move `WireMessage` from `consilium.wire.message` to `consilium.wire`
 - Print: Fix `stream-json` output format missing the last assistant message
-- UI: Add warning when API key is overridden by `KIMI_API_KEY` environment variable
+- UI: Add warning when API key is overridden by `CONSILIUM_API_KEY` environment variable
 - UI: Make a bell sound when there's an approval request
 - Core: Fix context compaction and clearing on Windows
 
@@ -824,7 +824,7 @@ Only write entries that are worth mentioning to users.
 ## 0.51 (2025-11-08)
 
 - Lib: Rename `Soul.model` to `Soul.model_name`
-- Lib: Rename `LLMModelCapability` to `ModelCapability` and move to `kimi_cli.llm`
+- Lib: Rename `LLMModelCapability` to `ModelCapability` and move to `consilium.llm`
 - Lib: Add `"thinking"` to `ModelCapability`
 - Lib: Remove `LLM.supports_image_in` property
 - Lib: Add required `Soul.model_capabilities` property
@@ -877,7 +877,7 @@ Only write entries that are worth mentioning to users.
 
 ### Added
 
-- Allow `KIMI_MODEL_CAPABILITIES` environment variable to override model capabilities
+- Allow `CONSILIUM_MODEL_CAPABILITIES` environment variable to override model capabilities
 - Add `--no-markdown` option to disable markdown rendering
 - Support `openai_responses` LLM provider type
 
@@ -1082,7 +1082,7 @@ Only write entries that are worth mentioning to users.
 
 ### Changed
 
-- Rename package name `ensoul` to `kimi-cli`
+- Rename package name `ensoul` to `consilium`
 - Rename `ENSOUL_*` builtin system prompt arguments to `KIMI_*`
 - Further decouple `App` with `Soul`
 - Split `Soul` protocol and `KimiSoul` implementation for better modularity

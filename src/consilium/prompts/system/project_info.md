@@ -15,10 +15,10 @@ Markdown files named `AGENTS.md` usually contain the background, structure, codi
 The `AGENTS.md` instructions (merged from all applicable directories):
 
 `````````
-${KIMI_AGENTS_MD}
+${CONSILIUM_AGENTS_MD}
 `````````
 
-`AGENTS.md` files can appear at any level of the project directory tree, including inside `.kimi/` directories. Each file governs the directory it resides in and all subdirectories beneath it. When multiple `AGENTS.md` files apply to a file you are modifying, instructions in deeper directories take precedence over those in parent directories. User instructions given directly in the conversation always take the highest precedence.
+`AGENTS.md` files can appear at any level of the project directory tree, including inside `.consilium/` directories. Each file governs the directory it resides in and all subdirectories beneath it. When multiple `AGENTS.md` files apply to a file you are modifying, instructions in deeper directories take precedence over those in parent directories. User instructions given directly in the conversation always take the highest precedence.
 
 When working on files in subdirectories, always check whether those directories contain their own `AGENTS.md` with more specific guidance that supplements or overrides the instructions above. You may also check `README`/`README.md` files for more information about the project.
 

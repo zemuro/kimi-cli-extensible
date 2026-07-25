@@ -3,7 +3,7 @@
 **Date:** 2026-07-17  
 **Author:** Do agent (Consilium development session)  
 **Status:** Implemented  
-**Scope:** CLI (`kimi_cli_mod`)
+**Scope:** CLI (`consilium_mod`)
 
 ## Problem
 
@@ -13,7 +13,7 @@ Custom subagent types (e.g., `translator`, `translation_reviewer`) were only ava
 consilium --agent-file .consilium/agents/agent.yaml
 ```
 
-If Do mode was started without that flag, the workspace override under `.consilium/agents/` was ignored, and the custom subagents were unknown to the `LaborMarket`. This contradicts the expectation that a workspace-level `.consilium/agents/agent.yaml` should be discovered automatically, similar to how `.kimi/AGENTS.md` or project skills are discovered.
+If Do mode was started without that flag, the workspace override under `.consilium/agents/` was ignored, and the custom subagents were unknown to the `LaborMarket`. This contradicts the expectation that a workspace-level `.consilium/agents/agent.yaml` should be discovered automatically, similar to how `.consilium/AGENTS.md` or project skills are discovered.
 
 ## Solution
 

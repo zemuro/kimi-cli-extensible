@@ -20,7 +20,7 @@ _TESTABLE_PATTERNS = re.compile(
 
 
 class AuditRules:
-    """Project-local audit rules loaded from .kimi/audit_rules.yaml."""
+    """Project-local audit rules loaded from .consilium/audit_rules.yaml."""
 
     def __init__(self, rules_path: Path | None = None) -> None:
         self.anti_patterns: list[dict] = []

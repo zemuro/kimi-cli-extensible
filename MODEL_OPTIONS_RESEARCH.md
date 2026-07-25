@@ -1,6 +1,6 @@
 # Model Options Research Report
 
-This document maps how LLM parameters flow from user input → config → API request in kimi-cli.
+This document maps how LLM parameters flow from user input → config → API request in consilium.
 
 ---
 
@@ -10,8 +10,8 @@ This document maps how LLM parameters flow from user input → config → API re
 User Input
     │
     ├── CLI args (--model, --thinking)
-    ├── Config file (~/.kimi/config.toml)
-    └── Environment variables (KIMI_MODEL_*)
+    ├── Config file (~/.consilium/config.toml)
+    └── Environment variables (CONSILIUM_MODEL_*)
     │
     ▼
 App.create_soul()  →  create_llm()  →  ChatProvider (kosong)
@@ -48,7 +48,7 @@ Uses `AsyncOpenAI` client targeting Moonshot's API.
 **Special behavior:**
 - **Hardcoded default:** `max_tokens=32000` is set inside `generate()` and then overlaid with `_generation_kwargs`.
 - **Thinking:** Maps `with_thinking("high")` → `reasoning_effort="high"` + `extra_body.thinking.type="enabled"`.
-- **Preserved thinking:** `KIMI_MODEL_THINKING_KEEP=all` adds `extra_body.thinking.keep="all"` via `with_extra_body()`.
+- **Preserved thinking:** `CONSILIUM_MODEL_THINKING_KEEP=all` adds `extra_body.thinking.keep="all"` via `with_extra_body()`.
 
 ### 2.2 OpenAI Legacy (`kosong/contrib/chat_provider/openai_legacy.py`)
 
@@ -128,7 +128,7 @@ Uses Anthropic's Messages API.
 
 ## 3. How Options Flow: The Full Pipeline
 
-### 3.1 CLI Arguments (`src/kimi_cli/cli/__init__.py`)
+### 3.1 CLI Arguments (`src/consilium/cli/__init__.py`)
 
 Only two model-related CLI options exist:
 
@@ -139,7 +139,7 @@ Only two model-related CLI options exist:
 
 **There are NO CLI flags for** `temperature`, `top_p`, `max_tokens`, `presence_penalty`, etc.
 
-### 3.2 Config File (`src/kimi_cli/config.py`)
+### 3.2 Config File (`src/consilium/config.py`)
 
 Generation parameters are configured per-model under `[models.X.generation]`:
 
@@ -171,19 +171,19 @@ max_tokens = 32000
 - `max_tool_calls`, `top_logprobs`, `user` — openai_responses
 - `tool_choice`, `extra_headers` — anthropic
 
-### 3.3 Environment Variables (`src/kimi_cli/llm.py`)
+### 3.3 Environment Variables (`src/consilium/llm.py`)
 
 **Only the Kimi provider** reads generation-related env vars. These are applied at LLM creation time in `create_llm()`:
 
 | Env Var | Provider | Parameter | Type |
 |---|---|---|---|
-| `KIMI_MODEL_NAME` | Kimi | `model.model` | string |
-| `KIMI_MODEL_MAX_CONTEXT_SIZE` | Kimi | `model.max_context_size` | int |
-| `KIMI_MODEL_CAPABILITIES` | Kimi | `model.capabilities` | comma-separated strings |
-| `KIMI_MODEL_TEMPERATURE` | Kimi | `gen_kwargs["temperature"]` | float |
-| `KIMI_MODEL_TOP_P` | Kimi | `gen_kwargs["top_p"]` | float |
-| `KIMI_MODEL_MAX_TOKENS` | Kimi | `gen_kwargs["max_tokens"]` | int |
-| `KIMI_MODEL_THINKING_KEEP` | Kimi | `extra_body.thinking.keep` | string |
+| `CONSILIUM_MODEL_NAME` | Kimi | `model.model` | string |
+| `CONSILIUM_MODEL_MAX_CONTEXT_SIZE` | Kimi | `model.max_context_size` | int |
+| `CONSILIUM_MODEL_CAPABILITIES` | Kimi | `model.capabilities` | comma-separated strings |
+| `CONSILIUM_MODEL_TEMPERATURE` | Kimi | `gen_kwargs["temperature"]` | float |
+| `CONSILIUM_MODEL_TOP_P` | Kimi | `gen_kwargs["top_p"]` | float |
+| `CONSILIUM_MODEL_MAX_TOKENS` | Kimi | `gen_kwargs["max_tokens"]` | int |
+| `CONSILIUM_MODEL_THINKING_KEEP` | Kimi | `extra_body.thinking.keep` | string |
 
 **OpenAI, Anthropic, and Gemini providers do NOT read any generation-related environment variables.**
 
@@ -191,8 +191,8 @@ max_tokens = 32000
 
 | Env Var | Provider | Purpose |
 |---|---|---|
-| `KIMI_BASE_URL` | Kimi | API base URL |
-| `KIMI_API_KEY` | Kimi | API key |
+| `CONSILIUM_BASE_URL` | Kimi | API base URL |
+| `CONSILIUM_API_KEY` | Kimi | API key |
 | `OPENAI_BASE_URL` | openai_legacy / openai_responses | API base URL |
 | `OPENAI_API_KEY` | openai_legacy / openai_responses | API key |
 
@@ -203,11 +203,11 @@ max_tokens = 32000
 | Value | Location | Provider | Context |
 |---|---|---|---|
 | `max_tokens=32000` | `kosong/chat_provider/kimi.py:165` | Kimi | Default output token limit in `generate()` |
-| `default_max_tokens=50000` | `src/kimi_cli/llm.py:186` | Anthropic | Passed to Anthropic constructor |
+| `default_max_tokens=50000` | `src/consilium/llm.py:186` | Anthropic | Passed to Anthropic constructor |
 | `stream=True` | all providers' `__init__` | all | Streaming is always enabled |
 | `stream_options={"include_usage": True}` | `kimi.py:175`, `openai_legacy.py:147` | Kimi, OpenAI Legacy | Always sent when streaming |
 | `store=False` | `openai_responses.py:185` | OpenAI Responses | Hardcoded |
-| `error_probability=0.8` | `src/kimi_cli/llm.py:235` | `_chaos` | Test provider |
+| `error_probability=0.8` | `src/consilium/llm.py:235` | `_chaos` | Test provider |
 | `thinking.type="enabled"` | `kimi.py:210` | Kimi | When thinking is on |
 | `thinking.display="summarized"` | `anthropic.py:391` | Anthropic | For adaptive thinking models |
 | `beta_features=["interleaved-thinking-2025-05-14"]` | `anthropic.py:252` | Anthropic | Default beta header |
@@ -224,7 +224,7 @@ max_tokens = 32000
    c. Else → empty LLMModel (provider="", model="", max_context_size=100_000)
 3. create_llm(provider, model):
    a. Look up provider from config.providers[model.provider]
-   b. Apply env var overrides (KIMI_MODEL_NAME, etc.)
+   b. Apply env var overrides (CONSILIUM_MODEL_NAME, etc.)
    c. Instantiate ChatProvider subclass
    d. Apply generation kwargs from config (`model.generation`) + env var overrides
    e. Apply thinking mode
@@ -270,9 +270,9 @@ All providers default to `stream=True`. The `generate()` method returns a `Strea
 
 ## 8. Key Observations
 
-1. **Per-model generation config is supported** via `[models.X.generation]` in `config.toml`. See `src/kimi_cli/config.py` for the full schema.
+1. **Per-model generation config is supported** via `[models.X.generation]` in `config.toml`. See `src/consilium/config.py` for the full schema.
 
-2. **Env vars are Kimi-only overrides:** `KIMI_MODEL_TEMPERATURE`, `KIMI_MODEL_TOP_P`, `KIMI_MODEL_MAX_TOKENS` still work and override config values for the Kimi provider. OpenAI, Anthropic, and Gemini users must use the config file.
+2. **Env vars are Kimi-only overrides:** `CONSILIUM_MODEL_TEMPERATURE`, `CONSILIUM_MODEL_TOP_P`, `CONSILIUM_MODEL_MAX_TOKENS` still work and override config values for the Kimi provider. OpenAI, Anthropic, and Gemini users must use the config file.
 
 3. **`max_tokens` default varies by provider:**
    - Kimi: 32000 (hardcoded)
@@ -291,11 +291,11 @@ All providers default to `stream=True`. The `generate()` method returns a `Strea
 
 | File | Responsibility |
 |---|---|
-| `src/kimi_cli/llm.py` | `create_llm()`, env var application, thinking logic, provider instantiation |
-| `src/kimi_cli/config.py` | `Config`, `LLMModel`, `LLMProvider` Pydantic models |
-| `src/kimi_cli/cli/__init__.py` | CLI arg parsing (`--model`, `--thinking`) |
-| `src/kimi_cli/app.py` | `App.create_soul()` — wires config + CLI args → `create_llm()` |
-| `src/kimi_cli/soul/kimisoul.py` | Agent loop, calls `kosong.step()` with the chat provider |
+| `src/consilium/llm.py` | `create_llm()`, env var application, thinking logic, provider instantiation |
+| `src/consilium/config.py` | `Config`, `LLMModel`, `LLMProvider` Pydantic models |
+| `src/consilium/cli/__init__.py` | CLI arg parsing (`--model`, `--thinking`) |
+| `src/consilium/app.py` | `App.create_soul()` — wires config + CLI args → `create_llm()` |
+| `src/consilium/soul/kimisoul.py` | Agent loop, calls `kosong.step()` with the chat provider |
 | `packages/kosong/src/kosong/_generate.py` | `generate()` — orchestrates streaming, tool calls |
 | `packages/kosong/src/kosong/__init__.py` | `step()` — single agent step wrapper |
 | `packages/kosong/src/kosong/chat_provider/kimi.py` | Kimi API provider |
@@ -303,3 +303,25 @@ All providers default to `stream=True`. The `generate()` method returns a `Strea
 | `packages/kosong/src/kosong/contrib/chat_provider/openai_responses.py` | OpenAI Responses provider |
 | `packages/kosong/src/kosong/contrib/chat_provider/anthropic.py` | Anthropic Messages provider |
 | `packages/kosong/src/kosong/contrib/chat_provider/google_genai.py` | Google Gemini provider |
+
+---
+
+## 10. OpenRouter Configuration Example
+
+To configure OpenRouter models, define a custom provider using the `openai_responses` provider type in `~/.consilium/config.toml`. Specify the custom base URL and pass the required OpenRouter headers (`HTTP-Referer` and `X-Title`) via `custom_headers`:
+
+```toml
+[providers.openrouter]
+type = "openai_responses"
+base_url = "https://openrouter.ai/api/v1"
+api_key = "your-openrouter-api-key"
+
+[providers.openrouter.custom_headers]
+"HTTP-Referer" = "https://github.com/zemuro/consilium"
+"X-Title" = "Consilium Agent"
+
+[models.openrouter-deepseek]
+provider = "openrouter"
+model = "deepseek/deepseek-chat"
+max_context_size = 64000
+```

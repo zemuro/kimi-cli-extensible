@@ -81,7 +81,7 @@ from kosong.chat_provider import (
     ThinkingEffort,
     TokenUsage,
 )
-from kosong.chat_provider.kimi import Kimi, KimiFiles, KimiStreamedMessage
+from kosong.chat_provider.consilium import Kimi, KimiFiles, KimiStreamedMessage
 from kosong.message import (
     AudioURLPart,
     ContentPart,

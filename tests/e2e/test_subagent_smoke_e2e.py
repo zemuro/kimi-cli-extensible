@@ -107,13 +107,13 @@ def _make_two_provider_config(
                         "type": "_scripted_echo",
                         "base_url": "",
                         "api_key": "",
-                        "env": {"KIMI_SCRIPTED_ECHO_SCRIPTS": str(root_scripts_path)},
+                        "env": {"CONSILIUM_SCRIPTED_ECHO_SCRIPTS": str(root_scripts_path)},
                     },
                     "sub_provider": {
                         "type": "_scripted_echo",
                         "base_url": "",
                         "api_key": "",
-                        "env": {"KIMI_SCRIPTED_ECHO_SCRIPTS": str(sub_scripts_path)},
+                        "env": {"CONSILIUM_SCRIPTED_ECHO_SCRIPTS": str(sub_scripts_path)},
                     },
                 },
             }

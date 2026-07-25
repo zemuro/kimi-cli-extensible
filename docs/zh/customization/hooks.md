@@ -8,7 +8,7 @@ Hooks 系统让你可以在 Agent 生命周期的关键节点执行自定义命�
 
 ## Hook 是什么
 
-Hook 是一种在特定事件发生时触发的机制。你可以配置一个 shell 命令，当事件发生时，Kimi Code CLI 会将事件相关的上下文信息通过标准输入传递给该命令，并根据命令的退出码决定后续行为。
+Hook 是一种在特定事件发生时触发的机制。你可以配置一个 shell 命令，当事件发生时，Consilium CLI 会将事件相关的上下文信息通过标准输入传递给该命令，并根据命令的退出码决定后续行为。
 
 使用场景示例：
 
@@ -20,7 +20,7 @@ Hook 是一种在特定事件发生时触发的机制。你可以配置一个 sh
 
 ## 支持的 Hook 事件
 
-Kimi Code CLI 支持 13 种生命周期事件：
+Consilium CLI 支持 13 种生命周期事件：
 
 | 事件 | 触发时机 | Matcher 过滤 | 可用上下文 |
 |------|----------|--------------|------------|
@@ -40,7 +40,7 @@ Kimi Code CLI 支持 13 种生命周期事件：
 
 ## 配置 Hooks
 
-在 `~/.kimi/config.toml` 中使用 `[[hooks]]` 数组定义 hook：
+在 `~/.consilium/config.toml` 中使用 `[[hooks]]` 数组定义 hook：
 
 ```toml
 # 文件编辑后自动格式化
@@ -53,19 +53,19 @@ command = "jq -r '.tool_input.file_path' | xargs prettier --write"
 [[hooks]]
 event = "PreToolUse"
 matcher = "WriteFile|StrReplaceFile"
-command = ".kimi/hooks/protect-env.sh"
+command = ".consilium/hooks/protect-env.sh"
 timeout = 10
 
 # 需要审批时发送桌面通知
 [[hooks]]
 event = "Notification"
 matcher = "permission_prompt"
-command = "osascript -e 'display notification \"Kimi needs attention\" with title \"Kimi CLI\"'"
+command = "osascript -e 'display notification \"Kimi needs attention\" with title \"Consilium CLI\"'"
 
 # 会话结束前检查任务完成情况
 [[hooks]]
 event = "Stop"
-command = ".kimi/hooks/check-complete.sh"
+command = ".consilium/hooks/check-complete.sh"
 ```
 
 ### 配置字段
@@ -123,7 +123,7 @@ Hook 命令从标准输入接收 JSON 格式的上下文信息，包含通用字
 
 ```bash
 #!/bin/bash
-# .kimi/hooks/protect-env.sh
+# .consilium/hooks/protect-env.sh
 
 read JSON
 echo "$JSON" | jq -r '.tool_input.file_path' | grep -qE '\.env$|\.env\.local$'
@@ -140,7 +140,7 @@ exit 0
 
 ```bash
 #!/bin/bash
-# .kimi/hooks/auto-format.sh
+# .consilium/hooks/auto-format.sh
 
 FILE=$(python3 -c "import sys,json; print(json.load(sys.stdin).get('tool_input',{}).get('file_path',''))")
 
@@ -157,7 +157,7 @@ exit 0
 
 ```bash
 #!/bin/bash
-# .kimi/hooks/check-complete.sh
+# .consilium/hooks/check-complete.sh
 
 # 检查是否有进行中的后台任务
 if kimi task list --active 2>/dev/null | grep -q "running"; then

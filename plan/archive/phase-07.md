@@ -5,7 +5,7 @@ status: implemented
 dependencies:
   - phase-04d
 files_involved:
-  - src/kimi_cli/do/session.py
+  - src/consilium/do/session.py
 ---
 
 **Status: STAGED — ready for implementation.**
@@ -31,13 +31,13 @@ The existing `/approve` and `/reject` commands (Phase 4c) already handle the `aw
 
 #### 7.1 Lazy `PlanReviewer` creation in `DoSession`
 
-In `src/kimi_cli/do/session.py`:
+In `src/consilium/do/session.py`:
 
 ```python
 def _ensure_reviewer(self) -> PlanReviewer:
     """Lazy-create a PlanReviewer if one was not provided at init."""
     if self._reviewer is None:
-        from kimi_cli.config import DoConfig
+        from consilium.config import DoConfig
         do_config = getattr(self.soul._runtime.config, "do", None)
         if do_config is None:
             do_config = DoConfig()
@@ -59,7 +59,7 @@ async def trigger_manual_review(self) -> PlanReviewReport:
 
 #### 7.2 `/review` slash command
 
-In `src/kimi_cli/ui/shell/slash.py`, add:
+In `src/consilium/ui/shell/slash.py`, add:
 
 ```python
 @registry.command
@@ -69,7 +69,7 @@ async def review(app: Shell, args: str) -> None:
     soul = ensure_kimi_soul(app)
     if soul is None:
         return
-    from kimi_cli.do.registry import get_do_session
+    from consilium.do.registry import get_do_session
     do_session = get_do_session(soul._runtime.session.id)
     if do_session is None:
         console.print("[red]No Do session found.[/red]")

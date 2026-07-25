@@ -1,6 +1,6 @@
 # Config Overrides
 
-Kimi Code CLI configuration can be set through multiple methods, with different sources overriding each other by priority.
+Consilium CLI configuration can be set through multiple methods, with different sources overriding each other by priority.
 
 ## Priority
 
@@ -8,7 +8,7 @@ Configuration priority from highest to lowest:
 
 1. **Environment variables** - Highest priority, for temporary overrides or CI/CD environments
 2. **CLI flags** - Flags specified at startup
-3. **Configuration file** - `~/.kimi/config.toml` or file specified via `--config-file`
+3. **Configuration file** - `~/.consilium/config.toml` or file specified via `--config-file`
 
 ## CLI flags
 
@@ -17,7 +17,7 @@ Configuration priority from highest to lowest:
 | Flag | Description |
 | --- | --- |
 | `--config <TOML/JSON>` | Pass configuration content directly, overrides default config file |
-| `--config-file <PATH>` | Specify configuration file path, replaces default `~/.kimi/config.toml` |
+| `--config-file <PATH>` | Specify configuration file path, replaces default `~/.consilium/config.toml` |
 
 `--config` and `--config-file` cannot be used together.
 
@@ -62,22 +62,22 @@ See [Environment Variables](./env-vars.md) for the complete list.
 Example:
 
 ```sh
-KIMI_API_KEY="sk-xxx" KIMI_MODEL_NAME="kimi-k2-thinking-turbo" kimi
+CONSILIUM_API_KEY="sk-xxx" CONSILIUM_MODEL_NAME="kimi-k2-thinking-turbo" kimi
 ```
 
 ## Configuration priority example
 
-Assume the configuration file `~/.kimi/config.toml` contains:
+Assume the configuration file `~/.consilium/config.toml` contains:
 
 ```toml
 default_model = "kimi-for-coding"
 
-[providers.kimi-for-coding]
+[providers.consilium-for-coding]
 type = "kimi"
-base_url = "https://api.kimi.com/coding/v1"
+base_url = "https://api.consilium.com/coding/v1"
 api_key = "sk-config"
 
-[models.kimi-for-coding]
+[models.consilium-for-coding]
 provider = "kimi-for-coding"
 model = "kimi-for-coding"
 max_context_size = 262144
@@ -88,6 +88,6 @@ Here are the configuration sources in different scenarios:
 | Scenario | `base_url` | `api_key` | `model` |
 | --- | --- | --- | --- |
 | `kimi` | Config file | Config file | Config file |
-| `KIMI_API_KEY=sk-env kimi` | Config file | Environment variable | Config file |
+| `CONSILIUM_API_KEY=sk-env kimi` | Config file | Environment variable | Config file |
 | `kimi --model other` | Config file | Config file | CLI flag |
-| `KIMI_MODEL_NAME=k2 kimi` | Config file | Config file | Environment variable |
+| `CONSILIUM_MODEL_NAME=k2 kimi` | Config file | Config file | Environment variable |

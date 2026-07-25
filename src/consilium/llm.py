@@ -66,26 +66,26 @@ def augment_provider_with_env_vars(provider: LLMProvider, model: LLMModel) -> di
 
     match provider.type:
         case "kimi":
-            if base_url := os.getenv("KIMI_BASE_URL"):
+            if base_url := os.getenv("CONSILIUM_BASE_URL"):
                 provider.base_url = base_url
-                applied["KIMI_BASE_URL"] = base_url
-            if api_key := os.getenv("KIMI_API_KEY"):
+                applied["CONSILIUM_BASE_URL"] = base_url
+            if api_key := os.getenv("CONSILIUM_API_KEY"):
                 provider.api_key = SecretStr(api_key)
-                applied["KIMI_API_KEY"] = "******"
-            if model_name := os.getenv("KIMI_MODEL_NAME"):
+                applied["CONSILIUM_API_KEY"] = "******"
+            if model_name := os.getenv("CONSILIUM_MODEL_NAME"):
                 model.model = model_name
-                applied["KIMI_MODEL_NAME"] = model_name
-            if max_context_size := os.getenv("KIMI_MODEL_MAX_CONTEXT_SIZE"):
+                applied["CONSILIUM_MODEL_NAME"] = model_name
+            if max_context_size := os.getenv("CONSILIUM_MODEL_MAX_CONTEXT_SIZE"):
                 model.max_context_size = int(max_context_size)
-                applied["KIMI_MODEL_MAX_CONTEXT_SIZE"] = max_context_size
-            if capabilities := os.getenv("KIMI_MODEL_CAPABILITIES"):
+                applied["CONSILIUM_MODEL_MAX_CONTEXT_SIZE"] = max_context_size
+            if capabilities := os.getenv("CONSILIUM_MODEL_CAPABILITIES"):
                 caps_lower = (cap.strip().lower() for cap in capabilities.split(",") if cap.strip())
                 model.capabilities = set(
                     cast(ModelCapability, cap)
                     for cap in caps_lower
                     if cap in get_args(ModelCapability.__value__)
                 )
-                applied["KIMI_MODEL_CAPABILITIES"] = capabilities
+                applied["CONSILIUM_MODEL_CAPABILITIES"] = capabilities
         case "openai_legacy" | "openai_responses":
             if base_url := os.getenv("OPENAI_BASE_URL"):
                 provider.base_url = base_url
@@ -97,8 +97,8 @@ def augment_provider_with_env_vars(provider: LLMProvider, model: LLMModel) -> di
     return applied
 
 
-def _kimi_default_headers(provider: LLMProvider, oauth: OAuthManager | None) -> dict[str, str]:
-    headers = {"User-Agent": "KimiCLI/1.46.0"}
+def _default_headers(provider: LLMProvider, oauth: OAuthManager | None) -> dict[str, str]:
+    headers = {"User-Agent": USER_AGENT}
     if oauth:
         headers.update(oauth.common_headers())
     if provider.custom_headers:
@@ -235,7 +235,7 @@ def create_llm(
                 model=model.model,
                 base_url=provider.base_url,
                 api_key=resolved_api_key,
-                default_headers=_kimi_default_headers(provider, oauth),
+                default_headers=_default_headers(provider, oauth),
             )
         case "openai_legacy":
             from kosong.contrib.chat_provider.openai_legacy import OpenAILegacy
@@ -302,7 +302,7 @@ def create_llm(
             if provider.env:
                 os.environ.update(provider.env)
             scripts = _load_scripted_echo_scripts()
-            trace_value = os.getenv("KIMI_SCRIPTED_ECHO_TRACE", "")
+            trace_value = os.getenv("CONSILIUM_SCRIPTED_ECHO_TRACE", "")
             trace = trace_value.strip().lower() in {"1", "true", "yes", "on"}
             chat_provider = ScriptedEchoChatProvider(scripts, trace=trace)
         case "_chaos":
@@ -314,7 +314,7 @@ def create_llm(
                     model=model.model,
                     base_url=provider.base_url,
                     api_key=resolved_api_key,
-                    default_headers=_kimi_default_headers(provider, oauth),
+                    default_headers=_default_headers(provider, oauth),
                 ),
                 chaos_config=ChaosConfig(
                     error_probability=0.8,
@@ -329,11 +329,11 @@ def create_llm(
     if provider.type == "kimi":
         if session_id:
             gen_kwargs["prompt_cache_key"] = session_id
-        if temperature := os.getenv("KIMI_MODEL_TEMPERATURE"):
+        if temperature := os.getenv("CONSILIUM_MODEL_TEMPERATURE"):
             gen_kwargs["temperature"] = float(temperature)
-        if top_p := os.getenv("KIMI_MODEL_TOP_P"):
+        if top_p := os.getenv("CONSILIUM_MODEL_TOP_P"):
             gen_kwargs["top_p"] = float(top_p)
-        if max_tokens := os.getenv("KIMI_MODEL_MAX_TOKENS"):
+        if max_tokens := os.getenv("CONSILIUM_MODEL_MAX_TOKENS"):
             gen_kwargs["max_tokens"] = int(max_tokens)
 
     # CLI overrides (highest precedence)
@@ -364,7 +364,7 @@ def create_llm(
         from kosong.chat_provider.kimi import Kimi
 
         if isinstance(chat_provider, Kimi) and (
-            thinking_keep := os.getenv("KIMI_MODEL_THINKING_KEEP")
+            thinking_keep := os.getenv("CONSILIUM_MODEL_THINKING_KEEP")
         ):
             chat_provider = chat_provider.with_extra_body({"thinking": {"keep": thinking_keep}})
 
@@ -407,19 +407,20 @@ def clone_llm_with_model_alias(
 
 def derive_model_capabilities(model: LLMModel) -> set[ModelCapability]:
     capabilities = set(model.capabilities or ())
-    # Models with "thinking" in their name are always-thinking models
-    if "thinking" in model.model.lower() or "reason" in model.model.lower():
+    model_lower = model.model.lower()
+    # Models with "thinking" or "reason" in their name are always-thinking models
+    if "thinking" in model_lower or "reason" in model_lower:
         capabilities.update(("thinking", "always_thinking"))
-    # These models support thinking but can be toggled on/off
-    elif model.model in {"kimi-for-coding", "kimi-code"}:
+    # Standard coding models support thinking, image_in, video_in
+    if "code" in model_lower or "coder" in model_lower:
         capabilities.update(("thinking", "image_in", "video_in"))
     return capabilities
 
 
 def _load_scripted_echo_scripts() -> list[str]:
-    script_path = os.getenv("KIMI_SCRIPTED_ECHO_SCRIPTS")
+    script_path = os.getenv("CONSILIUM_SCRIPTED_ECHO_SCRIPTS")
     if not script_path:
-        raise ValueError("KIMI_SCRIPTED_ECHO_SCRIPTS is required for _scripted_echo.")
+        raise ValueError("CONSILIUM_SCRIPTED_ECHO_SCRIPTS is required for _scripted_echo.")
     path = Path(script_path).expanduser()
     if not path.exists():
         raise ValueError(f"Scripted echo file not found: {path}")

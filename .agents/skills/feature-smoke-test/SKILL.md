@@ -1,6 +1,6 @@
 ---
 name: feature-smoke-test
-description: 针对 Kimi Code CLI 的新增或变更功能，规划并执行可重复的端到端冒烟测试。从 git diff 推断功能边界，读取相关文档和代码，设计测试 prompt，以 --print 非交互模式运行本地 CLI，检查进程退出码和 session 产物，总结预期与实际行为之间的差异。发现问题时自动启动多路并行探查以定位根因。
+description: 针对 Consilium CLI 的新增或变更功能，规划并执行可重复的端到端冒烟测试。从 git diff 推断功能边界，读取相关文档和代码，设计测试 prompt，以 --print 非交互模式运行本地 CLI，检查进程退出码和 session 产物，总结预期与实际行为之间的差异。发现问题时自动启动多路并行探查以定位根因。
 ---
 
 冒烟测试是运行时验证，不是写完 prompt 或读完代码就结束。必须实际执行、实际检查产物。
@@ -70,7 +70,7 @@ git diff main --stat
 
 ## 以非交互模式隔离运行 CLI
 
-使用 `/tmp` 下的一次性目录作为 `--work-dir`，实现 session 隔离。CLI 的 session 路径由 `~/.kimi/sessions/<md5(work_dir)>/` 决定，不同的 work-dir 自动产生独立的 session 命名空间，不会污染正常项目的 session。认证状态保留在 `~/.kimi` 下，无需额外配置。
+使用 `/tmp` 下的一次性目录作为 `--work-dir`，实现 session 隔离。CLI 的 session 路径由 `~/.consilium/sessions/<md5(work_dir)>/` 决定，不同的 work-dir 自动产生独立的 session 命名空间，不会污染正常项目的 session。认证状态保留在 `~/.consilium` 下，无需额外配置。
 
 ### 环境准备
 
@@ -85,7 +85,7 @@ SMOKE_DIR="$(mktemp -d /tmp/kimi-smoke-XXXXXX)"
 绝大多数场景使用这个模式：
 
 ```sh
-uv run python -m kimi_cli.cli \
+uv run python -m consilium.cli \
   --print \
   --prompt "你的测试 prompt" \
   --work-dir "$SMOKE_DIR"
@@ -100,7 +100,7 @@ echo "exit_code=$?"
 
 当默认方式不满足需求时，按需选用：
 
-- **长 prompt**：通过 stdin 传入——`cat <<'PROMPT' | uv run python -m kimi_cli.cli --print --input-format text --work-dir "$SMOKE_DIR"`
+- **长 prompt**：通过 stdin 传入——`cat <<'PROMPT' | uv run python -m consilium.cli --print --input-format text --work-dir "$SMOKE_DIR"`
 - **结构化输出**：加 `--output-format stream-json`，输出逐行 JSON，便于程序化解析
 - **只看最终结果**：用 `--quiet`，等价于 `--print --output-format text --final-message-only`
 
@@ -123,14 +123,14 @@ echo "exit_code=$?"
 
 首先检查：
 
-- `~/.kimi/sessions/.../context.jsonl`
-- `~/.kimi/sessions/.../wire.jsonl`
+- `~/.consilium/sessions/.../context.jsonl`
+- `~/.consilium/sessions/.../wire.jsonl`
 - 功能创建的 session 级文件
 
 使用 `scripts/inspect_session.py` 查找并汇总最新 session：
 
 ```sh
-uv run python .agents/skills/feature-smoke-test/scripts/inspect_session.py --share-dir ~/.kimi
+uv run python .agents/skills/feature-smoke-test/scripts/inspect_session.py --share-dir ~/.consilium
 ```
 
 脚本退出码含义：0 = 正常汇总，1 = session 目录缺失或无法解析。

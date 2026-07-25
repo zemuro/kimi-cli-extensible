@@ -1,5 +1,5 @@
-"""Kimi CLI session runner."""
+"""Consilium CLI session runner."""
 
-from consilium.web.runner.process import KimiCLIRunner
+from consilium.web.runner.process import ConsiliumCLIRunner
 
-__all__ = ["KimiCLIRunner"]
+__all__ = ["ConsiliumCLIRunner"]

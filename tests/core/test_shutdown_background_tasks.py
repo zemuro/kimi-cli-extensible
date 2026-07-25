@@ -1,4 +1,4 @@
-"""Tests for ``KimiCLI.shutdown_background_tasks``.
+"""Tests for ``ConsiliumCLI.shutdown_background_tasks``.
 
 On CLI exit (``/exit``, Ctrl+D, end of ``-p`` run), the user should see:
 
@@ -18,7 +18,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from consilium.app import KimiCLI
+from consilium.app import ConsiliumCLI
 
 
 def _fake_view(
@@ -42,8 +42,8 @@ def _make_cli(
     views: list[MagicMock],
     kill_grace_ms: int = 2000,
     kill_leaves_alive: bool = False,
-) -> tuple[KimiCLI, MagicMock, dict]:
-    """Build a KimiCLI stub exposing only what shutdown_background_tasks needs.
+) -> tuple[ConsiliumCLI, MagicMock, dict]:
+    """Build a ConsiliumCLI stub exposing only what shutdown_background_tasks needs.
 
     ``kill_leaves_alive=True`` simulates workers that do not terminate inside
     the grace window — their status stays ``running`` after ``kill``.
@@ -84,7 +84,7 @@ def _make_cli(
     runtime.config.background.kill_grace_period_ms = kill_grace_ms
     runtime.background_tasks = manager
 
-    cli = KimiCLI.__new__(KimiCLI)
+    cli = ConsiliumCLI.__new__(ConsiliumCLI)
     cli._soul = MagicMock()
     cli._runtime = runtime
     cli._env_overrides = {}

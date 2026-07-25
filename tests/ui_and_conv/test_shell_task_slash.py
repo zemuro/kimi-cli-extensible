@@ -12,7 +12,7 @@ from kosong.tooling.empty import EmptyToolset
 from consilium.approval_runtime import ApprovalSource
 from consilium.soul.agent import Agent, Runtime
 from consilium.soul.context import Context
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.subagents import AgentLaunchSpec
 from consilium.tools.display import ShellDisplayBlock
 from consilium.ui.shell import Shell
@@ -35,7 +35,7 @@ def _make_shell_app(runtime: Runtime, tmp_path: Path) -> SimpleNamespace:
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
     return SimpleNamespace(soul=soul)
 
 
@@ -77,7 +77,7 @@ async def test_task_command_launches_browser(runtime: Runtime, tmp_path: Path, m
     run_mock = Mock()
 
     class _FakeTaskBrowserApp:
-        def __init__(self, soul: KimiSoul):
+        def __init__(self, soul: ConsiliumSoul):
             assert soul is app.soul
 
         async def run(self) -> None:
@@ -100,7 +100,7 @@ class TestShellBackgroundTaskCleanup:
             toolset=EmptyToolset(),
             runtime=runtime,
         )
-        soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+        soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
         return Shell(soul)
 
     @pytest.mark.asyncio
@@ -155,7 +155,7 @@ async def test_shell_handles_background_approval_without_active_turn(
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
     shell = Shell(soul)
 
     runtime.approval_runtime.create_request(
@@ -199,7 +199,7 @@ async def test_shell_background_approval_with_prompt_session_uses_prompt_modal(
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
     shell = Shell(soul)
 
     runtime.approval_runtime.create_request(
@@ -264,7 +264,7 @@ async def test_shell_prompt_approval_modal_keeps_current_request_when_new_reques
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
     shell = Shell(soul)
 
     runtime.approval_runtime.create_request(
@@ -342,7 +342,7 @@ async def test_shell_prompt_approval_modal_advances_fifo_after_current_response(
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
     shell = Shell(soul)
 
     runtime.approval_runtime.create_request(
@@ -422,7 +422,7 @@ async def test_shell_queued_approval_deduplicates(
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
     shell = Shell(soul)
 
     runtime.approval_runtime.create_request(
@@ -462,7 +462,7 @@ async def test_shell_routes_foreground_approval_to_active_live_view(
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
     shell = Shell(soul)
 
     runtime.approval_runtime.create_request(
@@ -517,7 +517,7 @@ async def test_shell_foreground_subagent_approval_renders_subagent_metadata(
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
     shell = Shell(soul)
     runtime.subagent_store.create_instance(
         agent_id="a7654321",
@@ -587,7 +587,7 @@ async def test_shell_queues_approval_until_sink_is_ready(
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
     shell = Shell(soul)
 
     runtime.approval_runtime.create_request(
@@ -641,7 +641,7 @@ async def test_shell_sink_approval_bridge_resolves_in_runtime(
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
     shell = Shell(soul)
 
     runtime.approval_runtime.create_request(
@@ -693,7 +693,7 @@ async def test_shell_background_approval_modal_includes_display_blocks(
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
     shell = Shell(soul)
 
     runtime.approval_runtime.create_request(
@@ -761,7 +761,7 @@ async def test_shell_background_approval_renders_subagent_metadata(
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
     shell = Shell(soul)
     runtime.subagent_store.create_instance(
         agent_id="a1234567",
@@ -838,7 +838,7 @@ async def test_shell_sink_bridge_passes_feedback_to_runtime(
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
     shell = Shell(soul)
 
     runtime.approval_runtime.create_request(
@@ -900,7 +900,7 @@ async def test_set_active_approval_sink_does_not_flush_in_interactive_mode(
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
     shell = Shell(soul)
 
     # Simulate interactive mode by setting _prompt_session

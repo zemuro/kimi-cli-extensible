@@ -8,12 +8,12 @@ import pytest
 from kosong.tooling.empty import EmptyToolset
 
 from consilium.acp.session import ACPSession
-from consilium.app import KimiCLI
+from consilium.app import ConsiliumCLI
 from consilium.approval_runtime import get_current_approval_source_or_none
 from consilium.soul import wire_send
 from consilium.soul.agent import Agent, Runtime
 from consilium.soul.context import Context
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.wire.types import Notification, TextPart, ToolCall, TurnBegin, TurnEnd
 
 
@@ -114,10 +114,10 @@ async def test_acp_prompt_cancel_closes_abandoned_approval_stream(
     async def fake_ensure_fresh(_runtime):
         return None
 
-    monkeypatch.setattr(KimiSoul, "_turn", fake_turn)
+    monkeypatch.setattr(ConsiliumSoul, "_turn", fake_turn)
     monkeypatch.setattr(runtime.oauth, "ensure_fresh", fake_ensure_fresh)
 
-    soul = KimiSoul(
+    soul = ConsiliumSoul(
         Agent(
             name="ACP Approval Agent",
             system_prompt="System prompt.",
@@ -127,7 +127,7 @@ async def test_acp_prompt_cancel_closes_abandoned_approval_stream(
         context=Context(file_backend=tmp_path / "history.jsonl"),
     )
     conn = _BlockingApprovalConn()
-    session = ACPSession("session-1", KimiCLI(soul, runtime, {}), conn)  # type: ignore[arg-type]
+    session = ACPSession("session-1", ConsiliumCLI(soul, runtime, {}), conn)  # type: ignore[arg-type]
     prompt_task = asyncio.create_task(session.prompt([acp.text_block("hello")]))
 
     await asyncio.wait_for(conn.permission_requested.wait(), timeout=1.0)

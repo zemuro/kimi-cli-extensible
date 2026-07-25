@@ -15,7 +15,7 @@ from consilium.acp.convert import (
     tool_result_to_acp_content,
 )
 from consilium.acp.types import ACPContentBlock
-from consilium.app import KimiCLI
+from consilium.app import ConsiliumCLI
 from consilium.soul import LLMNotSet, LLMNotSupported, MaxStepsReached, RunCancelled
 from consilium.tools import extract_key_argument
 from consilium.utils.logging import logger
@@ -123,7 +123,7 @@ class ACPSession:
     def __init__(
         self,
         id: str,
-        cli: KimiCLI,
+        cli: ConsiliumCLI,
         acp_conn: acp.Client,
         kaos: Kaos | None = None,
     ) -> None:
@@ -139,8 +139,8 @@ class ACPSession:
         return self._id
 
     @property
-    def cli(self) -> KimiCLI:
-        """The Kimi Code CLI instance bound to this ACP session."""
+    def cli(self) -> ConsiliumCLI:
+        """The Consilium CLI instance bound to this ACP session."""
         return self._cli
 
     def _is_oauth_session(self) -> bool:

@@ -1,6 +1,6 @@
 # Phase 6B Review: Session Pairing Support for Dual-Process
 
-**Reviewer:** Kimi Code CLI  
+**Reviewer:** Consilium CLI  
 **Date:** 2026-06-01  
 **Verdict:** 🟢 **Approved with 2 minor corrections**
 

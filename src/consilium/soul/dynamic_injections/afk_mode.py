@@ -9,7 +9,7 @@ import consilium.prompts as prompts
 from consilium.soul.dynamic_injection import DynamicInjection, DynamicInjectionProvider
 
 if TYPE_CHECKING:
-    from consilium.soul.kimisoul import KimiSoul
+    from consilium.soul.consiliumsoul import ConsiliumSoul
 
 _AFK_INJECTION_TYPE = "afk_mode"
 
@@ -27,7 +27,7 @@ class AfkModeInjectionProvider(DynamicInjectionProvider):
     async def get_injections(
         self,
         history: Sequence[Message],
-        soul: KimiSoul,
+        soul: ConsiliumSoul,
     ) -> list[DynamicInjection]:
         _ = history
         if not soul.is_afk:

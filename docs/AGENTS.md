@@ -56,7 +56,7 @@ Term mapping (Chinese <-> English, and proper noun handling):
 | Thinking 模式 | thinking mode | yes | no |
 | MCP | MCP | yes | yes |
 | ACP | ACP | yes | yes |
-| Kimi Code CLI | Kimi Code CLI | yes | yes |
+| Consilium CLI | Consilium CLI | yes | yes |
 | Agent Skills | Agent Skills | yes | yes |
 | Skill | skill | yes | no |
 | 系统提示词 | system prompt | no | no |
@@ -104,9 +104,9 @@ JetBrains IDE terminology (Chinese UI translations):
   - Chinese: use `提示` for tip, `注意` for warning, `说明` for info, `警告` for danger.
   - English: use no title or short words like `Note` for warning.
   - ✓ `::: tip 提示` + content starting with the key point
-  - ✓ `::: warning 注意` + content `\`KIMI_SHARE_DIR\` 不影响 Skills 的搜索路径。...`
+  - ✓ `::: warning 注意` + content `\`CONSILIUM_SHARE_DIR\` 不影响 Skills 的搜索路径。...`
   - ✗ `::: warning 不影响 Skills` (title too long, should be in content)
-  - ✗ `::: tip Skills 路径独立于 KIMI_SHARE_DIR` (title too long)
+  - ✗ `::: tip Skills 路径独立于 CONSILIUM_SHARE_DIR` (title too long)
 - **Version info blocks**: For version change callouts, use `::: info` with a category title (Added/Changed/Removed in English; 新增/变更/移除 in Chinese). The content should be a complete sentence.
   - ✓ `::: info 新增` + content `新增于 Wire 1.2。`
   - ✗ `::: info 新增于 Wire 1.2` (title too long)
@@ -155,9 +155,9 @@ Outline prompt:
 ```markdown
 ## Install and upgrade
 
-Kimi Code CLI requires Python 3.12+. We recommend using uv for installation and management.
+Consilium CLI requires Python 3.12+. We recommend using uv for installation and management.
 
-If you haven't installed uv yet, please refer to the uv installation docs first. Install Kimi Code CLI:
+If you haven't installed uv yet, please refer to the uv installation docs first. Install Consilium CLI:
 
 (code block)
 

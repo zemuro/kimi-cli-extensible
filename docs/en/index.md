@@ -1,7 +1,7 @@
 ---
 layout: home
 hero:
-  name: Kimi Code CLI
+  name: Consilium CLI
   text: Intelligent Command Line Assistant
   tagline: Technical Preview
   actions:
@@ -10,5 +10,5 @@ hero:
       link: /en/guides/getting-started
     - theme: alt
       text: GitHub
-      link: https://github.com/MoonshotAI/kimi-cli
+      link: https://github.com/MoonshotAI/consilium
 ---

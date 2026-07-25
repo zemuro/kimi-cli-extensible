@@ -42,7 +42,7 @@ The tmux session adds a `codex-worker-` prefix so workers are easy to filter:
 |---|---|---|
 | Task name | `<type>-<number>-<desc>` | `issue-836-prompt-dollar-sign` |
 | Git branch | same as task name | `issue-836-prompt-dollar-sign` |
-| Worktree dir | `<project>.worktrees/<task>` | `kimi-cli.worktrees/issue-836-prompt-dollar-sign` |
+| Worktree dir | `<project>.worktrees/<task>` | `consilium.worktrees/issue-836-prompt-dollar-sign` |
 | tmux session | `codex-worker-<task>` | `codex-worker-issue-836-prompt-dollar-sign` |
 
 More examples:

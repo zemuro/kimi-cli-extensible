@@ -1,4 +1,4 @@
-"""Tests for --plan flag and default_plan_mode config in KimiCLI.create()."""
+"""Tests for --plan flag and default_plan_mode config in ConsiliumCLI.create()."""
 
 from __future__ import annotations
 
@@ -9,21 +9,21 @@ from uuid import uuid4
 import pytest
 
 import consilium.app as app_module
-from consilium.app import KimiCLI
+from consilium.app import ConsiliumCLI
 
 # ---------------------------------------------------------------------------
-# Helpers — lightweight fakes for KimiCLI.create() dependencies
+# Helpers — lightweight fakes for ConsiliumCLI.create() dependencies
 # ---------------------------------------------------------------------------
 
 
 def _patch_create_deps(monkeypatch, *, session_plan_mode: bool = False):
-    """Patch heavy dependencies so KimiCLI.create() runs without I/O.
+    """Patch heavy dependencies so ConsiliumCLI.create() runs without I/O.
 
     Returns a FakeSoul class whose instances record plan-mode interactions.
     """
 
     class FakeSoul:
-        """Tracks plan-mode calls made by KimiCLI.create()."""
+        """Tracks plan-mode calls made by ConsiliumCLI.create()."""
 
         instances: list[FakeSoul] = []
 
@@ -77,7 +77,7 @@ def _patch_create_deps(monkeypatch, *, session_plan_mode: bool = False):
         AsyncMock(return_value=SimpleNamespace(name="test", system_prompt="sp")),
     )
     monkeypatch.setattr(app_module, "Context", lambda _path: fake_context)
-    monkeypatch.setattr(app_module, "KimiSoul", FakeSoul)
+    monkeypatch.setattr(app_module, "ConsiliumSoul", FakeSoul)
 
     return FakeSoul, runtime_create_calls
 
@@ -95,7 +95,7 @@ class TestPlanFlagNewSession:
         """--plan flag on a new session should call set_plan_mode_from_manual(True)."""
         FakeSoul, _ = _patch_create_deps(monkeypatch)
 
-        await KimiCLI.create(session, config=config, plan_mode=True, resumed=False)
+        await ConsiliumCLI.create(session, config=config, plan_mode=True, resumed=False)
 
         soul = FakeSoul.instances[0]
         assert soul._set_plan_mode_calls == [(True, "manual")]
@@ -107,7 +107,7 @@ class TestPlanFlagNewSession:
         config.default_plan_mode = True
         FakeSoul, _ = _patch_create_deps(monkeypatch)
 
-        await KimiCLI.create(session, config=config, plan_mode=False, resumed=False)
+        await ConsiliumCLI.create(session, config=config, plan_mode=False, resumed=False)
 
         soul = FakeSoul.instances[0]
         assert soul._set_plan_mode_calls == [(True, "manual")]
@@ -117,7 +117,7 @@ class TestPlanFlagNewSession:
         """Without --plan or config, plan mode stays inactive."""
         FakeSoul, _ = _patch_create_deps(monkeypatch)
 
-        await KimiCLI.create(session, config=config, plan_mode=False, resumed=False)
+        await ConsiliumCLI.create(session, config=config, plan_mode=False, resumed=False)
 
         soul = FakeSoul.instances[0]
         assert soul._set_plan_mode_calls == []
@@ -129,7 +129,7 @@ class TestPlanFlagNewSession:
         config.default_plan_mode = False
         FakeSoul, _ = _patch_create_deps(monkeypatch)
 
-        await KimiCLI.create(session, config=config, plan_mode=True, resumed=False)
+        await ConsiliumCLI.create(session, config=config, plan_mode=True, resumed=False)
 
         soul = FakeSoul.instances[0]
         assert soul._set_plan_mode_calls == [(True, "manual")]
@@ -144,7 +144,7 @@ class TestPlanFlagResumedSession:
         config.default_plan_mode = True
         FakeSoul, _ = _patch_create_deps(monkeypatch)
 
-        await KimiCLI.create(session, config=config, plan_mode=False, resumed=True)
+        await ConsiliumCLI.create(session, config=config, plan_mode=False, resumed=True)
 
         soul = FakeSoul.instances[0]
         # plan_mode param stays False because resumed=True skips config
@@ -158,7 +158,7 @@ class TestPlanFlagResumedSession:
         """--plan on a resumed session that was NOT in plan mode should activate it."""
         FakeSoul, _ = _patch_create_deps(monkeypatch, session_plan_mode=False)
 
-        await KimiCLI.create(session, config=config, plan_mode=True, resumed=True)
+        await ConsiliumCLI.create(session, config=config, plan_mode=True, resumed=True)
 
         soul = FakeSoul.instances[0]
         assert soul._set_plan_mode_calls == [(True, "manual")]
@@ -171,7 +171,7 @@ class TestPlanFlagResumedSession:
         """--plan on a resumed session already in plan mode should schedule a reminder."""
         FakeSoul, _ = _patch_create_deps(monkeypatch, session_plan_mode=True)
 
-        await KimiCLI.create(session, config=config, plan_mode=True, resumed=True)
+        await ConsiliumCLI.create(session, config=config, plan_mode=True, resumed=True)
 
         soul = FakeSoul.instances[0]
         # Should NOT call set_plan_mode since already active
@@ -183,7 +183,7 @@ class TestPlanFlagResumedSession:
         """Resumed session with plan_mode already active (no --plan flag) stays in plan mode."""
         FakeSoul, _ = _patch_create_deps(monkeypatch, session_plan_mode=True)
 
-        await KimiCLI.create(session, config=config, plan_mode=False, resumed=True)
+        await ConsiliumCLI.create(session, config=config, plan_mode=False, resumed=True)
 
         soul = FakeSoul.instances[0]
         assert soul._set_plan_mode_calls == []
@@ -201,7 +201,7 @@ class TestPlanFlagPriority:
         config.default_plan_mode = False
         FakeSoul, _ = _patch_create_deps(monkeypatch)
 
-        await KimiCLI.create(session, config=config, plan_mode=True, resumed=False)
+        await ConsiliumCLI.create(session, config=config, plan_mode=True, resumed=False)
 
         soul = FakeSoul.instances[0]
         assert soul._set_plan_mode_calls == [(True, "manual")]
@@ -212,7 +212,7 @@ class TestPlanFlagPriority:
         config.default_plan_mode = True
         FakeSoul, _ = _patch_create_deps(monkeypatch)
 
-        await KimiCLI.create(session, config=config, plan_mode=False, resumed=False)
+        await ConsiliumCLI.create(session, config=config, plan_mode=False, resumed=False)
 
         soul = FakeSoul.instances[0]
         assert soul._set_plan_mode_calls == [(True, "manual")]
@@ -223,7 +223,7 @@ class TestPlanFlagPriority:
         assert config.default_plan_mode is False
         FakeSoul, _ = _patch_create_deps(monkeypatch)
 
-        await KimiCLI.create(session, config=config, resumed=False)
+        await ConsiliumCLI.create(session, config=config, resumed=False)
 
         soul = FakeSoul.instances[0]
         assert soul._set_plan_mode_calls == []
@@ -233,7 +233,7 @@ class TestPlanFlagPriority:
         """--plan and --yolo can be used together without conflict."""
         FakeSoul, runtime_create_calls = _patch_create_deps(monkeypatch)
 
-        await KimiCLI.create(session, config=config, plan_mode=True, yolo=True, resumed=False)
+        await ConsiliumCLI.create(session, config=config, plan_mode=True, yolo=True, resumed=False)
 
         soul = FakeSoul.instances[0]
         assert soul._set_plan_mode_calls == [(True, "manual")]
@@ -244,14 +244,14 @@ class TestPlanFlagPriority:
         """Print-mode afk overlay should be passed separately from explicit afk."""
         _, runtime_create_calls = _patch_create_deps(monkeypatch)
 
-        await KimiCLI.create(session, config=config, runtime_afk=True, resumed=False)
+        await ConsiliumCLI.create(session, config=config, runtime_afk=True, resumed=False)
 
         assert runtime_create_calls[0]["afk"] is False
         assert runtime_create_calls[0]["runtime_afk"] is True
 
 
 class TestSchedulePlanActivationReminder:
-    """Unit tests for KimiSoul.schedule_plan_activation_reminder()."""
+    """Unit tests for ConsiliumSoul.schedule_plan_activation_reminder()."""
 
     def test_schedules_when_in_plan_mode(self, runtime, tmp_path, monkeypatch):
         """Reminder is scheduled when plan mode is active."""
@@ -259,7 +259,7 @@ class TestSchedulePlanActivationReminder:
 
         from consilium.soul.agent import Agent
         from consilium.soul.context import Context
-        from consilium.soul.kimisoul import KimiSoul
+        from consilium.soul.consiliumsoul import ConsiliumSoul
 
         # Redirect PLANS_DIR to tmp_path to avoid filesystem side effects
         monkeypatch.setattr("consilium.tools.plan.heroes.PLANS_DIR", tmp_path)
@@ -270,7 +270,7 @@ class TestSchedulePlanActivationReminder:
             toolset=EmptyToolset(),
             runtime=runtime,
         )
-        soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "ctx.jsonl"))
+        soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "ctx.jsonl"))
 
         # Enable plan mode first
         soul._set_plan_mode(True, source="manual")
@@ -287,7 +287,7 @@ class TestSchedulePlanActivationReminder:
 
         from consilium.soul.agent import Agent
         from consilium.soul.context import Context
-        from consilium.soul.kimisoul import KimiSoul
+        from consilium.soul.consiliumsoul import ConsiliumSoul
 
         agent = Agent(
             name="Test",
@@ -295,7 +295,7 @@ class TestSchedulePlanActivationReminder:
             toolset=EmptyToolset(),
             runtime=runtime,
         )
-        soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "ctx.jsonl"))
+        soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "ctx.jsonl"))
 
         assert soul.plan_mode is False
         soul.schedule_plan_activation_reminder()
@@ -332,7 +332,7 @@ class TestWebWorkerResumedDetection:
                 "consilium.web.runner.worker.get_global_mcp_config_file",
                 return_value=tmp_path / "no-mcp.json",
             ),
-            patch.object(KimiCLI, "create", side_effect=spy_create),
+            patch.object(ConsiliumCLI, "create", side_effect=spy_create),
             pytest.raises(_StopWorker),
         ):
             await run_worker(uuid4())
@@ -366,7 +366,7 @@ class TestWebWorkerResumedDetection:
                 "consilium.web.runner.worker.get_global_mcp_config_file",
                 return_value=tmp_path / "no-mcp.json",
             ),
-            patch.object(KimiCLI, "create", side_effect=spy_create),
+            patch.object(ConsiliumCLI, "create", side_effect=spy_create),
             pytest.raises(_StopWorker),
         ):
             await run_worker(uuid4())

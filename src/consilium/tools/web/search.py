@@ -45,13 +45,13 @@ class SearchWeb(CallableTool2[Params]):
 
     def __init__(self, config: Config, runtime: Runtime):
         super().__init__()
-        if config.services.moonshot_search is None:
+        if config.services.web_search is None:
             raise SkipThisTool()
         self._runtime = runtime
-        self._base_url = config.services.moonshot_search.base_url
-        self._api_key = config.services.moonshot_search.api_key
-        self._oauth_ref = config.services.moonshot_search.oauth
-        self._custom_headers = config.services.moonshot_search.custom_headers or {}
+        self._base_url = config.services.web_search.base_url
+        self._api_key = config.services.web_search.api_key
+        self._oauth_ref = config.services.web_search.oauth
+        self._custom_headers = config.services.web_search.custom_headers or {}
 
     @override
     async def __call__(self, params: Params) -> ToolReturnValue:

@@ -2,13 +2,13 @@
 
 > For a quick overview, see the [README](./README.md#prompt-extensibility). This document covers the full details.
 
-This fork makes the kimi-cli system prompts fully customizable without requiring code changes. All hardcoded prompts have been extracted into plain `.md` files that can be overridden via configuration.
+This fork makes the consilium system prompts fully customizable without requiring code changes. All hardcoded prompts have been extracted into plain `.md` files that can be overridden via configuration.
 
 ## What Changed
 
 ### 1. Main System Prompt — Decomposed into Sections
 
-The monolithic `src/kimi_cli/agents/default/system.md` (160 lines) has been split into logical sections under `src/kimi_cli/prompts/system/`:
+The monolithic `src/consilium/agents/default/system.md` (160 lines) has been split into logical sections under `src/consilium/prompts/system/`:
 
 | Section File | Covers |
 |---|---|
@@ -50,7 +50,7 @@ This keeps YAML specs clean and makes subagent behavior editable without touchin
 
 ### 3. Secondary/Special-Mode Prompts — Extracted
 
-All previously hardcoded prompts now live in `src/kimi_cli/prompts/`:
+All previously hardcoded prompts now live in `src/consilium/prompts/`:
 
 | File | Used By |
 |---|---|
@@ -69,7 +69,7 @@ All previously hardcoded prompts now live in `src/kimi_cli/prompts/`:
 
 ### Override Individual Main Prompt Sections
 
-Add this to `~/.kimi/config.toml`:
+Add this to `~/.consilium/config.toml`:
 
 ```toml
 [system_prompt_overrides]
@@ -85,14 +85,14 @@ Custom agents can still provide a complete `system.md` file. Only the default ag
 
 ### Override Secondary Prompts
 
-Secondary prompts are loaded at import time from `src/kimi_cli/prompts/`. To override them, fork the repo and edit the `.md` files directly, or (for runtime overrides) contribute a plugin that hooks into the loading mechanism.
+Secondary prompts are loaded at import time from `src/consilium/prompts/`. To override them, fork the repo and edit the `.md` files directly, or (for runtime overrides) contribute a plugin that hooks into the loading mechanism.
 
 ### Override Subagent Prompts
 
 Subagent role and `when_to_use` prompts are loaded from files relative to the subagent YAML. You can fork and edit:
 
-- `src/kimi_cli/agents/default/coder_role.md`
-- `src/kimi_cli/agents/default/explore_when_to_use.md`
+- `src/consilium/agents/default/coder_role.md`
+- `src/consilium/agents/default/explore_when_to_use.md`
 - etc.
 
 Or create a new agent spec that extends the default and points to your own files:
@@ -110,7 +110,7 @@ agent:
 
 ### Section Assembly
 
-`src/kimi_cli/prompts/system/__init__.py` exports:
+`src/consilium/prompts/system/__init__.py` exports:
 
 - `DEFAULT_SECTION_ORDER` — list of section names in assembly order
 - `load_section(name, overrides)` — load a single section, respecting overrides
@@ -119,7 +119,7 @@ agent:
 
 ### Config Schema Addition
 
-`src/kimi_cli/config.py` adds:
+`src/consilium/config.py` adds:
 
 ```python
 system_prompt_overrides: dict[str, str]
@@ -129,7 +129,7 @@ Keys are section names (e.g., `"identity"`, `"coding_guidelines"`). Values are a
 
 ### AgentSpec Schema Additions
 
-`src/kimi_cli/agentspec.py` adds:
+`src/consilium/agentspec.py` adds:
 
 ```python
 system_prompt_args_files: dict[str, Path]  # key → file path
@@ -143,7 +143,7 @@ These are resolved relative to the agent YAML file and loaded at spec-parse time
 - Existing `system.md` files without the assembly marker work exactly as before
 - Inline `system_prompt_args` and `when_to_use` in YAML still work
 - All existing tests pass without modification
-- The Jinja2 variable syntax (`${KIMI_OS}`, `{% if %}`) continues to work inside sections
+- The Jinja2 variable syntax (`${CONSILIUM_OS}`, `{% if %}`) continues to work inside sections
 
 
 ## Reload Semantics
@@ -152,11 +152,11 @@ Prompt overrides are loaded **once per agent initialization** (when `Runtime` is
 
 Subagent prompts are loaded when the subagent spec is parsed, which happens on first invocation of that subagent type. Changing a subagent's `.md` file also requires `/restart` to take effect.
 
-Secondary/special-mode prompts (compaction, plan mode, AFK, etc.) are loaded from `src/kimi_cli/prompts/` at import time. To modify them, edit the files and restart the process.
+Secondary/special-mode prompts (compaction, plan mode, AFK, etc.) are loaded from `src/consilium/prompts/` at import time. To modify them, edit the files and restart the process.
 
 ## Dynamic Injections
 
-Special-mode prompts that are injected into the message history (not the system prompt) live in `src/kimi_cli/soul/dynamic_injections/`:
+Special-mode prompts that are injected into the message history (not the system prompt) live in `src/consilium/soul/dynamic_injections/`:
 
 - `plan_mode.py` — periodic plan-mode reminders
 - `afk_mode.py` — AFK-mode system reminders
@@ -165,4 +165,4 @@ These are loaded as injection providers by `KimiSoul` and appended as user messa
 
 ## Rebasing from Upstream
 
-See [`REBASE.md`](./REBASE.md) for the merge strategy when syncing with upstream MoonshotAI/kimi-cli releases.
+See [`REBASE.md`](./REBASE.md) for the merge strategy when syncing with upstream MoonshotAI/consilium releases.

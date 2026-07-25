@@ -1,5 +1,18 @@
 from __future__ import annotations
 
+import os
+
+# Automatically sync KIMI_ and CONSILIUM_ environment variables for backward/forward compatibility
+for env_key, env_value in list(os.environ.items()):
+    if env_key.startswith("KIMI_"):
+        consilium_key = env_key.replace("KIMI_", "CONSILIUM_", 1)
+        if consilium_key not in os.environ:
+            os.environ[consilium_key] = env_value
+    elif env_key.startswith("CONSILIUM_"):
+        kimi_key = env_key.replace("CONSILIUM_", "KIMI_", 1)
+        if kimi_key not in os.environ:
+            os.environ[kimi_key] = env_value
+
 from typing import Any, cast
 
 

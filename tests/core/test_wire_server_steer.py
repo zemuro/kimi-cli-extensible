@@ -11,7 +11,7 @@ import consilium.telemetry as telemetry_mod
 from consilium.approval_runtime import ApprovalSource
 from consilium.soul.agent import Agent, Runtime
 from consilium.soul.context import Context
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.telemetry import set_context
 from consilium.utils.aioqueue import QueueShutDown
 from consilium.wire.jsonrpc import (
@@ -28,14 +28,14 @@ from consilium.wire.server import WireServer
 from consilium.wire.types import ApprovalRequest, ApprovalResponse, TextPart
 
 
-def _make_soul(runtime: Runtime, tmp_path: Path) -> KimiSoul:
+def _make_soul(runtime: Runtime, tmp_path: Path) -> ConsiliumSoul:
     agent = Agent(
         name="Steer Test Agent",
         system_prompt="Test prompt.",
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    return KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    return ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
 
 
 def _reset_telemetry() -> None:

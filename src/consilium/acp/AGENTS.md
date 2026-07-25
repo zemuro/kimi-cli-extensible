@@ -1,4 +1,4 @@
-# ACP Integration Notes (kimi-cli)
+# ACP Integration Notes (consilium)
 
 ## Protocol summary (ACP overview)
 - ACP is JSON-RPC 2.0 with request/response methods plus one-way notifications.
@@ -10,11 +10,11 @@
 
 ## Entry points and server modes
 - **Single-session server**: `KimiCLI.run_acp()` uses `ACP` -> `ACPServerSingleSession`.
-  - Code: `src/kimi_cli/app.py`, `src/kimi_cli/ui/acp/__init__.py`.
+  - Code: `src/consilium/app.py`, `src/consilium/ui/acp/__init__.py`.
   - Used when running CLI with `--acp` UI mode.
 - **Multi-session server**: `acp_main()` runs `ACPServer` with `use_unstable_protocol=True`.
-  - Code: `src/kimi_cli/acp/__init__.py`, `src/kimi_cli/acp/server.py`.
-  - Exposed via the `kimi acp` command in `src/kimi_cli/cli/__init__.py`.
+  - Code: `src/consilium/acp/__init__.py`, `src/consilium/acp/server.py`.
+  - Exposed via the `kimi acp` command in `src/consilium/cli/__init__.py`.
 
 ## Capabilities advertised
 - `prompt_capabilities`: `embedded_context=False`, `image=True`, `audio=False`.
@@ -74,7 +74,7 @@
 
 ## Current gaps / not implemented
 - `authenticate` method (not used by current Zed ACP client).
-- `session/set_mode` and `session/set_model` (no multi-mode/model switching in kimi-cli).
+- `session/set_mode` and `session/set_model` (no multi-mode/model switching in consilium).
 - `ext_method` / `ext_notification` for custom ACP extensions are stubbed.
 - Single-session server does not implement `session/load` or `session/list`.
 

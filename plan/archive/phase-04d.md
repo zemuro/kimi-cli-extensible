@@ -5,9 +5,9 @@ status: implemented
 dependencies:
   - phase-04c
 files_involved:
-  - src/kimi_cli/plan/
-  - src/kimi_cli/plan/parser.py
-  - src/kimi_cli/plan/validator.py
+  - src/consilium/plan/
+  - src/consilium/plan/parser.py
+  - src/consilium/plan/validator.py
 ---
 
 **Status: IMPLEMENTED — 41 tests passing, ruff clean.**
@@ -258,7 +258,7 @@ docs/
 | interrupt_vector.md | Phase 13 audit | Map interrupt handlers | draft |
 ```
 
-**Machine-readable cache:** `.kimi/docs_index.json` (auto-generated from README.md)
+**Machine-readable cache:** `.consilium/docs_index.json` (auto-generated from README.md)
 
 ```json
 {
@@ -303,7 +303,7 @@ docs/
 - Think updates `last_updated` when editing a doc.
 - Think marks docs `stale` when discoveries contradict them.
 - Think moves docs from "Emergent Docs Queue" to "Active Documents" when ready.
-- A small parser regenerates `.kimi/docs_index.json` from `docs/README.md`.
+- A small parser regenerates `.consilium/docs_index.json` from `docs/README.md`.
 
 ---
 
@@ -311,7 +311,7 @@ docs/
 
 **How Think signals Do to start work:**
 
-**File:** `.kimi/dispatch.json`
+**File:** `.consilium/dispatch.json`
 
 ```json
 {
@@ -348,7 +348,7 @@ Do begins audit of target_phase
 **Do CLI additions:**
 
 ```python
-# src/kimi_cli/cli/__init__.py
+# src/consilium/cli/__init__.py
 plan_file: Annotated[
     Path | None,
     typer.Option(
@@ -374,7 +374,7 @@ kimi --do --plan plan/index.md --phase phase-3
 
 Do:
 1. Reads `plan/index.md`, extracts the target phase
-2. Reads `docs/README.md` (or `.kimi/docs_index.json`) to find relevant docs
+2. Reads `docs/README.md` (or `.consilium/docs_index.json`) to find relevant docs
 3. Loads referenced docs into context as system messages
 4. Begins audit (not implementation — audit comes first)
 
@@ -424,7 +424,7 @@ If Think process is alive:
     Think can auto-respond if AFK, or wait for user input
     ↓
 If Think process is not alive:
-    Audit queued in .kimi/think_inbox/
+    Audit queued in .consilium/think_inbox/
     Think checks inbox on next startup
 ```
 
@@ -457,7 +457,7 @@ L1 flags → run L2 for flagged items only
 L1 fails hard (missing critical file) → reject immediately, no L2 needed
 ```
 
-**Cache:** Project-specific rule overrides stored in `.kimi/audit_rules.yaml`. Known-safe patterns skip L2 on subsequent phases.
+**Cache:** Project-specific rule overrides stored in `.consilium/audit_rules.yaml`. Known-safe patterns skip L2 on subsequent phases.
 
 **Max iterations:** Default 3 audit cycles per phase. After 3 without consensus, pause for user.
 
@@ -467,7 +467,7 @@ L1 fails hard (missing critical file) → reject immediately, no L2 needed
 
 **Principle:** Sessions are ephemeral; handover documents are permanent. A new Think session starts by reading the handover, not old chat history.
 
-**File:** `docs/session_handover_YYYYMMDD.md` (or `.kimi/session_handoff.json` for machine parsing)
+**File:** `docs/session_handover_YYYYMMDD.md` (or `.consilium/session_handoff.json` for machine parsing)
 
 ```markdown
 # Session Handover 2026-05-24
@@ -622,9 +622,9 @@ Do continues to Phase 3 audit...
 |------|---------|-------|
 | `plan/index.md` | Phased implementation plan | Think (write), Do (read) |
 | `docs/README.md` | Documentation index | Think (write), Do (read) |
-| `.kimi/docs_index.json` | Machine-readable doc cache | Auto-generated |
-| `.kimi/dispatch.json` | Think→Do signal | Think (write), Do (read) |
-| `.kimi/think_inbox/` | Queued audits for offline Think | Do (write), Think (read) |
+| `.consilium/docs_index.json` | Machine-readable doc cache | Auto-generated |
+| `.consilium/dispatch.json` | Think→Do signal | Think (write), Do (read) |
+| `.consilium/think_inbox/` | Queued audits for offline Think | Do (write), Think (read) |
 | `audits/phase-N-*.md` | Do audit reports | Do (write), Think (read) |
 | `reports/phase-N-complete.md` | Do completion reports | Do (write), Think (read) |
 | `docs/session_handover_*.md` | Session continuity docs | Think (write), Think (read) |

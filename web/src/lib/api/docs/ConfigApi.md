@@ -4,10 +4,10 @@ All URIs are relative to *http://localhost*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
-| [**getConfigTomlApiConfigTomlGet**](ConfigApi.md#getconfigtomlapiconfigtomlget) | **GET** /api/config/toml | Get kimi-cli config.toml |
-| [**getGlobalConfigApiConfigGet**](ConfigApi.md#getglobalconfigapiconfigget) | **GET** /api/config/ | Get global (kimi-cli) config snapshot |
-| [**updateConfigTomlApiConfigTomlPut**](ConfigApi.md#updateconfigtomlapiconfigtomlput) | **PUT** /api/config/toml | Update kimi-cli config.toml |
-| [**updateGlobalConfigApiConfigPatch**](ConfigApi.md#updateglobalconfigapiconfigpatch) | **PATCH** /api/config/ | Update global (kimi-cli) default model/thinking |
+| [**getConfigTomlApiConfigTomlGet**](ConfigApi.md#getconfigtomlapiconfigtomlget) | **GET** /api/config/toml | Get consilium config.toml |
+| [**getGlobalConfigApiConfigGet**](ConfigApi.md#getglobalconfigapiconfigget) | **GET** /api/config/ | Get global (consilium) config snapshot |
+| [**updateConfigTomlApiConfigTomlPut**](ConfigApi.md#updateconfigtomlapiconfigtomlput) | **PUT** /api/config/toml | Update consilium config.toml |
+| [**updateGlobalConfigApiConfigPatch**](ConfigApi.md#updateglobalconfigapiconfigpatch) | **PATCH** /api/config/ | Update global (consilium) default model/thinking |
 
 
 
@@ -15,9 +15,9 @@ All URIs are relative to *http://localhost*
 
 > ConfigToml getConfigTomlApiConfigTomlGet()
 
-Get kimi-cli config.toml
+Get consilium config.toml
 
-Get kimi-cli config.toml.
+Get consilium config.toml.
 
 ### Example
 
@@ -74,9 +74,9 @@ No authorization required
 
 > GlobalConfig getGlobalConfigApiConfigGet()
 
-Get global (kimi-cli) config snapshot
+Get global (consilium) config snapshot
 
-Get global (kimi-cli) config snapshot.
+Get global (consilium) config snapshot.
 
 ### Example
 
@@ -133,9 +133,9 @@ No authorization required
 
 > UpdateConfigTomlResponse updateConfigTomlApiConfigTomlPut(updateConfigTomlRequest)
 
-Update kimi-cli config.toml
+Update consilium config.toml
 
-Update kimi-cli config.toml.
+Update consilium config.toml.
 
 ### Example
 
@@ -201,9 +201,9 @@ No authorization required
 
 > UpdateGlobalConfigResponse updateGlobalConfigApiConfigPatch(updateGlobalConfigRequest)
 
-Update global (kimi-cli) default model/thinking
+Update global (consilium) default model/thinking
 
-Update global (kimi-cli) default model/thinking.
+Update global (consilium) default model/thinking.
 
 ### Example
 

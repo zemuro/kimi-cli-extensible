@@ -14,7 +14,7 @@ from consilium.llm import LLM, create_llm
 from consilium.session import Session
 from consilium.soul.agent import Agent, Runtime
 from consilium.soul.context import Context
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import KimiSoul
 from consilium.ui.shell import Shell
 from consilium.wire.types import ContentPart, ToolReturnValue
 
@@ -94,8 +94,8 @@ async def main():
         llm=create_llm(
             LLMProvider(
                 type="kimi",
-                base_url=os.getenv("KIMI_BASE_URL") or "https://api.moonshot.ai/v1",
-                api_key=SecretStr(os.getenv("KIMI_API_KEY") or ""),
+                base_url=os.getenv("CONSILIUM_BASE_URL") or "https://api.moonshot.ai/v1",
+                api_key=SecretStr(os.getenv("CONSILIUM_API_KEY") or ""),
             ),
             LLMModel(
                 provider="kimi",

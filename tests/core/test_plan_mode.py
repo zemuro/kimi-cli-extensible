@@ -13,8 +13,8 @@ from pydantic import ValidationError
 from consilium.soul.agent import Agent, Runtime
 from consilium.soul.approval import Approval
 from consilium.soul.context import Context
-from consilium.soul.kimisoul import KimiSoul
-from consilium.soul.toolset import KimiToolset
+from consilium.soul.consiliumsoul import ConsiliumSoul
+from consilium.soul.toolset import ConsiliumToolset
 from consilium.tools.file.replace import StrReplaceFile
 from consilium.tools.file.write import WriteFile
 from consilium.tools.plan import ExitPlanMode, Params, PlanOption
@@ -47,14 +47,14 @@ def _clear_slug_cache():
     _slug_cache.clear()
 
 
-def _make_soul(runtime: Runtime, tmp_path: Path) -> KimiSoul:
+def _make_soul(runtime: Runtime, tmp_path: Path) -> ConsiliumSoul:
     agent = Agent(
         name="Test Agent",
         system_prompt="Test system prompt.",
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    return KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    return ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
 
 
 def _tool_output_text(result: ToolReturnValue) -> str:
@@ -525,11 +525,11 @@ class TestEnterPlanModeHappyPaths:
 
 
 # ---------------------------------------------------------------------------
-# KimiSoul — plan mode state management
+# ConsiliumSoul — plan mode state management
 # ---------------------------------------------------------------------------
 
 
-class TestKimiSoulPlanState:
+class TestConsiliumSoulPlanState:
     async def test_session_id_allocated_on_activation(
         self, runtime: Runtime, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -633,7 +633,7 @@ class TestKimiSoulPlanState:
         assert soul.status.plan_mode is False
 
     def test_bind_plan_mode_tools_binds_callbacks(self, runtime: Runtime, tmp_path: Path) -> None:
-        toolset = KimiToolset()
+        toolset = ConsiliumToolset()
         write_tool = WriteFile(runtime, runtime.approval)
         replace_tool = StrReplaceFile(runtime, runtime.approval)
         toolset.add(write_tool)
@@ -645,7 +645,7 @@ class TestKimiSoulPlanState:
             toolset=toolset,
             runtime=runtime,
         )
-        soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+        soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
 
         assert write_tool._plan_mode_checker is not None
         assert write_tool._plan_file_path_getter is not None
@@ -662,17 +662,17 @@ class TestKimiSoulPlanState:
 
 
 # ---------------------------------------------------------------------------
-# KimiSoul — plan_session_id cross-process persistence
+# ConsiliumSoul — plan_session_id cross-process persistence
 # ---------------------------------------------------------------------------
 
 
-class TestKimiSoulPlanSessionPersistence:
+class TestConsiliumSoulPlanSessionPersistence:
     """Tests that plan_session_id survives simulated process restarts."""
 
     async def test_plan_session_id_survives_restart(
         self, runtime: Runtime, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Second KimiSoul created from same session state gets same plan file path."""
+        """Second ConsiliumSoul created from same session state gets same plan file path."""
         monkeypatch.setattr("consilium.tools.plan.heroes.PLANS_DIR", tmp_path)
         soul1 = _make_soul(runtime, tmp_path)
         soul1._set_plan_mode(True, source="tool")
@@ -682,7 +682,7 @@ class TestKimiSoulPlanSessionPersistence:
         # Simulate restart: clear in-process slug cache (as would happen in a new process)
         _slug_cache.clear()
 
-        # New KimiSoul reads from same (already-saved) session state and re-seeds cache
+        # New ConsiliumSoul reads from same (already-saved) session state and re-seeds cache
         soul2 = _make_soul(runtime, tmp_path)
         path2 = soul2.get_plan_file_path()
         assert path2 == path1

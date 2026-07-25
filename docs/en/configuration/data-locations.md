@@ -1,17 +1,17 @@
 # Data Locations
 
-Kimi Code CLI stores all data in the `~/.kimi/` directory under the user's home directory. This page describes the locations and purposes of various data files.
+Consilium CLI stores all data in the `~/.consilium/` directory under the user's home directory. This page describes the locations and purposes of various data files.
 
 ::: tip
-You can customize the share directory path by setting the `KIMI_SHARE_DIR` environment variable. See [Environment Variables](./env-vars.md#kimi-share-dir) for details.
+You can customize the share directory path by setting the `CONSILIUM_SHARE_DIR` environment variable. See [Environment Variables](./env-vars.md#kimi-share-dir) for details.
 
-Note: `KIMI_SHARE_DIR` only affects the storage location of the runtime data listed above, not the [Agent Skills](../customization/skills.md) search paths. Skills, as cross-tool shared capability extensions, are a different type of data from application runtime data.
+Note: `CONSILIUM_SHARE_DIR` only affects the storage location of the runtime data listed above, not the [Agent Skills](../customization/skills.md) search paths. Skills, as cross-tool shared capability extensions, are a different type of data from application runtime data.
 :::
 
 ## Directory structure
 
 ```
-~/.kimi/
+~/.consilium/
 ├── config.toml           # Main configuration file
 ├── kimi.json             # Metadata
 ├── mcp.json              # MCP server configuration
@@ -47,12 +47,12 @@ You can specify a configuration file at a different location with the `--config-
 
 ### `kimi.json`
 
-Metadata file, stores Kimi Code CLI's runtime state, including:
+Metadata file, stores Consilium CLI's runtime state, including:
 
 - `work_dirs`: List of working directories and their last used session IDs
 - `thinking`: Whether thinking mode was enabled in the last session
 
-This file is automatically managed by Kimi Code CLI and typically doesn't need manual editing.
+This file is automatically managed by Consilium CLI and typically doesn't need manual editing.
 
 ### `mcp.json`
 
@@ -76,15 +76,15 @@ Example structure:
 
 ## Credentials
 
-OAuth credentials are stored in the `~/.kimi/credentials/` directory. After logging in to your Kimi account via `/login`, OAuth tokens are saved in this directory.
+OAuth credentials are stored in the `~/.consilium/credentials/` directory. After logging in to your Kimi account via `/login`, OAuth tokens are saved in this directory.
 
-OAuth tokens for MCP servers are stored separately in `~/.kimi/mcp-oauth/`. After authorizing an MCP server added with `--auth oauth` via `kimi mcp auth <name>`, later sessions reuse the tokens from this directory. Use `kimi mcp reset-auth <name>` to clear the MCP OAuth token for one server.
+OAuth tokens for MCP servers are stored separately in `~/.consilium/mcp-oauth/`. After authorizing an MCP server added with `--auth oauth` via `kimi mcp auth <name>`, later sessions reuse the tokens from this directory. Use `kimi mcp reset-auth <name>` to clear the MCP OAuth token for one server.
 
 Files in the `credentials/` directory have permissions set to read/write for the current user only (600) to protect sensitive information.
 
 ## Session data
 
-Session data is grouped by working directory and stored under `~/.kimi/sessions/`. Each working directory corresponds to a subdirectory named with the path's MD5 hash, and each session corresponds to a subdirectory named with the session ID.
+Session data is grouped by working directory and stored under `~/.consilium/sessions/`. Each working directory corresponds to a subdirectory named with the path's MD5 hash, and each session corresponds to a subdirectory named with the session ID.
 
 ### `context.jsonl`
 
@@ -92,7 +92,7 @@ Context history file, stores the session's full context in JSON Lines (JSONL) fo
 
 The system prompt is generated and frozen at session creation time, and reused on session restore instead of being regenerated.
 
-Kimi Code CLI uses this file to restore session context when using `--continue` or `--session`.
+Consilium CLI uses this file to restore session context when using `--continue` or `--session`.
 
 ### `wire.jsonl`
 
@@ -106,11 +106,11 @@ Session state file, stores the session's runtime state, including:
 - `approval`: Approval decision state (YOLO and AFK mode on/off, auto-approved operation types)
 - `plan_mode`: Plan mode on/off status
 - `plan_session_id`: Unique identifier for the current plan session, used to associate the plan file
-- `plan_slug`: The file path identifier for the plan (the slug in `~/.kimi/plans/<slug>.md`), preserved so restarts resume the same file
+- `plan_slug`: The file path identifier for the plan (the slug in `~/.consilium/plans/<slug>.md`), preserved so restarts resume the same file
 - `subagent_instances`: Subagent instance state and metadata
 - `additional_dirs`: Additional workspace directories added via `--add-dir` or `/add-dir`
 
-When resuming a session, Kimi Code CLI reads this file to restore the session state. This file uses atomic writes to prevent data corruption on crash.
+When resuming a session, Consilium CLI reads this file to restore the session state. This file uses atomic writes to prevent data corruption on crash.
 
 ### `subagents/<agent_id>/`
 
@@ -126,35 +126,35 @@ When resuming a session, subagent instance context and state are automatically r
 
 ## Plan files
 
-Plan mode plan files are stored in the `~/.kimi/plans/` directory. Each plan session corresponds to a randomly named Markdown file (e.g. `<slug>.md`).
+Plan mode plan files are stored in the `~/.consilium/plans/` directory. Each plan session corresponds to a randomly named Markdown file (e.g. `<slug>.md`).
 
 The `plan_slug` is saved in `state.json`, so the same plan file is resumed after a process restart. Use `/plan clear` to delete the current plan session's file.
 
 ## Input history
 
-User input history is stored in the `~/.kimi/user-history/` directory. Each working directory corresponds to a `.jsonl` file named with the path's MD5 hash.
+User input history is stored in the `~/.consilium/user-history/` directory. Each working directory corresponds to a `.jsonl` file named with the path's MD5 hash.
 
 Input history is used for history browsing (up/down arrow keys) and search (Ctrl-R) in shell mode.
 
 ## Logs
 
-Runtime logs are stored in `~/.kimi/logs/kimi.log`. Default log level is INFO, use the `--debug` flag to enable TRACE level.
+Runtime logs are stored in `~/.consilium/logs/kimi.log`. Default log level is INFO, use the `--debug` flag to enable TRACE level.
 
 Log files are used for troubleshooting. When reporting bugs, please include relevant log content.
 
 ## Cleaning data
 
-Deleting the share directory (default `~/.kimi/`, or the path specified by `KIMI_SHARE_DIR`) completely clears all Kimi Code CLI data, including configuration, sessions, and history.
+Deleting the share directory (default `~/.consilium/`, or the path specified by `CONSILIUM_SHARE_DIR`) completely clears all Consilium CLI data, including configuration, sessions, and history.
 
 To clean only specific data:
 
 | Need | Action |
 | --- | --- |
-| Reset configuration | Delete `~/.kimi/config.toml` |
-| Clear all sessions | Delete `~/.kimi/sessions/` directory |
+| Reset configuration | Delete `~/.consilium/config.toml` |
+| Clear all sessions | Delete `~/.consilium/sessions/` directory |
 | Clear sessions for specific working directory | Use `/sessions` in shell mode to view and delete |
-| Clear plan files | Delete `~/.kimi/plans/` directory, or use `/plan clear` in plan mode |
-| Clear input history | Delete `~/.kimi/user-history/` directory |
-| Clear logs | Delete `~/.kimi/logs/` directory |
-| Clear MCP configuration | Delete `~/.kimi/mcp.json` or use `kimi mcp remove` |
-| Clear login credentials | Delete `~/.kimi/credentials/` directory or use `/logout` |
+| Clear plan files | Delete `~/.consilium/plans/` directory, or use `/plan clear` in plan mode |
+| Clear input history | Delete `~/.consilium/user-history/` directory |
+| Clear logs | Delete `~/.consilium/logs/` directory |
+| Clear MCP configuration | Delete `~/.consilium/mcp.json` or use `kimi mcp remove` |
+| Clear login credentials | Delete `~/.consilium/credentials/` directory or use `/logout` |

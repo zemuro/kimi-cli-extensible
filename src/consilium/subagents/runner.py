@@ -17,10 +17,12 @@ from consilium.approval_runtime import (
     set_current_approval_source,
 )
 from consilium.soul import MaxStepsReached, RunCancelled, UILoopFn, get_wire_or_none, run_soul
-from consilium.soul.kimisoul import KimiSoul, StepOutcome
+from consilium.soul.consiliumsoul import ConsiliumSoul, StepOutcome
 from consilium.soul.toolset import get_current_tool_call_or_none
+from consilium.subagents.adaptive_timer import AdaptiveTimer, CheckpointDecision, ProgressSnapshot
 from consilium.subagents.budget_tracker import BudgetStatus, SubagentBudgetTracker
 from consilium.subagents.builder import SubagentBuilder
+from consilium.subagent_config import resolve_subagent_config
 from consilium.subagents.core import SubagentRunSpec, prepare_soul
 from consilium.subagents.models import AgentInstanceRecord, AgentLaunchSpec
 from consilium.subagents.output import SubagentOutputWriter
@@ -67,7 +69,7 @@ class SoulRunFailure:
 
 
 async def run_soul_checked(
-    soul: KimiSoul,
+    soul: ConsiliumSoul,
     prompt: str,
     ui_loop_fn: UILoopFn,
     wire_path: Path,
@@ -164,7 +166,7 @@ async def run_soul_checked(
 
 
 async def run_with_summary_continuation(
-    soul: KimiSoul,
+    soul: ConsiliumSoul,
     prompt: str,
     ui_loop_fn: UILoopFn,
     wire_path: Path,
@@ -199,6 +201,24 @@ async def run_with_summary_continuation(
         final_response = soul.context.history[-1].extract_text(sep="\n")
 
     return final_response, None
+
+
+class _ProgressState:
+    """Mutable progress counters shared between the soul loop and checkpoint loop."""
+
+    __slots__ = ("tracker", "wire_message_count")
+
+    def __init__(self, tracker: SubagentBudgetTracker) -> None:
+        self.tracker = tracker
+        self.wire_message_count = 0
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class _CheckpointStop:
+    """Reason the adaptive checkpoint loop stopped the run."""
+
+    message: str
+    brief: str
 
 
 # ---------------------------------------------------------------------------
@@ -315,11 +335,13 @@ class ForegroundSubagentRunner:
             soul.register_step_gate(_budget_gate)
 
             tool_call = get_current_tool_call_or_none()
+            progress_state = _ProgressState(tracker)
             ui_loop_fn = self._make_ui_loop_fn(
                 parent_tool_call_id=tool_call.id if tool_call is not None else None,
                 agent_id=agent_id,
                 subagent_type=actual_type,
                 output_writer=output_writer,
+                progress_state=progress_state,
             )
 
             # Use a single stable ApprovalSource for the entire run (including summary
@@ -349,26 +371,73 @@ class ForegroundSubagentRunner:
             )
 
             output_writer.stage("run_soul_start")
-            timeout_seconds = self._runtime.config.subagents.timeout_seconds
-            try:
-                async with asyncio.timeout(timeout_seconds):
-                    final_response, failure = await run_with_summary_continuation(
-                        soul,
-                        prompt,
-                        ui_loop_fn,
-                        self._store.wire_path(agent_id),
-                        min_summary_length=type_def.min_summary_length,
-                    )
-            except TimeoutError:
-                self._store.update_instance(agent_id, status="failed")
-                output_writer.stage("failed: timeout")
-                return ToolError(
-                    message=(
-                        f"Subagent timed out after {timeout_seconds}s. "
-                        "Increase [subagents] timeout_seconds if this task is expected to take longer."
-                    ),
-                    brief="Subagent timeout",
+
+            async def _run_soul_with_summary() -> tuple[str | None, SoulRunFailure | None]:
+                return await run_with_summary_continuation(
+                    soul,
+                    prompt,
+                    ui_loop_fn,
+                    self._store.wire_path(agent_id),
+                    min_summary_length=type_def.min_summary_length,
                 )
+
+            resolved = resolve_subagent_config(
+                actual_type,
+                self._runtime.config,
+                cli_overrides=None,
+                default_temperature=0.7,
+            )
+            timer = AdaptiveTimer(max_wait=float(resolved.timeout_seconds))
+            main_task: asyncio.Task[tuple[str | None, SoulRunFailure | None]] = (
+                asyncio.create_task(_run_soul_with_summary())
+            )
+            checkpoint_task: asyncio.Task[_CheckpointStop] = asyncio.create_task(
+                self._checkpoint_loop(
+                    main_task, timer, progress_state, output_writer, agent_id
+                )
+            )
+
+            try:
+                done, _pending = await asyncio.wait(
+                    {main_task, checkpoint_task}, return_when=asyncio.FIRST_COMPLETED
+                )
+            except asyncio.CancelledError:
+                main_task.cancel()
+                checkpoint_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await main_task
+                with contextlib.suppress(asyncio.CancelledError):
+                    await checkpoint_task
+                self._store.update_instance(agent_id, status="killed")
+                output_writer.stage("cancelled")
+                raise
+
+            if checkpoint_task in done:
+                # Adaptive timer stopped the run because of no progress or max wait.
+                stop = checkpoint_task.result()
+                main_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await main_task
+                self._store.update_instance(agent_id, status="failed")
+                output_writer.stage(f"failed: {stop.brief}")
+                partial_output = self._read_partial_output(agent_id, output_writer)
+                return ToolError(
+                    message=f"{stop.message}\n\nPartial result:\n{partial_output}",
+                    brief=stop.brief,
+                )
+
+            # Main task finished first.
+            checkpoint_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await checkpoint_task
+
+            try:
+                final_response, failure = main_task.result()
+            except RunCancelled as exc:
+                self._store.update_instance(agent_id, status="killed")
+                output_writer.stage("cancelled")
+                raise RunCancelled("Subagent run was cancelled.") from exc
+
             if failure is not None:
                 self._store.update_instance(agent_id, status="failed")
                 output_writer.stage(f"failed: {failure.brief}")
@@ -437,6 +506,75 @@ class ForegroundSubagentRunner:
         )
         return ToolOk(output="\n".join(lines))
 
+    async def _checkpoint_loop(
+        self,
+        main_task: asyncio.Task[tuple[str | None, SoulRunFailure | None]],
+        timer: AdaptiveTimer,
+        progress_state: _ProgressState,
+        output_writer: SubagentOutputWriter,
+        agent_id: str,
+    ) -> _CheckpointStop:
+        """Periodically check progress and stop the run if it stalls.
+
+        Runs as a sibling task to the soul run. When progress stops or the
+        absolute maximum wait time is reached, this task cancels ``main_task``
+        and returns the reason.
+        """
+        timer.start()
+        while True:
+            remaining = timer.remaining_wait()
+            if remaining > 0:
+                wait_for = min(timer.checkpoint_interval, remaining)
+                await asyncio.sleep(wait_for)
+            # If remaining <= 0, the deadline has passed. Still wait one
+            # checkpoint interval before checking again so we do not spin
+            # and accumulate no-progress strikes artificially fast.
+            else:
+                await asyncio.sleep(timer.checkpoint_interval)
+
+            snapshot = ProgressSnapshot(
+                tokens_burned=progress_state.tracker.tokens_burned,
+                tool_calls_made=progress_state.tracker.tool_calls_made,
+                wire_message_count=progress_state.wire_message_count,
+                output_writes=output_writer.writes,
+            )
+            decision = timer.checkpoint(snapshot)
+            if decision == CheckpointDecision.MAX_WAIT_REACHED:
+                return _CheckpointStop(
+                    message=(
+                        f"Subagent reached the maximum adaptive wait time of {timer.max_wait:.0f}s."
+                    ),
+                    brief="Adaptive timeout (max wait)",
+                )
+            if decision == CheckpointDecision.NO_PROGRESS:
+                return _CheckpointStop(
+                    message=(
+                        f"Subagent stopped because no progress was detected for "
+                        f"{timer.no_progress_strikes} consecutive checkpoints "
+                        f"({timer.no_progress_strikes * timer.checkpoint_interval:.0f}s)."
+                    ),
+                    brief="Adaptive timeout (no progress)",
+                )
+            # EXTEND: keep looping.
+
+    def _read_partial_output(
+        self, agent_id: str, output_writer: SubagentOutputWriter
+    ) -> str:
+        """Return staged transcript, falling back to the raw wire file."""
+        text = output_writer.read().strip()
+        if text:
+            return text
+        wire_path = self._store.wire_path(agent_id)
+        try:
+            if wire_path.exists():
+                return (
+                    f"[raw wire output]\n"
+                    f"{wire_path.read_text(encoding='utf-8', errors='replace')[:8000]}"
+                )
+        except OSError:
+            pass
+        return "(no partial output available)"
+
     async def _prepare_instance(self, req: ForegroundRunRequest) -> PreparedInstance:
         if req.resume:
             record = self._store.require_instance(req.resume)
@@ -480,6 +618,7 @@ class ForegroundSubagentRunner:
         agent_id: str,
         subagent_type: str,
         output_writer: SubagentOutputWriter,
+        progress_state: _ProgressState,
     ):
         super_wire = get_wire_or_none()
 
@@ -487,6 +626,7 @@ class ForegroundSubagentRunner:
             wire_ui = wire.ui_side(merge=True)
             while True:
                 msg = await wire_ui.receive()
+                progress_state.wire_message_count += 1
                 # Always write to output file regardless of wire availability.
                 output_writer.write_wire_message(msg)
                 if super_wire is None or parent_tool_call_id is None:

@@ -21,7 +21,7 @@ import aiohttp
 import keyring
 from pydantic import SecretStr
 
-from consilium.auth import KIMI_CODE_PLATFORM_ID
+from consilium.auth import CONSILIUM_CODE_PLATFORM_ID
 from consilium.auth.platforms import (
     ModelInfo,
     get_platform_by_id,
@@ -33,9 +33,9 @@ from consilium.config import (
     Config,
     LLMModel,
     LLMProvider,
-    MoonshotFetchConfig,
-    MoonshotSearchConfig,
     OAuthRef,
+    WebFetchConfig,
+    WebSearchConfig,
     save_config,
 )
 from consilium.constant import VERSION
@@ -47,9 +47,9 @@ if TYPE_CHECKING:
     from consilium.soul.agent import Runtime
 
 
-KIMI_CODE_CLIENT_ID = "17e5f671-d194-4dfb-9706-5516cb48c098"
-KIMI_CODE_OAUTH_KEY = "oauth/kimi-code"
-DEFAULT_OAUTH_HOST = "https://auth.kimi.com"
+CONSILIUM_CODE_CLIENT_ID = "17e5f671-d194-4dfb-9706-5516cb48c098"
+CONSILIUM_CODE_OAUTH_KEY = "oauth/kimi-code"
+DEFAULT_OAUTH_HOST = "https://auth.consilium.com"
 KEYRING_SERVICE = "kimi-code"
 REFRESH_INTERVAL_SECONDS = 60
 MIN_REFRESH_THRESHOLD_SECONDS = 300
@@ -179,7 +179,7 @@ class DeviceAuthorization:
 
 
 def _oauth_host() -> str:
-    return os.getenv("KIMI_CODE_OAUTH_HOST") or os.getenv("KIMI_OAUTH_HOST") or DEFAULT_OAUTH_HOST
+    return os.getenv("CONSILIUM_CODE_OAUTH_HOST") or os.getenv("CONSILIUM_OAUTH_HOST") or DEFAULT_OAUTH_HOST
 
 
 def _device_id_path() -> Path:
@@ -251,7 +251,7 @@ def _common_headers() -> dict[str, str]:
     device_name = platform.node() or socket.gethostname()
     device_model = _device_model()
     headers = {
-        "X-Msh-Platform": "kimi_cli",
+        "X-Msh-Platform": "consilium",
         "X-Msh-Version": "1.46.0",
         "X-Msh-Device-Name": device_name,
         "X-Msh-Device-Model": device_model,
@@ -278,7 +278,7 @@ def _credentials_lock_path(key: str) -> Path:
 
 
 class _CrossProcessLock:
-    """File-based lock that coordinates token refresh across kimi-cli processes.
+    """File-based lock that coordinates token refresh across consilium processes.
 
     Uses fcntl.flock on Unix and msvcrt.locking on Windows.
     """
@@ -456,7 +456,7 @@ async def request_device_authorization() -> DeviceAuthorization:
         new_client_session() as session,
         session.post(
             f"{_oauth_host().rstrip('/')}/api/oauth/device_authorization",
-            data={"client_id": KIMI_CODE_CLIENT_ID},
+            data={"client_id": CONSILIUM_CODE_CLIENT_ID},
             headers=_common_headers(),
         ) as response,
     ):
@@ -481,7 +481,7 @@ async def _request_device_token(auth: DeviceAuthorization) -> tuple[int, dict[st
             session.post(
                 f"{_oauth_host().rstrip('/')}/api/oauth/token",
                 data={
-                    "client_id": KIMI_CODE_CLIENT_ID,
+                    "client_id": CONSILIUM_CODE_CLIENT_ID,
                     "device_code": auth.device_code,
                     "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
                 },
@@ -509,7 +509,7 @@ async def refresh_token(refresh_token: str, *, max_retries: int = 3) -> OAuthTok
                 session.post(
                     f"{_oauth_host().rstrip('/')}/api/oauth/token",
                     data={
-                        "client_id": KIMI_CODE_CLIENT_ID,
+                        "client_id": CONSILIUM_CODE_CLIENT_ID,
                         "grant_type": "refresh_token",
                         "refresh_token": refresh_token,
                     },
@@ -563,9 +563,9 @@ def _apply_kimi_code_config(
     thinking: bool,
     oauth_ref: OAuthRef,
 ) -> None:
-    platform = get_platform_by_id(KIMI_CODE_PLATFORM_ID)
+    platform = get_platform_by_id(CONSILIUM_CODE_PLATFORM_ID)
     if platform is None:
-        raise OAuthError("Kimi Code platform not found.")
+        raise OAuthError("Consilium platform not found.")
 
     provider_key = managed_provider_key(platform.id)
     config.providers[provider_key] = LLMProvider(
@@ -593,14 +593,14 @@ def _apply_kimi_code_config(
     config.default_thinking = thinking
 
     if platform.search_url:
-        config.services.moonshot_search = MoonshotSearchConfig(
+        config.services.web_search = WebSearchConfig(
             base_url=platform.search_url,
             api_key=SecretStr(""),
             oauth=oauth_ref,
         )
 
     if platform.fetch_url:
-        config.services.moonshot_fetch = MoonshotFetchConfig(
+        config.services.web_fetch = WebFetchConfig(
             base_url=platform.fetch_url,
             api_key=SecretStr(""),
             oauth=oauth_ref,
@@ -617,9 +617,9 @@ async def login_kimi_code(
         )
         return
 
-    platform = get_platform_by_id(KIMI_CODE_PLATFORM_ID)
+    platform = get_platform_by_id(CONSILIUM_CODE_PLATFORM_ID)
     if platform is None:
-        yield OAuthEvent("error", "Kimi Code platform is unavailable.")
+        yield OAuthEvent("error", "Consilium platform is unavailable.")
         return
 
     auth: DeviceAuthorization
@@ -682,7 +682,7 @@ async def login_kimi_code(
 
     assert token is not None
 
-    oauth_ref = OAuthRef(storage="file", key=KIMI_CODE_OAUTH_KEY)
+    oauth_ref = OAuthRef(storage="file", key=CONSILIUM_CODE_OAUTH_KEY)
     oauth_ref = save_tokens(oauth_ref, token)
 
     try:
@@ -721,10 +721,10 @@ async def logout_kimi_code(config: Config) -> AsyncIterator[OAuthEvent]:
         )
         return
 
-    delete_tokens(OAuthRef(storage="keyring", key=KIMI_CODE_OAUTH_KEY))
-    delete_tokens(OAuthRef(storage="file", key=KIMI_CODE_OAUTH_KEY))
+    delete_tokens(OAuthRef(storage="keyring", key=CONSILIUM_CODE_OAUTH_KEY))
+    delete_tokens(OAuthRef(storage="file", key=CONSILIUM_CODE_OAUTH_KEY))
 
-    provider_key = managed_provider_key(KIMI_CODE_PLATFORM_ID)
+    provider_key = managed_provider_key(CONSILIUM_CODE_PLATFORM_ID)
     if provider_key in config.providers:
         del config.providers[provider_key]
 
@@ -739,8 +739,8 @@ async def logout_kimi_code(config: Config) -> AsyncIterator[OAuthEvent]:
     if removed_default:
         config.default_model = ""
 
-    config.services.moonshot_search = None
-    config.services.moonshot_fetch = None
+    config.services.web_search = None
+    config.services.web_fetch = None
 
     save_config(config)
     yield OAuthEvent("success", "Logged out successfully.")
@@ -762,8 +762,8 @@ class OAuthManager:
             if provider.oauth:
                 refs.append(provider.oauth)
         for service in (
-            self._config.services.moonshot_search,
-            self._config.services.moonshot_fetch,
+            self._config.services.web_search,
+            self._config.services.web_fetch,
         ):
             if service and service.oauth:
                 refs.append(service.oauth)
@@ -788,8 +788,8 @@ class OAuthManager:
                 provider.oauth = _migrate_ref(provider.oauth)
 
         for service in (
-            self._config.services.moonshot_search,
-            self._config.services.moonshot_fetch,
+            self._config.services.web_search,
+            self._config.services.web_fetch,
         ):
             if service and service.oauth:
                 service.oauth = _migrate_ref(service.oauth)
@@ -863,15 +863,15 @@ class OAuthManager:
         return api_key.get_secret_value()
 
     def _kimi_code_ref(self) -> OAuthRef | None:
-        provider_key = managed_provider_key(KIMI_CODE_PLATFORM_ID)
+        provider_key = managed_provider_key(CONSILIUM_CODE_PLATFORM_ID)
         provider = self._config.providers.get(provider_key)
         if provider and provider.oauth:
             return provider.oauth
         for service in (
-            self._config.services.moonshot_search,
-            self._config.services.moonshot_fetch,
+            self._config.services.web_search,
+            self._config.services.web_fetch,
         ):
-            if service and service.oauth and service.oauth.key == KIMI_CODE_OAUTH_KEY:
+            if service and service.oauth and service.oauth.key == CONSILIUM_CODE_OAUTH_KEY:
                 return service.oauth
         return None
 
@@ -997,7 +997,7 @@ class OAuthManager:
                 return
 
             # Acquire cross-process file lock to coordinate with other
-            # kimi-cli instances (terminal, VS Code, web).
+            # consilium instances (terminal, VS Code, web).
             xlock = _CrossProcessLock(ref.key)
             acquired = await xlock.acquire_with_retry()
             try:
@@ -1079,7 +1079,7 @@ class OAuthManager:
     def _apply_access_token(self, runtime: Runtime | None, access_token: str) -> None:
         if runtime is None:
             return
-        provider_key = managed_provider_key(KIMI_CODE_PLATFORM_ID)
+        provider_key = managed_provider_key(CONSILIUM_CODE_PLATFORM_ID)
         if runtime.llm is None or runtime.llm.model_config is None:
             return
         if runtime.llm.model_config.provider != provider_key:

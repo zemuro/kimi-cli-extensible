@@ -12,7 +12,7 @@ from consilium.plan.log_entry import make_log_entry
 from consilium.plan.persistent_log import PersistentLog
 from consilium.soul.agent import Agent, Runtime
 from consilium.soul.context import Context
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.wire.jsonrpc import (
     ErrorCodes,
     JSONRPCErrorResponse,
@@ -27,7 +27,7 @@ from consilium.wire.server import WireServer
 
 @pytest.fixture(autouse=True)
 def _patch_log_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Patch PersistentLog.for_session to use tmp_path instead of ~/.kimi/."""
+    """Patch PersistentLog.for_session to use tmp_path instead of ~/.consilium/."""
 
     def _patched_for_session(session_id: str, log_owner: str) -> PersistentLog:
         log_dir = tmp_path / f"{log_owner}_logs"
@@ -37,14 +37,14 @@ def _patch_log_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(PersistentLog, "for_session", _patched_for_session)
 
 
-def _make_soul(runtime: Runtime, tmp_path: Path) -> KimiSoul:
+def _make_soul(runtime: Runtime, tmp_path: Path) -> ConsiliumSoul:
     agent = Agent(
         name="Query Test Agent",
         system_prompt="Test prompt.",
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    return KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    return ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
 
 
 class TestHandleLogQuery:

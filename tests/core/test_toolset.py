@@ -1,4 +1,4 @@
-"""Tests for KimiToolset hide/unhide and deduplication functionality."""
+"""Tests for ConsiliumToolset hide/unhide and deduplication functionality."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from kosong.tooling import CallableTool2, ToolOk, ToolReturnValue
 from kosong.tooling.error import ToolNotFoundError as KosongToolNotFoundError
 from pydantic import BaseModel
 
-from consilium.soul.toolset import KimiToolset
+from consilium.soul.toolset import ConsiliumToolset
 from consilium.wire.types import ToolCall, ToolResult
 
 
@@ -36,14 +36,14 @@ class DummyToolB(CallableTool2[DummyParams]):
         return ToolOk(output="b")
 
 
-def _make_toolset() -> KimiToolset:
-    ts = KimiToolset()
+def _make_toolset() -> ConsiliumToolset:
+    ts = ConsiliumToolset()
     ts.add(DummyToolA())
     ts.add(DummyToolB())
     return ts
 
 
-def _tool_names(ts: KimiToolset) -> set[str]:
+def _tool_names(ts: ConsiliumToolset) -> set[str]:
     return {t.name for t in ts.tools}
 
 
@@ -291,7 +291,7 @@ def test_begin_end_step():
     assert ts.end_step() == [("ToolB", "{}")]
 
     # After end_step, internal lists are not cleared by end_step itself;
-    # the caller (KimiSoul) is expected to call begin_step again for the next step.
+    # the caller (ConsiliumSoul) is expected to call begin_step again for the next step.
     # But dedup_triggered should still reflect the last step's state.
     assert ts.dedup_triggered is False
 

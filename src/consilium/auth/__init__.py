@@ -1,5 +1,5 @@
 from __future__ import annotations
 
-KIMI_CODE_PLATFORM_ID = "kimi-code"
+CONSILIUM_CODE_PLATFORM_ID = "kimi-code"
 
-__all__ = ["KIMI_CODE_PLATFORM_ID"]
+__all__ = ["CONSILIUM_CODE_PLATFORM_ID"]

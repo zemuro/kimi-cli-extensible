@@ -44,8 +44,8 @@ def test_create_llm_consilium_overrides_config():
 
 def test_create_llm_consilium_overrides_env(monkeypatch):
     """CLI overrides win over env vars."""
-    monkeypatch.setenv("KIMI_MODEL_TEMPERATURE", "0.2")
-    monkeypatch.setenv("KIMI_MODEL_MAX_TOKENS", "1234")
+    monkeypatch.setenv("CONSILIUM_MODEL_TEMPERATURE", "0.2")
+    monkeypatch.setenv("CONSILIUM_MODEL_MAX_TOKENS", "1234")
 
     provider = LLMProvider(
         type="kimi",

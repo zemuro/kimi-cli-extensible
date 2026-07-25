@@ -12,9 +12,9 @@ from consilium.wire.types import TextPart, TurnBegin, TurnEnd
 
 
 def _make_shell_app(work_dir: Path) -> Mock:
-    from consilium.soul.kimisoul import KimiSoul
+    from consilium.soul.consiliumsoul import ConsiliumSoul
 
-    soul = Mock(spec=KimiSoul)
+    soul = Mock(spec=ConsiliumSoul)
     soul.runtime.session.work_dir = work_dir
     soul.runtime.session.id = "curr-session-id"
     soul.context.history = []

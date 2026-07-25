@@ -13,10 +13,10 @@ from rich.progress_bar import ProgressBar
 from rich.table import Table
 from rich.text import Text
 
-from consilium.auth import KIMI_CODE_PLATFORM_ID
+from consilium.auth import CONSILIUM_CODE_PLATFORM_ID
 from consilium.auth.platforms import get_platform_by_id, parse_managed_provider_key
 from consilium.config import LLMModel
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.ui.shell.console import console
 from consilium.ui.shell.slash import registry
 from consilium.utils.aiohttp import new_client_session
@@ -37,7 +37,7 @@ class UsageRow:
 @registry.command(aliases=["status"])
 async def usage(app: Shell, args: str):
     """Display API usage and quota information"""
-    assert isinstance(app.soul, KimiSoul)
+    assert isinstance(app.soul, ConsiliumSoul)
     if app.soul.runtime.llm is None:
         console.print("[red]LLM not set. Please run /login first.[/red]")
         return
@@ -49,7 +49,7 @@ async def usage(app: Shell, args: str):
 
     usage_url = _usage_url(app.soul.runtime.llm.model_config)
     if usage_url is None:
-        console.print("[yellow]Usage is available on Kimi Code platform only.[/yellow]")
+        console.print("[yellow]Usage is available on Consilium platform only.[/yellow]")
         return
 
     with console.status("[cyan]Fetching usage...[/cyan]"):
@@ -86,7 +86,7 @@ def _usage_url(model: LLMModel | None) -> str | None:
     if platform_id is None:
         return None
     platform = get_platform_by_id(platform_id)
-    if platform is None or platform.id != KIMI_CODE_PLATFORM_ID:
+    if platform is None or platform.id != CONSILIUM_CODE_PLATFORM_ID:
         return None
     base_url = platform.base_url.rstrip("/")
     return f"{base_url}/usages"

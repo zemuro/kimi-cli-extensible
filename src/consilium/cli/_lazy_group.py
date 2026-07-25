@@ -19,7 +19,7 @@ class LazySubcommandGroup(typer.core.TyperGroup):
         "mcp": ("consilium.cli.mcp", "cli", "Manage MCP server configurations."),
         "plugin": ("consilium.cli.plugin", "cli", "Manage plugins."),
         "vis": ("consilium.cli.vis", "cli", "Run Kimi Agent Tracing Visualizer."),
-        "web": ("consilium.cli.web", "cli", "Run Kimi Code CLI web interface."),
+        "web": ("consilium.cli.web", "cli", "Run Consilium CLI web interface."),
     }
     lazy_command_order: tuple[str, ...] = (
         "info",

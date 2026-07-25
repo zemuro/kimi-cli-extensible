@@ -21,7 +21,7 @@ async def test_watcher_survives_handler_exception(runtime, tmp_path) -> None:
 
     from consilium.soul.agent import Agent
     from consilium.soul.context import Context
-    from consilium.soul.kimisoul import KimiSoul
+    from consilium.soul.consiliumsoul import ConsiliumSoul
     from consilium.ui.shell import Shell
     from consilium.wire.types import ApprovalRequest
 
@@ -31,7 +31,7 @@ async def test_watcher_survives_handler_exception(runtime, tmp_path) -> None:
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "h.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "h.jsonl"))
     shell = Shell(soul)
 
     hub = runtime.root_wire_hub
@@ -95,7 +95,7 @@ async def test_watcher_exits_gracefully_on_queue_shutdown(runtime, tmp_path) -> 
 
     from consilium.soul.agent import Agent
     from consilium.soul.context import Context
-    from consilium.soul.kimisoul import KimiSoul
+    from consilium.soul.consiliumsoul import ConsiliumSoul
     from consilium.ui.shell import Shell
 
     agent = Agent(
@@ -104,7 +104,7 @@ async def test_watcher_exits_gracefully_on_queue_shutdown(runtime, tmp_path) -> 
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "h.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "h.jsonl"))
     shell = Shell(soul)
 
     watcher_task = asyncio.create_task(shell._watch_root_wire_hub())

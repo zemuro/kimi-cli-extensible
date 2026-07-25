@@ -27,7 +27,7 @@ def vis(
     """Launch the agent tracing visualizer."""
     from consilium.vis.app import run_vis_server
 
-    # Determine bind address (same logic as kimi web)
+    # Determine bind address (same logic as consilium web)
     if host:
         bind_host = host
     elif network:

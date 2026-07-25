@@ -11,7 +11,7 @@ from kosong.tooling.empty import EmptyToolset
 from consilium.config import get_default_config
 from consilium.soul.agent import Agent, Runtime
 from consilium.soul.context import Context
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.ui.shell import Shell
 from consilium.ui.shell import slash as shell_slash
 
@@ -23,7 +23,7 @@ def _make_shell_app(runtime: Runtime, tmp_path: Path) -> SimpleNamespace:
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
     return SimpleNamespace(soul=soul)
 
 

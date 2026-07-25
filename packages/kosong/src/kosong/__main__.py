@@ -117,10 +117,10 @@ async def main():
 
     match provider:
         case "kimi":
-            from kosong.chat_provider.kimi import Kimi
+            from kosong.chat_provider.consilium import Kimi
 
             base_url = base_url or "https://api.moonshot.ai/v1"
-            assert api_key is not None, "Expect KIMI_API_KEY environment variable"
+            assert api_key is not None, "Expect CONSILIUM_API_KEY environment variable"
             model = model or "kimi-k2-turbo-preview"
 
             chat_provider = Kimi(base_url=base_url, api_key=api_key, model=model)

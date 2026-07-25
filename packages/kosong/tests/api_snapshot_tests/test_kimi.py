@@ -7,7 +7,7 @@ from common import COMMON_CASES, Case, make_chat_completion_response, run_test_c
 from httpx import Response
 from inline_snapshot import snapshot
 
-from kosong.chat_provider.kimi import Kimi
+from kosong.chat_provider.consilium import Kimi
 from kosong.message import Message, TextPart, ThinkPart, ToolCall
 from kosong.tooling import Tool
 

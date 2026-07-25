@@ -39,7 +39,7 @@ def _spawn_workers(
     (share / "credentials").mkdir(parents=True, exist_ok=True)
 
     env = os.environ.copy()
-    env["KIMI_SHARE_DIR"] = str(share)
+    env["CONSILIUM_SHARE_DIR"] = str(share)
 
     procs = [
         subprocess.Popen(
@@ -149,8 +149,8 @@ async def test_lock_file_created_with_safe_permissions(tmp_path: Path) -> None:
 
     share = tmp_path / "share"
     (share / "credentials").mkdir(parents=True, exist_ok=True)
-    original = os.environ.get("KIMI_SHARE_DIR")
-    os.environ["KIMI_SHARE_DIR"] = str(share)
+    original = os.environ.get("CONSILIUM_SHARE_DIR")
+    os.environ["CONSILIUM_SHARE_DIR"] = str(share)
     try:
         lock = _CrossProcessLock("oauth/kimi-code")
         acquired = await lock.acquire_with_retry()
@@ -162,6 +162,6 @@ async def test_lock_file_created_with_safe_permissions(tmp_path: Path) -> None:
         lock.release()
     finally:
         if original is None:
-            os.environ.pop("KIMI_SHARE_DIR", None)
+            os.environ.pop("CONSILIUM_SHARE_DIR", None)
         else:
-            os.environ["KIMI_SHARE_DIR"] = original
+            os.environ["CONSILIUM_SHARE_DIR"] = original

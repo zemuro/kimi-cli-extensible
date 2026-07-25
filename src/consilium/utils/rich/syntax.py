@@ -24,8 +24,8 @@ from pygments.token import (
 from rich.style import Style
 from rich.syntax import ANSISyntaxTheme, Syntax, SyntaxTheme
 
-KIMI_ANSI_THEME_NAME = "kimi-ansi"
-KIMI_ANSI_THEME = ANSISyntaxTheme(
+CONSILIUM_ANSI_THEME_NAME = "consilium-ansi"
+CONSILIUM_ANSI_THEME = ANSISyntaxTheme(
     {
         PygmentsToken: Style(color="default"),
         PygmentsText: Style(color="default"),
@@ -79,15 +79,15 @@ KIMI_ANSI_THEME = ANSISyntaxTheme(
 
 
 def resolve_code_theme(theme: str | SyntaxTheme) -> str | SyntaxTheme:
-    if isinstance(theme, str) and theme.lower() == KIMI_ANSI_THEME_NAME:
-        return KIMI_ANSI_THEME
+    if isinstance(theme, str) and theme.lower() == CONSILIUM_ANSI_THEME_NAME:
+        return CONSILIUM_ANSI_THEME
     return theme
 
 
-class KimiSyntax(Syntax):
+class ConsiliumSyntax(Syntax):
     def __init__(self, code: str, lexer: str, **kwargs: Any) -> None:
         if "theme" not in kwargs or kwargs["theme"] is None:
-            kwargs["theme"] = KIMI_ANSI_THEME
+            kwargs["theme"] = CONSILIUM_ANSI_THEME
         super().__init__(code, lexer, **kwargs)
 
 
@@ -111,4 +111,4 @@ if __name__ == "__main__":
         if idx:
             console.print()
         console.print(Text(f"[{title}]", style="bold"))
-        console.print(KimiSyntax(code, lexer))
+        console.print(ConsiliumSyntax(code, lexer))

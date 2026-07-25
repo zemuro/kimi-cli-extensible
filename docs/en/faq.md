@@ -7,7 +7,7 @@
 If you see "No models available for the selected platform" error when running the `/login` (or `/setup`) command, it may be due to:
 
 - **Invalid or expired API key**: Check if your API key is correct and still valid.
-- **Network connection issues**: Confirm you can access the API service addresses (such as `api.kimi.com` or `api.moonshot.cn`).
+- **Network connection issues**: Confirm you can access the API service addresses (such as `api.consilium.com` or `api.moonshot.cn`).
 
 ### Invalid API key
 
@@ -15,17 +15,17 @@ Possible reasons for an invalid API key:
 
 - **Key input error**: Check for extra spaces or missing characters.
 - **Key expired or revoked**: Confirm the key status in the platform console.
-- **Environment variable override**: Check if `KIMI_API_KEY` or `OPENAI_API_KEY` environment variables are overriding the key in the config file. You can run `echo $KIMI_API_KEY` to check.
+- **Environment variable override**: Check if `CONSILIUM_API_KEY` or `OPENAI_API_KEY` environment variables are overriding the key in the config file. You can run `echo $CONSILIUM_API_KEY` to check.
 
 ### Membership expired or quota exhausted
 
-If you're using the Kimi Code platform, you can check your current quota and membership status with the `/usage` command. If the quota is exhausted or membership expired, you need to renew or upgrade at [Kimi Code](https://kimi.com/coding).
+If you're using the Consilium platform, you can check your current quota and membership status with the `/usage` command. If the quota is exhausted or membership expired, you need to renew or upgrade at [Consilium](https://kimi.com/coding).
 
 ## Interaction issues
 
 ### `cd` command doesn't work in shell mode
 
-Executing the `cd` command in shell mode won't change Kimi Code CLI's working directory. This is because each shell command executes in an independent subprocess, and directory changes only take effect within that process.
+Executing the `cd` command in shell mode won't change Consilium CLI's working directory. This is because each shell command executes in an independent subprocess, and directory changes only take effect within that process.
 
 If you need to change working directory:
 
@@ -44,18 +44,18 @@ Solutions:
 
 ### Working directory deleted or removed
 
-If the working directory becomes inaccessible during a session (external drive unplugged, directory deleted, or filesystem unmounted), Kimi Code CLI detects the situation and displays a crash report containing the session ID and work directory path, then exits cleanly. You can recover the session with `kimi -r <session-id>` from the correct directory.
+If the working directory becomes inaccessible during a session (external drive unplugged, directory deleted, or filesystem unmounted), Consilium CLI detects the situation and displays a crash report containing the session ID and work directory path, then exits cleanly. You can recover the session with `kimi -r <session-id>` from the correct directory.
 
 ## ACP issues
 
-### IDE cannot connect to Kimi Code CLI
+### IDE cannot connect to Consilium CLI
 
-If your IDE (like Zed or JetBrains IDEs) cannot connect to Kimi Code CLI, check the following:
+If your IDE (like Zed or JetBrains IDEs) cannot connect to Consilium CLI, check the following:
 
-- **Confirm Kimi Code CLI is installed**: Run `kimi --version` to confirm successful installation.
-- **Check configuration path**: Ensure the Kimi Code CLI path in IDE configuration is correct. You can typically use `kimi acp` as the command.
+- **Confirm Consilium CLI is installed**: Run `kimi --version` to confirm successful installation.
+- **Check configuration path**: Ensure the Consilium CLI path in IDE configuration is correct. You can typically use `kimi acp` as the command.
 - **Check uv path**: If installed via uv, ensure `~/.local/bin` is in PATH. You can use an absolute path like `/Users/yourname/.local/bin/kimi acp`.
-- **Check logs**: Examine error messages in `~/.kimi/logs/kimi.log`.
+- **Check logs**: Examine error messages in `~/.consilium/logs/kimi.log`.
 
 ## MCP issues
 
@@ -64,7 +64,7 @@ If your IDE (like Zed or JetBrains IDEs) cannot connect to Kimi Code CLI, check 
 After adding an MCP server, if tools aren't loaded or there are errors, it may be due to:
 
 - **Command doesn't exist**: For stdio type servers, ensure the command (like `npx`) is in PATH. You can configure with an absolute path.
-- **Configuration format error**: Check if `~/.kimi/mcp.json` is valid JSON. Run `kimi mcp list` to view current configuration.
+- **Configuration format error**: Check if `~/.consilium/mcp.json` is valid JSON. Run `kimi mcp list` to view current configuration.
 
 Debugging steps:
 
@@ -129,19 +129,19 @@ macOS's Gatekeeper security mechanism checks new programs on first run, causing 
 - **Wait for check to complete**: Be patient on first run; subsequent launches will return to normal.
 - **Add to Developer Tools**: Add your terminal application in "System Settings → Privacy & Security → Developer Tools".
 
-### How to upgrade Kimi Code CLI
+### How to upgrade Consilium CLI
 
 Use uv to upgrade to the latest version:
 
 ```sh
-uv tool upgrade kimi-cli --no-cache
+uv tool upgrade consilium --no-cache
 ```
 
 Adding `--no-cache` ensures you get the latest version.
 
 ### Update prompt on startup
 
-When a newer version is detected by the background check, Kimi Code CLI shows a blocking update prompt before the shell loads, displaying the current and latest version information. You can choose an action with the following keys:
+When a newer version is detected by the background check, Consilium CLI shows a blocking update prompt before the shell loads, displaying the current and latest version information. You can choose an action with the following keys:
 
 - `Enter`: Upgrade to the latest version immediately
 - `q`: Skip for now; you will be reminded on next startup
@@ -149,10 +149,10 @@ When a newer version is detected by the background check, Kimi Code CLI shows a 
 
 ### How to disable update reminders
 
-If you don't want Kimi Code CLI to check for updates or show update prompts on startup, set the environment variable:
+If you don't want Consilium CLI to check for updates or show update prompts on startup, set the environment variable:
 
 ```sh
-export KIMI_CLI_NO_AUTO_UPDATE=1
+export CONSILIUM_CLI_NO_AUTO_UPDATE=1
 ```
 
 This disables background update checks, the blocking update gate on startup, and the version hint in the welcome panel. You can add this line to your shell configuration file (like `~/.zshrc` or `~/.bashrc`).

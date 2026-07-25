@@ -123,7 +123,7 @@ Rather than adding new `WireMessage` types to the `Event` union, we add new JSON
 
 ## Files to Modify
 
-### 1. `src/kimi_cli/wire/jsonrpc.py`
+### 1. `src/consilium/wire/jsonrpc.py`
 
 Add three new JSON-RPC message classes and update unions:
 
@@ -166,7 +166,7 @@ Update:
 - `JSONRPCInMessage` union to include the three new types
 - `JSONRPC_IN_METHODS` to add `"query_logs"`, `"fetch_plan"`, `"trace_entry"`
 
-### 2. `src/kimi_cli/wire/server.py`
+### 2. `src/consilium/wire/server.py`
 
 Add dispatch cases and handlers:
 
@@ -185,7 +185,7 @@ async def _dispatch_msg(self, msg: JSONRPCInMessage) -> None:
 Handler implementations:
 
 **`_handle_log_query`:**
-1. Resolve log path: `~/.kimi/{log_owner}_logs/{session_id}.jsonl`
+1. Resolve log path: `~/.consilium/{log_owner}_logs/{session_id}.jsonl`
 2. Load `PersistentLog(path, log_owner)`
 3. Call `find_entries_by_type(filter_type, after_id)`
 4. Serialize entries with `entry.to_dict()`
@@ -204,7 +204,7 @@ Handler implementations:
 3. Call `trace_think_to_do()` or `trace_do_to_think()` from `bridge.py`
 4. Serialize results, return `{"linked_entries": [...]}`
 
-### 3. `src/kimi_cli/plan/persistent_log.py`
+### 3. `src/consilium/plan/persistent_log.py`
 
 Add a factory method for resolving logs by session ID:
 
@@ -213,14 +213,14 @@ Add a factory method for resolving logs by session ID:
 def for_session(cls, session_id: str, log_owner: str) -> PersistentLog:
     """Load a persistent log for a given session."""
     from pathlib import Path
-    log_dir = Path.home() / ".kimi" / f"{log_owner}_logs"
+    log_dir = Path.home() / ".consilium" / f"{log_owner}_logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     return cls(log_dir / f"{session_id}.jsonl", log_owner=log_owner)
 ```
 
 Also verify `find_entries_by_type()` supports `after_id=None` (returns all).
 
-### 4. `src/kimi_cli/plan/bridge.py` (verify only)
+### 4. `src/consilium/plan/bridge.py` (verify only)
 
 Confirm `trace_think_to_do()` and `trace_do_to_think()` can be called with log objects loaded by `PersistentLog.for_session()`. No changes expected unless interfaces don't match.
 

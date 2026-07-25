@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 from collections.abc import Callable
 from pathlib import Path
 from typing import Self, override
@@ -12,6 +13,7 @@ from consilium.background import TaskView, format_task
 from consilium.soul.agent import Runtime
 from consilium.soul.approval import Approval
 from consilium.soul.toolset import get_current_tool_call_or_none
+from consilium.subagents.adaptive_timer import AdaptiveTimer, CheckpointDecision, ProgressSnapshot
 from consilium.tools.display import BackgroundTaskDisplayBlock, ShellDisplayBlock
 from consilium.tools.utils import ToolResultBuilder, load_desc
 from consilium.utils.environment import Environment
@@ -19,7 +21,7 @@ from consilium.utils.logging import logger
 from consilium.utils.shell_quoting import rewrite_windows_null_redirect
 from consilium.utils.subprocess_env import get_noninteractive_env
 
-MAX_FOREGROUND_TIMEOUT = 5 * 60
+MAX_FOREGROUND_TIMEOUT = 15 * 60  # generous adaptive ceiling for foreground shells
 MAX_BACKGROUND_TIMEOUT = 24 * 60 * 60
 
 
@@ -221,13 +223,41 @@ class Shell(CallableTool2[Params]):
         stderr_cb: Callable[[bytes], None],
         timeout: int,
     ) -> int:
-        async def _read_stream(stream: AsyncReadable, cb: Callable[[bytes], None]):
+        class _ProgressState:
+            __slots__ = ("bytes_read",)
+
+            def __init__(self) -> None:
+                self.bytes_read = 0
+
+        state = _ProgressState()
+
+        async def _read_stream(
+            stream: AsyncReadable, cb: Callable[[bytes], None]
+        ) -> None:
             while True:
                 line = await stream.readline()
                 if line:
+                    state.bytes_read += len(line)
                     cb(line)
                 else:
                     break
+
+        async def _monitor(
+            read_task: asyncio.Task[None], timer: AdaptiveTimer
+        ) -> str:
+            timer.start()
+            while True:
+                wait_for = min(timer.checkpoint_interval, timer.remaining_wait())
+                if wait_for <= 0:
+                    return "max_wait"
+                await asyncio.sleep(wait_for)
+                snapshot = ProgressSnapshot(output_writes=state.bytes_read)
+                decision = timer.checkpoint(snapshot)
+                if decision == CheckpointDecision.MAX_WAIT_REACHED:
+                    return "max_wait"
+                if decision == CheckpointDecision.NO_PROGRESS:
+                    return "no_progress"
+                # EXTEND: keep monitoring.
 
         env = get_noninteractive_env()
         # Override SHELL so commands that read $SHELL see the bash we're actually
@@ -240,21 +270,51 @@ class Shell(CallableTool2[Params]):
         # EOF instead of hanging forever waiting for input that will never come.
         process.stdin.close()
 
-        try:
-            await asyncio.wait_for(
-                asyncio.gather(
-                    _read_stream(process.stdout, stdout_cb),
-                    _read_stream(process.stderr, stderr_cb),
-                ),
-                timeout,
+        # Adaptive timer: extend while output is still arriving, up to timeout.
+        async def _read_output() -> None:
+            await asyncio.gather(
+                _read_stream(process.stdout, stdout_cb),
+                _read_stream(process.stderr, stderr_cb),
             )
-            return await process.wait()
+
+        timer = AdaptiveTimer(max_wait=float(timeout))
+        read_task: asyncio.Task[None] = asyncio.create_task(_read_output())
+        monitor_task: asyncio.Task[str] = asyncio.create_task(_monitor(read_task, timer))
+
+        try:
+            done, _pending = await asyncio.wait(
+                {read_task, monitor_task}, return_when=asyncio.FIRST_COMPLETED
+            )
         except asyncio.CancelledError:
+            read_task.cancel()
+            monitor_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await read_task
+            with contextlib.suppress(asyncio.CancelledError):
+                await monitor_task
             await process.kill()
             raise
-        except TimeoutError:
+
+        if monitor_task in done:
+            reason = monitor_task.result()
+            read_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await read_task
             await process.kill()
-            raise
+            if reason == "max_wait":
+                raise TimeoutError(
+                    f"Command exceeded adaptive timeout ({timeout}s)"
+                )
+            raise TimeoutError(
+                f"Command produced no output for "
+                f"{timer.no_progress_strikes * timer.checkpoint_interval:.0f}s"
+            )
+
+        # read_task finished normally (streams EOF).
+        monitor_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await monitor_task
+        return await process.wait()
 
     def _shell_args(self, command: str) -> tuple[str, ...]:
         return (str(self._shell_path), "-c", command)

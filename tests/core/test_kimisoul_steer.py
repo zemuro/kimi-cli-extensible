@@ -8,14 +8,14 @@ from kosong import StepResult
 from kosong.message import ContentPart, Message
 from kosong.tooling.empty import EmptyToolset
 
-import consilium.soul.kimisoul as kimisoul_module
+import consilium.soul.consiliumsoul as kimisoul_module
 from consilium.llm import LLM, ModelCapability
 from consilium.soul import LLMNotSupported, run_soul
 from consilium.soul.agent import Agent, Runtime
 from consilium.soul.approval import Approval
 from consilium.soul.context import Context
 from consilium.soul.dynamic_injection import DynamicInjection
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.soul.message import is_system_reminder_message
 from consilium.utils.aioqueue import QueueShutDown
 from consilium.wire import Wire
@@ -28,14 +28,14 @@ def approval() -> Approval:
     return Approval(yolo=False)
 
 
-def _make_soul(runtime: Runtime, tmp_path: Path) -> KimiSoul:
+def _make_soul(runtime: Runtime, tmp_path: Path) -> ConsiliumSoul:
     agent = Agent(
         name="Steer Test Agent",
         system_prompt="Test prompt.",
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    return KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    return ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
 
 
 def _runtime_with_llm(runtime: Runtime, llm: LLM) -> Runtime:
@@ -431,7 +431,7 @@ async def test_run_soul_emits_steer_input_and_continues_same_turn(
         toolset=EmptyToolset(),
         runtime=_runtime_with_llm(runtime, llm),
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
 
     seen: list[object] = []
     injected = False

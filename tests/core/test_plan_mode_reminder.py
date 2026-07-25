@@ -23,7 +23,7 @@ def test_detects_sparse_reminder() -> None:
 
 def test_detects_sparse_reminder_with_path() -> None:
     msg = _user_msg(
-        f"<system-reminder>\n{_sparse_reminder('/home/user/.kimi/plans/iron-man.md')}\n</system-reminder>"
+        f"<system-reminder>\n{_sparse_reminder('/home/user/.consilium/plans/iron-man.md')}\n</system-reminder>"
     )
     assert _has_plan_reminder(msg)
 
@@ -35,14 +35,14 @@ def test_detects_full_reminder_without_path() -> None:
 
 def test_detects_full_reminder_with_path() -> None:
     msg = _user_msg(
-        f"<system-reminder>\n{_full_reminder('/home/user/.kimi/plans/iron-man.md')}\n</system-reminder>"
+        f"<system-reminder>\n{_full_reminder('/home/user/.consilium/plans/iron-man.md')}\n</system-reminder>"
     )
     assert _has_plan_reminder(msg)
 
 
 def test_detects_full_reminder_with_existing_plan() -> None:
     msg = _user_msg(
-        f"<system-reminder>\n{_full_reminder('/home/user/.kimi/plans/batman.md', plan_exists=True)}\n</system-reminder>"
+        f"<system-reminder>\n{_full_reminder('/home/user/.consilium/plans/batman.md', plan_exists=True)}\n</system-reminder>"
     )
     assert _has_plan_reminder(msg)
 
@@ -66,7 +66,7 @@ def test_detection_stays_in_sync_with_reminder_text() -> None:
     This test verifies the contract: any text produced by _full_reminder or
     _sparse_reminder must be detectable by _has_plan_reminder.
     """
-    for path in [None, "/tmp/plan.md", "/home/user/.kimi/plans/batman.md"]:
+    for path in [None, "/tmp/plan.md", "/home/user/.consilium/plans/batman.md"]:
         for exists in [False, True]:
             full = _full_reminder(path, plan_exists=exists)
             assert _has_plan_reminder(_user_msg(full)), (

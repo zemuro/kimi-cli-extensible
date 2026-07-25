@@ -1,4 +1,4 @@
-"""DoSession wraps KimiSoul with git snapshotting and change journaling."""
+"""DoSession wraps ConsiliumSoul with git snapshotting and change journaling."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from kosong.message import Message, ToolCall
     from kosong.tooling import ToolResult
 
-    from consilium.soul.kimisoul import KimiSoul
+    from consilium.soul.consiliumsoul import ConsiliumSoul
 
 # Tools that modify files (must match extension's FILE_TOOLS set)
 FILE_MODIFYING_TOOLS = frozenset({
@@ -34,14 +34,14 @@ FILE_MODIFYING_TOOLS = frozenset({
 
 
 class DoSession:
-    """Wraps a KimiSoul session with full versioning support.
+    """Wraps a ConsiliumSoul session with full versioning support.
 
     Responsibilities:
     - Git snapshotting (stash on start, pop on abort, commit on demand)
     - Change journaling (record every file-modifying tool call)
     - Blob storage (content-addressed baselines)
 
-    Note on turn indices: The turn index is incremented inside KimiSoul._turn()
+    Note on turn indices: The turn index is incremented inside ConsiliumSoul._turn()
     for every LLM invocation. This includes user-facing turns as well as internal
     turns such as context compaction. Turn indices are therefore coarse grouping
     keys rather than 1:1 mappings with chat turns.
@@ -49,7 +49,7 @@ class DoSession:
 
     def __init__(
         self,
-        soul: KimiSoul,
+        soul: ConsiliumSoul,
         work_dir: Path,
         seeded_from_think: bool = False,
         reviewer: PlanReviewer | None = None,
@@ -305,7 +305,7 @@ class DoSession:
     # ------------------------------------------------------------------
 
     def register_pre_run_hook(self) -> None:
-        """Register the plan-review gate as a KimiSoul pre-run hook."""
+        """Register the plan-review gate as a ConsiliumSoul pre-run hook."""
         self.soul.register_pre_run_hook(self._pre_run_hook)
 
     @property

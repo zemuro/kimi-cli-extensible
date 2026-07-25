@@ -54,7 +54,7 @@ Status: Implemented
 
   → Approve once
     Approve for this session
-    Reject, tell Kimi CLI what to do instead
+    Reject, tell Consilium CLI what to do instead
 ```
 
 #### 文件编辑的 Diff 显示

@@ -1,6 +1,6 @@
 # 键盘快捷键
 
-Kimi Code CLI Shell 模式支持以下键盘快捷键。
+Consilium CLI Shell 模式支持以下键盘快捷键。
 
 ## 快捷键列表
 
@@ -16,7 +16,7 @@ Kimi Code CLI Shell 模式支持以下键盘快捷键。
 | `Ctrl-E` | 展开审批请求完整内容 |
 | `1`–`4` | 审批面板快速选择（`4` 为附带反馈拒绝） |
 | `1`–`5` | 问题面板按编号选择选项 |
-| `Ctrl-D` | 退出 Kimi Code CLI |
+| `Ctrl-D` | 退出 Consilium CLI |
 | `Ctrl-C` | 中断当前操作 |
 
 ## 模式切换
@@ -126,7 +126,7 @@ Kimi Code CLI Shell 模式支持以下键盘快捷键。
 
 ### `Ctrl-D`：退出
 
-在输入框为空时按 `Ctrl-D` 退出 Kimi Code CLI。
+在输入框为空时按 `Ctrl-D` 退出 Consilium CLI。
 
 ### `Ctrl-C`：中断
 

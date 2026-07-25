@@ -21,7 +21,7 @@ from pydantic import BaseModel
 
 import kosong
 from kosong import StepResult
-from kosong.chat_provider.kimi import Kimi
+from kosong.chat_provider.consilium import Kimi
 from kosong.message import Message
 from kosong.tooling import CallableTool2, ToolOk, ToolReturnValue
 from kosong.tooling.simple import SimpleToolset

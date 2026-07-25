@@ -12,7 +12,7 @@ from consilium.cli import Reload, SwitchToVis, SwitchToWeb
 from consilium.config import load_config, save_config
 from consilium.exception import ConfigError
 from consilium.session import Session
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.ui.shell.console import console
 from consilium.ui.shell.mcp_status import render_mcp_console
 from consilium.ui.shell.task_browser import TaskBrowserApp
@@ -35,9 +35,9 @@ registry = SlashCommandRegistry[ShellSlashCmdFunc]()
 shell_mode_registry = SlashCommandRegistry[ShellSlashCmdFunc]()
 
 
-def ensure_kimi_soul(app: Shell) -> KimiSoul | None:
-    if not isinstance(app.soul, KimiSoul):
-        console.print("[red]KimiSoul required[/red]")
+def ensure_consilium_soul(app: Shell) -> ConsiliumSoul | None:
+    if not isinstance(app.soul, ConsiliumSoul):
+        console.print("[red]ConsiliumSoul required[/red]")
         return None
     return app.soul
 
@@ -163,7 +163,7 @@ async def btw(app: Shell, args: str):
     if not question:
         console.print('[yellow]Usage: "/btw <question>"[/yellow]')
         return
-    if ensure_kimi_soul(app) is None:
+    if ensure_consilium_soul(app) is None:
         return
     if app._prompt_session is None:  # pyright: ignore[reportPrivateUsage]
         console.print("[yellow]/btw is only available in interactive shell mode.[/yellow]")
@@ -185,7 +185,7 @@ async def model(app: Shell, args: str):
     """Switch LLM model or thinking mode"""
     from consilium.llm import derive_model_capabilities
 
-    soul = ensure_kimi_soul(app)
+    soul = ensure_consilium_soul(app)
     if soul is None:
         return
     config = soul.runtime.config
@@ -316,7 +316,7 @@ async def editor(app: Shell, args: str):
     """Set default external editor for Ctrl-O"""
     from consilium.utils.editor import get_editor_command
 
-    soul = ensure_kimi_soul(app)
+    soul = ensure_consilium_soul(app)
     if soul is None:
         return
     config = soul.runtime.config
@@ -441,35 +441,35 @@ def changelog(app: Shell, args: str):
 @registry.command
 @shell_mode_registry.command
 async def feedback(app: Shell, args: str):
-    """Submit feedback to make Kimi Code CLI better"""
+    """Submit feedback to make Consilium CLI better"""
     import platform
     import webbrowser
 
     import aiohttp
 
-    from consilium.auth import KIMI_CODE_PLATFORM_ID
+    from consilium.auth import CONSILIUM_CODE_PLATFORM_ID
     from consilium.auth.platforms import get_platform_by_id, managed_provider_key
     from consilium.constant import VERSION
     from consilium.ui.shell.oauth import current_model_key
     from consilium.utils.aiohttp import new_client_session
 
-    ISSUE_URL = "https://github.com/MoonshotAI/kimi-cli/issues"
+    ISSUE_URL = "https://github.com/MoonshotAI/consilium/issues"
 
     def _fallback_to_issues():
         if not webbrowser.open(ISSUE_URL):
             console.print(f"Please submit feedback at [underline]{ISSUE_URL}[/underline].")
 
-    soul = ensure_kimi_soul(app)
+    soul = ensure_consilium_soul(app)
     if soul is None:
         _fallback_to_issues()
         return
 
-    kimi_platform = get_platform_by_id(KIMI_CODE_PLATFORM_ID)
+    kimi_platform = get_platform_by_id(CONSILIUM_CODE_PLATFORM_ID)
     if kimi_platform is None:
         _fallback_to_issues()
         return
 
-    provider = soul.runtime.config.providers.get(managed_provider_key(KIMI_CODE_PLATFORM_ID))
+    provider = soul.runtime.config.providers.get(managed_provider_key(CONSILIUM_CODE_PLATFORM_ID))
     if provider is None or provider.oauth is None:
         _fallback_to_issues()
         return
@@ -537,7 +537,7 @@ async def feedback(app: Shell, args: str):
 @registry.command(aliases=["reset"])
 async def clear(app: Shell, args: str):
     """Clear the context"""
-    if ensure_kimi_soul(app) is None:
+    if ensure_consilium_soul(app) is None:
         return
     from consilium.telemetry import track
 
@@ -549,7 +549,7 @@ async def clear(app: Shell, args: str):
 @registry.command
 async def new(app: Shell, args: str):
     """Start a new session"""
-    soul = ensure_kimi_soul(app)
+    soul = ensure_consilium_soul(app)
     if soul is None:
         return
     current_session = soul.runtime.session
@@ -570,7 +570,7 @@ async def new(app: Shell, args: str):
 @registry.command(name="title", aliases=["rename"])
 async def title(app: Shell, args: str):
     """Set or show the session title"""
-    soul = ensure_kimi_soul(app)
+    soul = ensure_consilium_soul(app)
     if soul is None:
         return
     session = soul.runtime.session
@@ -599,7 +599,7 @@ async def list_sessions(app: Shell, args: str):
 
     from consilium.ui.shell.session_picker import SessionPickerApp
 
-    soul = ensure_kimi_soul(app)
+    soul = ensure_consilium_soul(app)
     if soul is None:
         return
 
@@ -634,7 +634,7 @@ async def list_sessions(app: Shell, args: str):
 @shell_mode_registry.command(name="task")
 async def task(app: Shell, args: str):
     """Browse and manage background tasks"""
-    soul = ensure_kimi_soul(app)
+    soul = ensure_consilium_soul(app)
     if soul is None:
         return
     if args.strip():
@@ -653,7 +653,7 @@ def theme(app: Shell, args: str):
     """Switch terminal color theme (dark/light)"""
     from consilium.ui.theme import get_active_theme
 
-    soul = ensure_kimi_soul(app)
+    soul = ensure_consilium_soul(app)
     if soul is None:
         return
 
@@ -699,11 +699,11 @@ def theme(app: Shell, args: str):
 
 @registry.command
 def web(app: Shell, args: str):
-    """Open Kimi Code Web UI in browser"""
+    """Open Consilium Web UI in browser"""
     from consilium.telemetry import track
 
     track("web_opened")
-    soul = ensure_kimi_soul(app)
+    soul = ensure_consilium_soul(app)
     session_id = soul.runtime.session.id if soul else None
     raise SwitchToWeb(session_id=session_id)
 
@@ -714,7 +714,7 @@ def vis(app: Shell, args: str):
     from consilium.telemetry import track
 
     track("vis_opened")
-    soul = ensure_kimi_soul(app)
+    soul = ensure_consilium_soul(app)
     session_id = soul.runtime.session.id if soul else None
     raise SwitchToVis(session_id=session_id)
 
@@ -724,7 +724,7 @@ async def mcp(app: Shell, args: str):
     """Show MCP servers and tools"""
     from rich.live import Live
 
-    soul = ensure_kimi_soul(app)
+    soul = ensure_consilium_soul(app)
     if soul is None:
         return
     await soul.start_background_mcp_loading()
@@ -764,7 +764,7 @@ async def mcp(app: Shell, args: str):
 @shell_mode_registry.command
 def hooks(app: Shell, args: str):
     """List configured hooks"""
-    soul = ensure_kimi_soul(app)
+    soul = ensure_consilium_soul(app)
     if soul is None:
         return
 
@@ -795,7 +795,7 @@ async def undo(app: Shell, args: str):
     from consilium.session_fork import enumerate_turns, fork_session
     from consilium.utils.string import shorten
 
-    soul = ensure_kimi_soul(app)
+    soul = ensure_consilium_soul(app)
     if soul is None:
         return
 
@@ -863,7 +863,7 @@ async def fork(app: Shell, args: str):
     """Fork the current session (copy all history to a new session)"""
     from consilium.session_fork import fork_session
 
-    soul = ensure_kimi_soul(app)
+    soul = ensure_consilium_soul(app)
     if soul is None:
         return
 
@@ -887,7 +887,7 @@ async def fork(app: Shell, args: str):
 @shell_mode_registry.command
 async def token_usage(app: Shell, args: str):
     """Show token usage summary for the current session."""
-    soul = ensure_kimi_soul(app)
+    soul = ensure_consilium_soul(app)
     if soul is None:
         return
     from consilium.token_tracker import TokenTracker
@@ -915,7 +915,7 @@ async def token_usage(app: Shell, args: str):
 @shell_mode_registry.command
 async def approve(app: Shell, args: str) -> None:
     """Approve a pending plan review and resume execution."""
-    soul = ensure_kimi_soul(app)
+    soul = ensure_consilium_soul(app)
     if soul is None:
         return
 
@@ -939,7 +939,7 @@ async def approve(app: Shell, args: str) -> None:
 @shell_mode_registry.command
 async def reject(app: Shell, args: str) -> None:
     """Reject a pending plan review and clear the gate."""
-    soul = ensure_kimi_soul(app)
+    soul = ensure_consilium_soul(app)
     if soul is None:
         return
 
@@ -962,7 +962,7 @@ async def reject(app: Shell, args: str) -> None:
 @shell_mode_registry.command
 async def review(app: Shell, args: str) -> None:
     """Manually trigger a plan review for the current Do session."""
-    soul = ensure_kimi_soul(app)
+    soul = ensure_consilium_soul(app)
     if soul is None:
         return
 

@@ -7,7 +7,7 @@
 如果在运行 `/login`（或 `/setup`）命令时看到 "No models available for the selected platform" 错误，可能是以下原因：
 
 - **API 密钥无效或过期**：检查你输入的 API 密钥是否正确，以及是否仍有效。
-- **网络连接问题**：确认能正常访问 API 服务地址（如 `api.kimi.com` 或 `api.moonshot.cn`）。
+- **网络连接问题**：确认能正常访问 API 服务地址（如 `api.consilium.com` 或 `api.moonshot.cn`）。
 
 ### API 密钥无效
 
@@ -15,17 +15,17 @@ API 密钥无效可能的原因：
 
 - **密钥输入错误**：检查是否有多余的空格或遗漏的字符。
 - **密钥已过期或被撤销**：在平台控制台确认密钥状态。
-- **环境变量覆盖**：检查是否有 `KIMI_API_KEY` 或 `OPENAI_API_KEY` 环境变量覆盖了配置文件中的密钥。可以运行 `echo $KIMI_API_KEY` 检查。
+- **环境变量覆盖**：检查是否有 `CONSILIUM_API_KEY` 或 `OPENAI_API_KEY` 环境变量覆盖了配置文件中的密钥。可以运行 `echo $CONSILIUM_API_KEY` 检查。
 
 ### 会员过期或配额用尽
 
-如果你使用 Kimi Code 平台，可以通过 `/usage` 命令查看当前的配额和会员状态。如果配额用尽或会员过期，需要在 [Kimi Code](https://kimi.com/coding) 续费或升级。
+如果你使用 Consilium 平台，可以通过 `/usage` 命令查看当前的配额和会员状态。如果配额用尽或会员过期，需要在 [Consilium](https://kimi.com/coding) 续费或升级。
 
 ## 交互问题
 
 ### Shell 模式中 `cd` 命令无效
 
-在 Shell 模式中执行 `cd` 命令不会改变 Kimi Code CLI 的工作目录。这是因为每次 Shell 命令在独立的子进程中执行，目录切换只在该进程内生效。
+在 Shell 模式中执行 `cd` 命令不会改变 Consilium CLI 的工作目录。这是因为每次 Shell 命令在独立的子进程中执行，目录切换只在该进程内生效。
 
 如果需要切换工作目录：
 
@@ -44,18 +44,18 @@ API 密钥无效可能的原因：
 
 ### 工作目录被删除或移除
 
-如果在会话期间工作目录变得不可访问（外置硬盘拔出、目录被删除或文件系统卸载），Kimi Code CLI 会检测到这一情况并显示崩溃报告，包含会话 ID 和工作目录路径，之后干净退出。你可以通过 `kimi -r <session-id>` 在正确的目录中恢复会话。
+如果在会话期间工作目录变得不可访问（外置硬盘拔出、目录被删除或文件系统卸载），Consilium CLI 会检测到这一情况并显示崩溃报告，包含会话 ID 和工作目录路径，之后干净退出。你可以通过 `kimi -r <session-id>` 在正确的目录中恢复会话。
 
 ## ACP 问题
 
-### IDE 无法连接到 Kimi Code CLI
+### IDE 无法连接到 Consilium CLI
 
-如果 IDE（如 Zed 或 JetBrains IDE）无法连接到 Kimi Code CLI，请检查以下几点：
+如果 IDE（如 Zed 或 JetBrains IDE）无法连接到 Consilium CLI，请检查以下几点：
 
-- **确认 Kimi Code CLI 已安装**：运行 `kimi --version` 确认安装成功。
-- **检查配置路径**：确保 IDE 配置中的 Kimi Code CLI 路径正确。通常可以使用 `kimi acp` 作为命令。
+- **确认 Consilium CLI 已安装**：运行 `kimi --version` 确认安装成功。
+- **检查配置路径**：确保 IDE 配置中的 Consilium CLI 路径正确。通常可以使用 `kimi acp` 作为命令。
 - **检查 uv 路径**：如果使用 uv 安装，确保 `~/.local/bin` 在 PATH 中。可以使用绝对路径，如 `/Users/yourname/.local/bin/kimi acp`。
-- **查看日志**：检查 `~/.kimi/logs/kimi.log` 中的错误信息。
+- **查看日志**：检查 `~/.consilium/logs/kimi.log` 中的错误信息。
 
 ## MCP 问题
 
@@ -64,7 +64,7 @@ API 密钥无效可能的原因：
 添加 MCP 服务器后，如果工具未加载或报错，可能是以下原因：
 
 - **命令不存在**：对于 stdio 类型的服务器，确保命令（如 `npx`）在 PATH 中。可以使用绝对路径配置。
-- **配置格式错误**：检查 `~/.kimi/mcp.json` 是否为有效的 JSON 格式。运行 `kimi mcp list` 查看当前配置。
+- **配置格式错误**：检查 `~/.consilium/mcp.json` 是否为有效的 JSON 格式。运行 `kimi mcp list` 查看当前配置。
 
 调试步骤：
 
@@ -129,19 +129,19 @@ macOS 的 Gatekeeper 安全机制会在首次运行新程序时进行检查，�
 - **等待检查完成**：首次运行时耐心等待，后续启动会恢复正常。
 - **添加到开发者工具**：在「系统设置 → 隐私与安全性 → 开发者工具」中添加你的终端应用。
 
-### 如何升级 Kimi Code CLI
+### 如何升级 Consilium CLI
 
 使用 uv 升级到最新版本：
 
 ```sh
-uv tool upgrade kimi-cli --no-cache
+uv tool upgrade consilium --no-cache
 ```
 
 添加 `--no-cache` 参数可以确保获取最新版本。
 
 ### 启动时弹出更新提醒
 
-当后台检查发现新版本时，Kimi Code CLI 会在 Shell 启动前显示一个阻断式更新提醒，列出当前版本和最新版本信息。你可以通过以下按键选择操作：
+当后台检查发现新版本时，Consilium CLI 会在 Shell 启动前显示一个阻断式更新提醒，列出当前版本和最新版本信息。你可以通过以下按键选择操作：
 
 - `Enter`：立即升级到最新版本
 - `q`：暂时跳过，下次启动时继续提醒
@@ -149,10 +149,10 @@ uv tool upgrade kimi-cli --no-cache
 
 ### 如何禁用更新提醒
 
-如果不希望 Kimi Code CLI 检查更新或在启动时显示更新提醒，可以设置环境变量：
+如果不希望 Consilium CLI 检查更新或在启动时显示更新提醒，可以设置环境变量：
 
 ```sh
-export KIMI_CLI_NO_AUTO_UPDATE=1
+export CONSILIUM_CLI_NO_AUTO_UPDATE=1
 ```
 
 这会同时禁用后台更新检查、启动时的阻断式更新提醒和欢迎面板中的版本提示。可以将此行添加到你的 shell 配置文件（如 `~/.zshrc` 或 `~/.bashrc`）中。

@@ -4,11 +4,11 @@ Updated: 2026-01-26
 Status: Draft
 ---
 
-# KLIP-15: kagent Rust kernel 以 sidecar 方式接入 kimi-cli
+# KLIP-15: kagent Rust kernel 以 sidecar 方式接入 consilium
 
 ## 背景与现状
 
-* Python 版 kimi-cli 的 Agent kernel 由 `KimiSoul` 驱动（`src/kimi_cli/soul/kimisoul.py`）。
+* Python 版 consilium 的 Agent kernel 由 `KimiSoul` 驱动（`src/consilium/soul/kimisoul.py`）。
 * UI（shell/print）与 ACP server 通过 Wire 事件与 kernel 交互。
 * Wire 协议已稳定，详见 `docs/zh/customization/wire-mode.md`（JSON-RPC 2.0 + stdio）。
 * Rust 版 kagent 已实现相同协议与核心逻辑，目标是替换 Python kernel，但**保留 Python UI/ACP**。
@@ -83,7 +83,7 @@ Rust -> Python：
 
 建议增加运行时切换方式（优先级从高到低）：
 1. CLI flag：`--kernel rust|python`（默认可为 `rust`）
-2. 环境变量：`KIMI_KERNEL=rust|python`
+2. 环境变量：`CONSILIUM_KERNEL=rust|python`
 3. 配置文件：`[runtime] kernel = "rust"`
 
 在 `KimiCLI.create` 中选择 `KimiSoul` 或 `WireBackedSoul`。
@@ -96,7 +96,7 @@ Rust -> Python：
   - Python wheel（包含 `kagent` 可执行文件）
   - Python 代码负责定位并调用该二进制
 * 运行时查找优先级：
-  1) `KIMI_KERNEL_BIN` 环境变量
+  1) `CONSILIUM_KERNEL_BIN` 环境变量
   2) package 内嵌二进制路径
   3) 系统 PATH
 
@@ -110,13 +110,13 @@ Rust -> Python：
 * Python kernel 保留并可显式启用。
 * Rust kernel 失败可自动 fallback。
 * 既有 wire/client 协议不变。
-* e2e 测试通过 `KIMI_E2E_WIRE_CMD` 指定 Rust kernel。
+* e2e 测试通过 `CONSILIUM_E2E_WIRE_CMD` 指定 Rust kernel。
 
 ## 测试与验证
 
 * Rust：`cargo fmt` / `cargo check` / `cargo test`
 * Python：现有 UI/ACP 测试继续
-* e2e：`KIMI_E2E_WIRE_CMD=... uv run pytest tests_e2e`
+* e2e：`CONSILIUM_E2E_WIRE_CMD=... uv run pytest tests_e2e`
 * CI：增加多平台 Rust + e2e 覆盖
 
 ## 替代方案（不选）

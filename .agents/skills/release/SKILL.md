@@ -1,13 +1,13 @@
 ---
 name: release
-description: Execute the release workflow for Kimi Code CLI packages.
+description: Execute the release workflow for Consilium CLI packages.
 ---
 
-Release process for Kimi Code CLI packages. Tags are pushed without a `v` prefix and follow one of these patterns (matched by `.github/workflows/release-*.yml`):
+Release process for Consilium CLI packages. Tags are pushed without a `v` prefix and follow one of these patterns (matched by `.github/workflows/release-*.yml`):
 
 | Tag pattern | Releases |
 |---|---|
-| `1.42.0` (numeric) | `kimi-cli` (root) + `kimi-code` wrapper, released together — versions must stay aligned |
+| `1.42.0` (numeric) | `consilium` (root) + `kimi-code` wrapper, released together — versions must stay aligned |
 | `kosong-0.53.0` | `packages/kosong` |
 | `pykaos-0.9.0` | `packages/kaos` (PyPI name `pykaos`) |
 | `kimi-sdk-0.3.0` | `sdks/kimi-sdk` |
@@ -18,7 +18,7 @@ The Rust implementation (`kagent`) lives in a separate repository and is **not**
 
 1. **Understand the automation.** Read `AGENTS.md` and `.github/workflows/release*.yml` so you know what each release workflow expects before changing any versions.
 
-2. **Detect changed packages.** Check each release unit under `packages/`, `sdks/`, and the repo root for changes since its last release tag. Use path-scoped diffs for subpackages so unrelated repo changes do not trigger a package release, e.g. `git diff kosong-0.53.0..HEAD -- packages/kosong`, `git diff pykaos-0.9.0..HEAD -- packages/kaos`, and `git diff kimi-sdk-0.2.1..HEAD -- sdks/kimi-sdk`. If nothing changed anywhere, stop and report that there is nothing to release. Note: `packages/kimi-code` is a thin wrapper and must stay version-synced with `kimi-cli`, so treat it as changed whenever the root package changes.
+2. **Detect changed packages.** Check each release unit under `packages/`, `sdks/`, and the repo root for changes since its last release tag. Use path-scoped diffs for subpackages so unrelated repo changes do not trigger a package release, e.g. `git diff kosong-0.53.0..HEAD -- packages/kosong`, `git diff pykaos-0.9.0..HEAD -- packages/kaos`, and `git diff kimi-sdk-0.2.1..HEAD -- sdks/kimi-sdk`. If nothing changed anywhere, stop and report that there is nothing to release. Note: `packages/kimi-code` is a thin wrapper and must stay version-synced with `consilium`, so treat it as changed whenever the root package changes.
 
 3. **Confirm new versions with the user.** For each changed package, propose a new version and confirm before editing. Versioning policy:
    - Patch is always `0`.
@@ -33,7 +33,7 @@ The Rust implementation (`kagent`) lives in a separate repository and is **not**
    - Update `breaking-changes.md` in both languages if there are breaking changes.
    - If bumping `packages/kosong` or `packages/kaos`, also update the root `pyproject.toml` pinned dependency (`kosong[contrib]==<version>` or `pykaos==<version>`) so root validation keeps passing.
 
-6. **Sync the `kimi-code` wrapper when the root version changes.** Bump `packages/kimi-code/pyproject.toml` `version` and its `kimi-cli==<version>` dependency to match the new root version.
+6. **Sync the `kimi-code` wrapper when the root version changes.** Bump `packages/kimi-code/pyproject.toml` `version` and its `consilium==<version>` dependency to match the new root version.
 
 7. **Run `uv sync`** to refresh the lockfile.
 
@@ -41,12 +41,12 @@ The Rust implementation (`kagent`) lives in a separate repository and is **not**
 
 9. **Confirm with the user before opening the PR.** Summarize the staged changes and ask the user to explicitly confirm:
    - **Version numbers** — every updated `pyproject.toml` (changed package + `packages/kimi-code` if the root moved) reflects the version agreed in step 3.
-   - **Dependency pins** — the root `pyproject.toml` pins (`kosong[contrib]==<version>`, `pykaos==<version>`) and `packages/kimi-code`'s `kimi-cli==<version>` match the bumped versions.
+   - **Dependency pins** — the root `pyproject.toml` pins (`kosong[contrib]==<version>`, `pykaos==<version>`) and `packages/kimi-code`'s `consilium==<version>` match the bumped versions.
    - **Documentation** — CHANGELOG entries are added below `## Unreleased` (Unreleased still present and empty), `breaking-changes.md` is updated in both languages if applicable, and `gen-docs` left no inconsistencies.
 
    Wait for explicit user approval before proceeding. If the user flags anything, fix it and re-confirm — do not push.
 
-10. **Open the PR.** Commit all changes, push, and open a PR with `gh`. The PR description must follow this structure (see https://github.com/MoonshotAI/kimi-cli/pull/2225 for reference):
+10. **Open the PR.** Commit all changes, push, and open a PR with `gh`. The PR description must follow this structure (see https://github.com/MoonshotAI/consilium/pull/2225 for reference):
 
     ```markdown
     ## Summary

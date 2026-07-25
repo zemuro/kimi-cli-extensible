@@ -65,7 +65,7 @@ kimi mcp remove NAME
 kimi mcp auth NAME
 ```
 
-执行后会打开浏览器进行 OAuth 授权流程。授权成功后，token 会缓存在 `~/.kimi/mcp-oauth/` 以供后续使用。
+执行后会打开浏览器进行 OAuth 授权流程。授权成功后，token 会缓存在 `~/.consilium/mcp-oauth/` 以供后续使用。
 
 **参数**
 

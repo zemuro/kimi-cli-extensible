@@ -9,7 +9,7 @@ from kosong.tooling.empty import EmptyToolset
 
 from consilium.soul.agent import Agent, Runtime
 from consilium.soul.context import Context
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.soul.slash import plan
 from consilium.tools.plan.heroes import _slug_cache
 from consilium.wire.types import TextPart
@@ -22,17 +22,17 @@ def _clear_slug_cache():
     _slug_cache.clear()
 
 
-def _make_soul(runtime: Runtime, tmp_path: Path) -> KimiSoul:
+def _make_soul(runtime: Runtime, tmp_path: Path) -> ConsiliumSoul:
     agent = Agent(
         name="Test Agent",
         system_prompt="Test system prompt.",
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    return KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    return ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
 
 
-async def _run_plan(soul: KimiSoul, args: str) -> None:
+async def _run_plan(soul: ConsiliumSoul, args: str) -> None:
     result = plan(soul, args)
     if result is not None:
         await result

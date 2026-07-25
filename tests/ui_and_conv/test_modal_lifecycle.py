@@ -939,7 +939,7 @@ async def test_shell_external_approval_response_syncs_modal(
     from consilium.approval_runtime import ApprovalSource
     from consilium.soul.agent import Agent
     from consilium.soul.context import Context
-    from consilium.soul.kimisoul import KimiSoul
+    from consilium.soul.consiliumsoul import ConsiliumSoul
     from consilium.ui.shell import Shell
 
     agent = Agent(
@@ -948,7 +948,7 @@ async def test_shell_external_approval_response_syncs_modal(
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "h.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "h.jsonl"))
     shell = Shell(soul)
 
     # Create two approval requests in the runtime
@@ -1037,7 +1037,7 @@ async def test_shell_forward_approval_to_sink_fallback_when_no_sink(
     from consilium.approval_runtime import ApprovalSource
     from consilium.soul.agent import Agent
     from consilium.soul.context import Context
-    from consilium.soul.kimisoul import KimiSoul
+    from consilium.soul.consiliumsoul import ConsiliumSoul
     from consilium.ui.shell import Shell
 
     agent = Agent(
@@ -1046,7 +1046,7 @@ async def test_shell_forward_approval_to_sink_fallback_when_no_sink(
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "h.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "h.jsonl"))
     shell = Shell(soul)
 
     runtime.approval_runtime.create_request(
@@ -1200,7 +1200,7 @@ async def test_shell_command_mode_starts_root_wire_hub_watcher(
 
     from consilium.soul.agent import Agent
     from consilium.soul.context import Context
-    from consilium.soul.kimisoul import KimiSoul
+    from consilium.soul.consiliumsoul import ConsiliumSoul
     from consilium.ui.shell import Shell
 
     agent = Agent(
@@ -1209,7 +1209,7 @@ async def test_shell_command_mode_starts_root_wire_hub_watcher(
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "h.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "h.jsonl"))
     shell = Shell(soul)
 
     # Mock run_soul_command so we don't need a real LLM
@@ -1238,7 +1238,7 @@ async def test_clear_active_approval_sink_requeues_pending_requests(
     from consilium.approval_runtime import ApprovalSource
     from consilium.soul.agent import Agent
     from consilium.soul.context import Context
-    from consilium.soul.kimisoul import KimiSoul
+    from consilium.soul.consiliumsoul import ConsiliumSoul
     from consilium.ui.shell import Shell
 
     agent = Agent(
@@ -1247,7 +1247,7 @@ async def test_clear_active_approval_sink_requeues_pending_requests(
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "h.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "h.jsonl"))
     shell = Shell(soul)
 
     # Create a pending approval in the runtime

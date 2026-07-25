@@ -31,7 +31,7 @@ def test_config_string(tmp_path) -> None:
                 "type": "_scripted_echo",
                 "base_url": "",
                 "api_key": "",
-                "env": {"KIMI_SCRIPTED_ECHO_SCRIPTS": str(scripts_path)},
+                "env": {"CONSILIUM_SCRIPTED_ECHO_SCRIPTS": str(scripts_path)},
             }
         },
     }
@@ -112,13 +112,13 @@ def test_model_override(tmp_path) -> None:
                 "type": "_scripted_echo",
                 "base_url": "",
                 "api_key": "",
-                "env": {"KIMI_SCRIPTED_ECHO_SCRIPTS": str(scripts_a)},
+                "env": {"CONSILIUM_SCRIPTED_ECHO_SCRIPTS": str(scripts_a)},
             },
             "provider-b": {
                 "type": "_scripted_echo",
                 "base_url": "",
                 "api_key": "",
-                "env": {"KIMI_SCRIPTED_ECHO_SCRIPTS": str(scripts_b)},
+                "env": {"CONSILIUM_SCRIPTED_ECHO_SCRIPTS": str(scripts_b)},
             },
         },
     }

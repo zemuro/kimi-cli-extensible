@@ -14,8 +14,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import IO, Any
 
-TRACE_ENV = "KIMI_TEST_TRACE"
-WIRE_COMMAND_ENV = "KIMI_E2E_WIRE_CMD"
+TRACE_ENV = "CONSILIUM_TEST_TRACE"
+WIRE_COMMAND_ENV = "CONSILIUM_E2E_WIRE_CMD"
 DEFAULT_TIMEOUT = 5.0
 _PATH_REPLACEMENTS: dict[str, str] = {}
 
@@ -48,12 +48,12 @@ def make_env(home_dir: Path) -> dict[str, str]:
     env = os.environ.copy()
     env["HOME"] = str(home_dir)
     env["USERPROFILE"] = str(home_dir)
-    env["KIMI_SHARE_DIR"] = str(share_dir(home_dir))
+    env["CONSILIUM_SHARE_DIR"] = str(share_dir(home_dir))
     return env
 
 
 def share_dir(home_dir: Path) -> Path:
-    return home_dir / ".kimi"
+    return home_dir / ".consilium"
 
 
 def register_path_replacements(
@@ -107,7 +107,7 @@ def write_scripted_config(
                 "type": "_scripted_echo",
                 "base_url": "",
                 "api_key": "",
-                "env": {"KIMI_SCRIPTED_ECHO_SCRIPTS": str(scripts_path)},
+                "env": {"CONSILIUM_SCRIPTED_ECHO_SCRIPTS": str(scripts_path)},
             }
         },
     }

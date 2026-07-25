@@ -110,7 +110,7 @@ def test_format_skills_for_prompt_lists_name_path_description():
     assert "alpha" in rendered
     assert "Alpha does things" in rendered
     # Path is included (helps model read the skill on demand)
-    assert "/tmp/user/alpha" in rendered
+    assert str(Path("/tmp/user/alpha")) in rendered
 
 
 def test_format_skills_for_prompt_sorts_within_scope():
@@ -138,7 +138,7 @@ async def test_discovered_skills_carry_scope(tmp_path, monkeypatch):
     )
 
     home_dir = tmp_path / "home"
-    user_brand = home_dir / ".kimi" / "skills"
+    user_brand = home_dir / ".consilium" / "skills"
     user_brand.mkdir(parents=True)
     (user_brand / "user-skill").mkdir()
     (user_brand / "user-skill" / "SKILL.md").write_text(
@@ -146,10 +146,10 @@ async def test_discovered_skills_carry_scope(tmp_path, monkeypatch):
         encoding="utf-8",
     )
     monkeypatch.setattr(Path, "home", lambda: home_dir)
-    monkeypatch.setenv("KIMI_SHARE_DIR", str(tmp_path / "share"))
+    monkeypatch.setenv("CONSILIUM_SHARE_DIR", str(tmp_path / "share"))
 
     work_dir = tmp_path / "project"
-    proj_brand = work_dir / ".kimi" / "skills"
+    proj_brand = work_dir / ".consilium" / "skills"
     proj_brand.mkdir(parents=True)
     (proj_brand / "proj-skill").mkdir()
     (proj_brand / "proj-skill" / "SKILL.md").write_text(
@@ -199,7 +199,7 @@ async def test_end_to_end_project_override_renders_correctly(tmp_path, monkeypat
 
     # 2. User scope (via monkeypatched home dir)
     home_dir = tmp_path / "home"
-    user_brand = home_dir / ".kimi" / "skills"
+    user_brand = home_dir / ".consilium" / "skills"
     user_brand.mkdir(parents=True)
     (user_brand / "foo").mkdir()
     (user_brand / "foo" / "SKILL.md").write_text(
@@ -207,11 +207,11 @@ async def test_end_to_end_project_override_renders_correctly(tmp_path, monkeypat
         encoding="utf-8",
     )
     monkeypatch.setattr(Path, "home", lambda: home_dir)
-    monkeypatch.setenv("KIMI_SHARE_DIR", str(tmp_path / "share"))
+    monkeypatch.setenv("CONSILIUM_SHARE_DIR", str(tmp_path / "share"))
 
     # 3. Project scope
     work_dir = tmp_path / "project"
-    proj_brand = work_dir / ".kimi" / "skills"
+    proj_brand = work_dir / ".consilium" / "skills"
     proj_brand.mkdir(parents=True)
     (proj_brand / "foo").mkdir()
     proj_foo_md = proj_brand / "foo" / "SKILL.md"

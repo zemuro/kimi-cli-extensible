@@ -40,8 +40,8 @@ class SwitchToVis(Exception):
 cli = typer.Typer(
     cls=LazySubcommandGroup,
     epilog="""\b\
-Documentation:        https://moonshotai.github.io/kimi-cli/\n
-LLM friendly version: https://moonshotai.github.io/kimi-cli/llms.txt""",
+Documentation:        https://moonshotai.github.io/consilium/\n
+LLM friendly version: https://moonshotai.github.io/consilium/llms.txt""",
     add_completion=False,
     context_settings={"help_option_names": ["-h", "--help"]},
     help="Consilium, your next CLI agent.",
@@ -365,6 +365,171 @@ def kimi(
             ),
         ),
     ] = None,
+    # Subagent overrides: coder
+    subagent_coder_temperature: Annotated[
+        float | None,
+        typer.Option(
+            '--subagent-coder-temperature',
+            help="Sampling temperature (0-2).",
+        ),
+    ] = None,
+    subagent_coder_max_tokens_per_task: Annotated[
+        int | None,
+        typer.Option(
+            '--subagent-coder-max-tokens-per-task',
+            help="Hard token limit per task.",
+                min=1000,
+        ),
+    ] = None,
+    subagent_coder_max_tool_calls_per_task: Annotated[
+        int | None,
+        typer.Option(
+            '--subagent-coder-max-tool-calls-per-task',
+            help="Hard tool-call limit per task.",
+                min=1,
+        ),
+    ] = None,
+    subagent_coder_timeout_seconds: Annotated[
+        int | None,
+        typer.Option(
+            '--subagent-coder-timeout-seconds',
+            help="Timeout in seconds.",
+                min=10,
+        ),
+    ] = None,
+
+    # Subagent overrides: explore
+    subagent_explore_temperature: Annotated[
+        float | None,
+        typer.Option(
+            '--subagent-explore-temperature',
+            help="Sampling temperature (0-2).",
+        ),
+    ] = None,
+    subagent_explore_max_tokens_per_task: Annotated[
+        int | None,
+        typer.Option(
+            '--subagent-explore-max-tokens-per-task',
+            help="Hard token limit per task.",
+                min=1000,
+        ),
+    ] = None,
+    subagent_explore_max_tool_calls_per_task: Annotated[
+        int | None,
+        typer.Option(
+            '--subagent-explore-max-tool-calls-per-task',
+            help="Hard tool-call limit per task.",
+                min=1,
+        ),
+    ] = None,
+    subagent_explore_timeout_seconds: Annotated[
+        int | None,
+        typer.Option(
+            '--subagent-explore-timeout-seconds',
+            help="Timeout in seconds.",
+                min=10,
+        ),
+    ] = None,
+
+    # Subagent overrides: plan
+    subagent_plan_temperature: Annotated[
+        float | None,
+        typer.Option(
+            '--subagent-plan-temperature',
+            help="Sampling temperature (0-2).",
+        ),
+    ] = None,
+    subagent_plan_max_tokens_per_task: Annotated[
+        int | None,
+        typer.Option(
+            '--subagent-plan-max-tokens-per-task',
+            help="Hard token limit per task.",
+                min=1000,
+        ),
+    ] = None,
+    subagent_plan_max_tool_calls_per_task: Annotated[
+        int | None,
+        typer.Option(
+            '--subagent-plan-max-tool-calls-per-task',
+            help="Hard tool-call limit per task.",
+                min=1,
+        ),
+    ] = None,
+    subagent_plan_timeout_seconds: Annotated[
+        int | None,
+        typer.Option(
+            '--subagent-plan-timeout-seconds',
+            help="Timeout in seconds.",
+                min=10,
+        ),
+    ] = None,
+
+    # Subagent overrides: plan_editor
+    subagent_plan_editor_temperature: Annotated[
+        float | None,
+        typer.Option(
+            '--subagent-plan-editor-temperature',
+            help="Sampling temperature (0-2).",
+        ),
+    ] = None,
+    subagent_plan_editor_max_tokens_per_task: Annotated[
+        int | None,
+        typer.Option(
+            '--subagent-plan-editor-max-tokens-per-task',
+            help="Hard token limit per task.",
+                min=1000,
+        ),
+    ] = None,
+    subagent_plan_editor_max_tool_calls_per_task: Annotated[
+        int | None,
+        typer.Option(
+            '--subagent-plan-editor-max-tool-calls-per-task',
+            help="Hard tool-call limit per task.",
+                min=1,
+        ),
+    ] = None,
+    subagent_plan_editor_timeout_seconds: Annotated[
+        int | None,
+        typer.Option(
+            '--subagent-plan-editor-timeout-seconds',
+            help="Timeout in seconds.",
+                min=10,
+        ),
+    ] = None,
+
+    # Subagent overrides: plan_reviewer
+    subagent_plan_reviewer_temperature: Annotated[
+        float | None,
+        typer.Option(
+            '--subagent-plan-reviewer-temperature',
+            help="Sampling temperature (0-2).",
+        ),
+    ] = None,
+    subagent_plan_reviewer_max_tokens_per_task: Annotated[
+        int | None,
+        typer.Option(
+            '--subagent-plan-reviewer-max-tokens-per-task',
+            help="Hard token limit per task.",
+                min=1000,
+        ),
+    ] = None,
+    subagent_plan_reviewer_max_tool_calls_per_task: Annotated[
+        int | None,
+        typer.Option(
+            '--subagent-plan-reviewer-max-tool-calls-per-task',
+            help="Hard tool-call limit per task.",
+                min=1,
+        ),
+    ] = None,
+    subagent_plan_reviewer_timeout_seconds: Annotated[
+        int | None,
+        typer.Option(
+            '--subagent-plan-reviewer-timeout-seconds',
+            help="Timeout in seconds.",
+                min=10,
+        ),
+    ] = None,
+
     mcp_config_file: Annotated[
         list[Path] | None,
         typer.Option(
@@ -436,7 +601,7 @@ def kimi(
 
     from consilium.utils.proctitle import init_process_name
 
-    init_process_name("Kimi Code")
+    init_process_name("Consilium")
 
     if ctx.invoked_subcommand is not None:
         return  # skip rest if a subcommand is invoked
@@ -448,8 +613,8 @@ def kimi(
     from kaos.path import KaosPath
 
     from consilium.agentspec import DEFAULT_AGENT_FILE, OKABE_AGENT_FILE
-    from consilium.app import KimiCLI, enable_logging
-    from consilium.config import Config, load_config_from_string
+    from consilium.app import ConsiliumCLI, enable_logging
+    from consilium.config import Config, SubagentOverrideConfig, load_config_from_string
     from consilium.exception import ConfigError
     from consilium.hooks import events as hook_events
     from consilium.metadata import load_metadata, save_metadata
@@ -462,7 +627,7 @@ def kimi(
 
     # Don't redirect stderr during argument parsing. Our stderr redirector
     # replaces fd=2 with a pipe, which would swallow Click/Typer startup errors.
-    # Redirection is installed later, right before KimiCLI.create(), so that
+    # Redirection is installed later, right before ConsiliumCLI.create(), so that
     # MCP server stderr noise is captured into logs from the start.
     enable_logging(debug, redirect_stderr=False)
 
@@ -479,7 +644,10 @@ def kimi(
     def _parse_subagent_role_overrides(
         values: list[str] | None,
     ) -> dict[str, Path]:
-        """Parse --subagent-system-prompt values and env vars into {subagent_name: role_file_path}."""
+        """Parse --subagent-system-prompt values and env vars.
+
+        Returns a mapping of {subagent_name: role_file_path}.
+        """
         import os
 
         overrides: dict[str, Path] = {}
@@ -724,7 +892,7 @@ def kimi(
                 if changed:
                     session.save_state()
 
-            # Redirect stderr *before* KimiCLI.create() so that MCP server
+            # Redirect stderr *before* ConsiliumCLI.create() so that MCP server
             # subprocesses (e.g. mcp-remote OAuth debug logs) write to the log
             # file instead of polluting the user's terminal.  CLI argument
             # parsing has already succeeded at this point, so Typer/Click
@@ -759,8 +927,28 @@ def kimi(
 
             subagent_role_overrides = _parse_subagent_role_overrides(subagent_system_prompt)
 
+            # Collect per-subagent overrides from CLI flags.
+            subagent_overrides: dict[str, SubagentOverrideConfig] = {}
+            for agent_type in ("coder", "explore", "plan", "plan_editor", "plan_reviewer"):
+                override = SubagentOverrideConfig(
+                    temperature=locals().get(f"subagent_{agent_type}_temperature"),
+                    max_tokens_per_task=locals().get(f"subagent_{agent_type}_max_tokens_per_task"),
+                    max_tool_calls_per_task=locals().get(f"subagent_{agent_type}_max_tool_calls_per_task"),
+                    timeout_seconds=locals().get(f"subagent_{agent_type}_timeout_seconds"),
+                )
+                if any(
+                    v is not None
+                    for v in (
+                        override.temperature,
+                        override.max_tokens_per_task,
+                        override.max_tool_calls_per_task,
+                        override.timeout_seconds,
+                    )
+                ):
+                    subagent_overrides[agent_type] = override
+
             if do_mode:
-                instance = await KimiCLI.create(
+                instance = await ConsiliumCLI.create(
                     session,
                     config=config,
                     model_name=model_name,
@@ -772,6 +960,7 @@ def kimi(
                     resumed=resumed,
                     agent_file=agent_file,
                     subagent_role_overrides=subagent_role_overrides,
+                    subagent_overrides=subagent_overrides,
                     mcp_configs=mcp_configs,
                     skills_dirs=skills_dirs,
                     max_steps_per_turn=max_steps_per_turn,
@@ -876,6 +1065,7 @@ def kimi(
                     budget_tokens=budget_tokens,
                     agent_file=agent_file,
                     subagent_role_overrides=subagent_role_overrides,
+                    subagent_overrides=subagent_overrides,
                 )
                 startup_progress.stop()
 
@@ -1256,7 +1446,7 @@ def logout(
 def term(
     ctx: typer.Context,
 ) -> None:
-    """Run Toad TUI backed by Kimi Code CLI ACP server."""
+    """Run Toad TUI backed by Consilium CLI ACP server."""
     from .toad import run_term
 
     run_term(ctx)
@@ -1264,7 +1454,7 @@ def term(
 
 @cli.command()
 def acp():
-    """Run Kimi Code CLI ACP server."""
+    """Run Consilium CLI ACP server."""
     from consilium.acp import acp_main
 
     acp_main()

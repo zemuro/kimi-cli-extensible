@@ -1,17 +1,17 @@
 # 破坏性变更与迁移说明
 
-本页面记录 Kimi Code CLI 各版本中的破坏性变更及对应的迁移指引。
+本页面记录 Consilium CLI 各版本中的破坏性变更及对应的迁移指引。
 
 ## 未发布
 
 ## 1.43.0
 
-### MCP OAuth token 缓存迁移到 `~/.kimi/mcp-oauth/`
+### MCP OAuth token 缓存迁移到 `~/.consilium/mcp-oauth/`
 
-Kimi Code CLI 现在为 MCP 服务器使用 FastMCP 3 的持久化 OAuth 存储 API，并将 MCP OAuth token 存储在 `~/.kimi/mcp-oauth/`。旧 FastMCP 2.x 缓存位置中的 token 不会自动迁移。
+Consilium CLI 现在为 MCP 服务器使用 FastMCP 3 的持久化 OAuth 存储 API，并将 MCP OAuth token 存储在 `~/.consilium/mcp-oauth/`。旧 FastMCP 2.x 缓存位置中的 token 不会自动迁移。
 
 - **受影响**：升级前已经授权过 OAuth MCP 服务器的用户
-- **迁移**：如果 `kimi mcp list` 显示某个 OAuth 服务器需要授权，请运行一次 `kimi mcp auth <name>`，在 `~/.kimi/mcp-oauth/` 中创建新的 token。如果已存储的 token 失效或损坏，可先运行 `kimi mcp reset-auth <name>` 再重新授权
+- **迁移**：如果 `kimi mcp list` 显示某个 OAuth 服务器需要授权，请运行一次 `kimi mcp auth <name>`，在 `~/.consilium/mcp-oauth/` 中创建新的 token。如果已存储的 token 失效或损坏，可先运行 `kimi mcp reset-auth <name>` 再重新授权
 
 ## 1.42.0
 
@@ -22,10 +22,10 @@ Windows 上的 Shell 工具现在通过 `bash.exe`（POSIX 语义）执行命令
 - **受影响**：所有 Windows 用户；依赖 PowerShell 专属语法（`Get-ChildItem`、`Where-Object`、`cmdlet -Foo Bar` 参数风格、仅 `;` 链式命令、`NUL` 重定向等）经由 Shell 工具执行的集成、agent 规格或保存的代码片段
 - **迁移**：
   1. 如果尚未安装，先安装 [Git for Windows](https://git-scm.com/downloads/win)；其自带的 `bash.exe`（通常位于 `C:\Program Files\Git\bin\bash.exe`）会通过 `where.exe git` 或标准安装位置自动发现
-  2. 如果 `bash.exe` 在非标准位置，启动 kimi-cli 前把 `KIMI_CLI_GIT_BASH_PATH` 环境变量设为它的绝对路径
+  2. 如果 `bash.exe` 在非标准位置，启动 consilium 前把 `CONSILIUM_CLI_GIT_BASH_PATH` 环境变量设为它的绝对路径
   3. 把任何硬编码 PowerShell 语法的自定义提示词、agent 规格或代码片段改为 Unix shell 语法（Shell 命令内用正斜杠路径，`/dev/null` 代替 `NUL`，控制流用 `&&` 和 `||`，文本工具用 `grep`/`sed`/`awk` 而非 PowerShell cmdlet）
   4. 注意：从 bash 中调用 `python.exe`、`node.exe` 等原生 Windows 程序时仍需要传入原生 Windows 路径（例如 `python C:\path\to\script.py`）；只有 POSIX-aware 工具（cat、ls、grep 等）才能识别 `/c/path/...` 形式
-  5. 如果 kimi-cli 找不到 `bash.exe`，现在会在启动时打印安装提示并退出，而不是回退到 PowerShell
+  5. 如果 consilium 找不到 `bash.exe`，现在会在启动时打印安装提示并退出，而不是回退到 PowerShell
 
 ## 1.40.0
 
@@ -47,7 +47,7 @@ YOLO 不再注入模型指导，因此旧的 `skip_yolo_prompt_injection` 配置
 
 ### `merge_all_available_skills` 默认值翻转为 `true`
 
-`merge_all_available_skills` 配置项的默认值从 `false` 改为 `true`。kimi-cli 现在默认会合并用户级和项目级所有已存在的品牌 Skills 目录（`.kimi/skills`、`.claude/skills`、`.codex/skills`），而不是仅使用找到的第一个。升级后，同时维护多个品牌目录（例如同时保留 `~/.kimi/skills` 和 `~/.claude/skills`）的用户会开箱即看到全部 Skills。
+`merge_all_available_skills` 配置项的默认值从 `false` 改为 `true`。consilium 现在默认会合并用户级和项目级所有已存在的品牌 Skills 目录（`.consilium/skills`、`.claude/skills`、`.codex/skills`），而不是仅使用找到的第一个。升级后，同时维护多个品牌目录（例如同时保留 `~/.consilium/skills` 和 `~/.claude/skills`）的用户会开箱即看到全部 Skills。
 
 - **受影响**：同时维护多个品牌 Skills 目录，并依赖旧的"仅取第一个"行为来隐藏重复项的用户
 - **迁移**：在配置中显式设置 `merge_all_available_skills = false` 可恢复旧的仅匹配第一个目录的行为
@@ -63,10 +63,10 @@ YOLO 不再注入模型指导，因此旧的 `skip_yolo_prompt_injection` 配置
 
 ### `CreateSubagent` 和 `Task`（multiagent）工具移除
 
-`kimi_cli.tools.multiagent` 下的 `CreateSubagent` 和 `Task` 工具已移除，由新的 `Agent` 工具替代。
+`consilium.tools.multiagent` 下的 `CreateSubagent` 和 `Task` 工具已移除，由新的 `Agent` 工具替代。
 
-- **受影响**：在 Agent YAML 中引用 `kimi_cli.tools.multiagent:Task` 或 `kimi_cli.tools.multiagent:CreateSubagent` 的自定义 Agent 配置
-- **迁移**：在 Agent YAML 的 `allowed_tools` 中替换为 `kimi_cli.tools.agent:Agent`
+- **受影响**：在 Agent YAML 中引用 `consilium.tools.multiagent:Task` 或 `consilium.tools.multiagent:CreateSubagent` 的自定义 Agent 配置
+- **迁移**：在 Agent YAML 的 `allowed_tools` 中替换为 `consilium.tools.agent:Agent`
 
 ### `TaskOutput` `block` 参数默认值变更
 
@@ -95,12 +95,12 @@ YOLO 不再注入模型指导，因此旧的 `skip_yolo_prompt_injection` 配置
 
 ### Thinking 模式设置迁移调整
 
-从 `0.76` 升级后，Thinking 模式设置不再自动保留。此前保存在 `~/.kimi/kimi.json` 中的 `thinking` 状态不再使用，改为通过 `~/.kimi/config.toml` 中的 `default_thinking` 配置项管理，但不会自动从旧版 `metadata` 迁移。
+从 `0.76` 升级后，Thinking 模式设置不再自动保留。此前保存在 `~/.consilium/kimi.json` 中的 `thinking` 状态不再使用，改为通过 `~/.consilium/config.toml` 中的 `default_thinking` 配置项管理，但不会自动从旧版 `metadata` 迁移。
 
 - **受影响**：此前启用 Thinking 模式的用户
 - **迁移**：升级后需重新设置 Thinking 模式：
   - 使用 `/model` 命令选择模型时设置 Thinking 模式（交互式）
-  - 或手动在 `~/.kimi/config.toml` 中添加：
+  - 或手动在 `~/.consilium/config.toml` 中添加：
 
     ```toml
     default_thinking = true  # 如需默认启用 Thinking 模式
@@ -130,9 +130,9 @@ YOLO 不再注入模型指导，因此旧的 `skip_yolo_prompt_injection` 配置
 
 配置文件格式从 JSON 迁移至 TOML。
 
-- **受影响**：使用 `~/.kimi/config.json` 的用户
-- **迁移**：Kimi Code CLI 会自动读取旧的 JSON 配置，但建议手动迁移到 TOML 格式
-- **新位置**：`~/.kimi/config.toml`
+- **受影响**：使用 `~/.consilium/config.json` 的用户
+- **迁移**：Consilium CLI 会自动读取旧的 JSON 配置，但建议手动迁移到 TOML 格式
+- **新位置**：`~/.consilium/config.toml`
 
 JSON 配置示例：
 
@@ -142,7 +142,7 @@ JSON 配置示例：
   "providers": {
     "kimi": {
       "type": "kimi",
-      "base_url": "https://api.kimi.com/coding/v1",
+      "base_url": "https://api.consilium.com/coding/v1",
       "api_key": "your-key"
     }
   }
@@ -154,9 +154,9 @@ JSON 配置示例：
 ```toml
 default_model = "kimi-k2-0711"
 
-[providers.kimi]
+[providers.consilium]
 type = "kimi"
-base_url = "https://api.kimi.com/coding/v1"
+base_url = "https://api.consilium.com/coding/v1"
 api_key = "your-key"
 ```
 
@@ -179,10 +179,10 @@ Gemini Developer API 的供应商类型从 `google_genai` 重命名为 `gemini`�
 
 ### `Task` 工具移至 `multiagent` 模块
 
-`Task` 工具从 `kimi_cli.tools.task` 移至 `kimi_cli.tools.multiagent` 模块。
+`Task` 工具从 `consilium.tools.task` 移至 `consilium.tools.multiagent` 模块。
 
 - **受影响**：自定义工具中导入 `Task` 工具的代码
-- **迁移**：将导入路径改为 `from kimi_cli.tools.multiagent import Task`
+- **迁移**：将导入路径改为 `from consilium.tools.multiagent import Task`
 
 ### `PatchFile` 工具移除
 
@@ -224,11 +224,11 @@ Agent/Shell 模式切换快捷键从 `Ctrl-K` 改为 `Ctrl-X`。
 
 ## 0.25 - 包名变更
 
-### 包名从 `ensoul` 改为 `kimi-cli`
+### 包名从 `ensoul` 改为 `consilium`
 
 - **受影响**：使用 `ensoul` 包名的代码或脚本
 - **迁移**：
-  - 安装：`pip install ensoul` → `pip install kimi-cli` 或 `uv tool install kimi-cli`
+  - 安装：`pip install ensoul` → `pip install consilium` 或 `uv tool install consilium`
   - 命令：`ensoul` → `kimi`
 
 ### `ENSOUL_*` 参数前缀变更
@@ -236,4 +236,4 @@ Agent/Shell 模式切换快捷键从 `Ctrl-K` 改为 `Ctrl-X`。
 系统提示词内置参数前缀从 `ENSOUL_*` 改为 `KIMI_*`。
 
 - **受影响**：自定义 Agent 文件中使用 `ENSOUL_*` 参数的配置
-- **迁移**：将参数前缀改为 `KIMI_*`（如 `ENSOUL_NOW` → `KIMI_NOW`）
+- **迁移**：将参数前缀改为 `KIMI_*`（如 `ENSOUL_NOW` → `CONSILIUM_NOW`）

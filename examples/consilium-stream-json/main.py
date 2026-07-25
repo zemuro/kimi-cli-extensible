@@ -2,12 +2,12 @@ import asyncio
 import json
 import os
 
-KIMI_CLI_COMMAND = "uv run --project ../../ kimi"
+CONSILIUM_CLI_COMMAND = "uv run --project ../../ kimi"
 
 
 async def main():
     proc = await asyncio.create_subprocess_exec(
-        *KIMI_CLI_COMMAND.split(),
+        *CONSILIUM_CLI_COMMAND.split(),
         "--work-dir",
         os.getcwd(),
         "--print",

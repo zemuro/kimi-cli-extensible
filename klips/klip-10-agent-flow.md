@@ -8,7 +8,7 @@ Status: Implemented
 
 ## 背景
 
-当前 Kimi CLI 只能通过交互式输入或 `--command` 单次输入驱动对话。希望支持一种
+当前 Consilium CLI 只能通过交互式输入或 `--command` 单次输入驱动对话。希望支持一种
 "agent flow"，让用户用 Mermaid 或 D2 flowchart 描述流程，每个节点对应一次对话轮次，
 并能根据分支节点的选择继续走向不同的下一节点。Agent Flow 作为 Agent Skill 的扩展，
 通过 `SKILL.md` 中的元数据声明类型，并从流程图代码块解析得到。
@@ -60,7 +60,7 @@ Status: Implemented
 
 ### 3) 图结构与校验
 
-数据结构（位于 `src/kimi_cli/skill/flow/__init__.py`，`PromptFlow` 更名为 `Flow`）：
+数据结构（位于 `src/consilium/skill/flow/__init__.py`，`PromptFlow` 更名为 `Flow`）：
 
 ```python
 FlowNodeKind = Literal["begin", "end", "task", "decision"]
@@ -111,7 +111,7 @@ class FlowValidationError(FlowError):
 
 Agent Flow 与 Agent Skill 复用同一套 discovery 逻辑，目录来源保持不变：
 
-- 内置技能：`src/kimi_cli/skills/`
+- 内置技能：`src/consilium/skills/`
 - 用户技能：`~/.config/agents/skills`（含历史兼容路径）
 - 项目技能：`<work_dir>/.agents/skills`（含历史兼容路径）
 
@@ -128,7 +128,7 @@ skill 元数据：
 来支持 agent flow。同时重构 slash command 机制，将 skill commands 也改为实例级别
 （不再全局注册）。
 
-**FlowRunner 类**（位于 `src/kimi_cli/soul/kimisoul.py`）：
+**FlowRunner 类**（位于 `src/consilium/soul/kimisoul.py`）：
 
 ```python
 class FlowRunner:
@@ -308,12 +308,12 @@ Agent Flow 通过 skill discovery 自动加载，不新增 CLI 参数。只要 `
 
 ## 关键参考位置
 
-- CLI 入口：`src/kimi_cli/cli/__init__.py`
-- Skill 解析：`src/kimi_cli/skill/__init__.py`
-- Flow 解析：`src/kimi_cli/skill/flow/mermaid.py` / `src/kimi_cli/skill/flow/d2.py`
-- Flow 数据结构：`src/kimi_cli/skill/flow/__init__.py`
-- `KimiSoul` 与 `FlowRunner`：`src/kimi_cli/soul/kimisoul.py`
-- `SlashCommand`：`src/kimi_cli/utils/slashcmd.py`
-- 静态 soul commands：`src/kimi_cli/soul/slash.py`
-- Shell UI：`src/kimi_cli/ui/shell/__init__.py`
+- CLI 入口：`src/consilium/cli/__init__.py`
+- Skill 解析：`src/consilium/skill/__init__.py`
+- Flow 解析：`src/consilium/skill/flow/mermaid.py` / `src/consilium/skill/flow/d2.py`
+- Flow 数据结构：`src/consilium/skill/flow/__init__.py`
+- `KimiSoul` 与 `FlowRunner`：`src/consilium/soul/kimisoul.py`
+- `SlashCommand`：`src/consilium/utils/slashcmd.py`
+- 静态 soul commands：`src/consilium/soul/slash.py`
+- Shell UI：`src/consilium/ui/shell/__init__.py`
 - Mermaid 示例：`flowchart.mmd`

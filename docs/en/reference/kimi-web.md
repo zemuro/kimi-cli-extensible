@@ -1,6 +1,6 @@
 # Web UI
 
-Web UI provides a browser-based interactive interface, allowing you to use all features of Kimi Code CLI in a web page. Compared to the terminal interface, Web UI offers a richer visual experience, more flexible session management, and more convenient file operations.
+Web UI provides a browser-based interactive interface, allowing you to use all features of Consilium CLI in a web page. Compared to the terminal interface, Web UI offers a richer visual experience, more flexible session management, and more convenient file operations.
 
 ## Starting Web UI
 
@@ -152,13 +152,13 @@ The `--dangerously-omit-auth` option completely disables authentication and acce
 
 ## Switching from terminal to Web UI
 
-If you are using Kimi Code CLI in shell mode in the terminal, you can enter the `/web` command to quickly switch to Web UI:
+If you are using Consilium CLI in shell mode in the terminal, you can enter the `/web` command to quickly switch to Web UI:
 
 ```
 /web
 ```
 
-After execution, Kimi Code CLI will automatically start the Web UI server and open the current session in the browser. You can continue the conversation in Web UI, and the session history will remain synchronized.
+After execution, Consilium CLI will automatically start the Web UI server and open the current session in the browser. You can continue the conversation in Web UI, and the session history will remain synchronized.
 
 ## Web UI features
 
@@ -366,4 +366,4 @@ Web UI is built on the following technologies:
 - **Frontend**: React + TypeScript + Vite
 - **API protocol**: Complies with OpenAPI specification, see `web/openapi.json`
 
-Web UI communicates with Kimi Code CLI's Wire mode via WebSocket, enabling real-time bidirectional data transmission.
+Web UI communicates with Consilium CLI's Wire mode via WebSocket, enabling real-time bidirectional data transmission.

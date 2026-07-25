@@ -25,7 +25,7 @@ Observations:
 
 ### 2. Adaptive timer checkpoint loop spins when deadline passes
 
-In `kimi_cli_mod/src/consilium/subagents/runner.py`, `_checkpoint_loop` computed:
+In `consilium_mod/src/consilium/subagents/runner.py`, `_checkpoint_loop` computed:
 
 ```python
 wait_for = min(timer.checkpoint_interval, timer.remaining_wait())
@@ -50,7 +50,7 @@ It did **not** use `resolve_subagent_config(...)`, so `[subagents.overrides.tran
 | File | Change |
 |------|--------|
 | `SusanYoung2/.consilium/agents/translator_role.md` | Replaced mandatory two-pass workflow with a single high-quality pass. Made a second pass optional **only** for very short segments. Added explicit instruction to write incrementally. |
-| `kimi_cli_mod/src/consilium/subagents/runner.py` | (a) Uses `resolve_subagent_config(actual_type, ...)` so per-type timeout overrides apply. (b) `_checkpoint_loop` now sleeps at least one `checkpoint_interval` even when the deadline has passed, preventing rapid strike accumulation. |
+| `consilium_mod/src/consilium/subagents/runner.py` | (a) Uses `resolve_subagent_config(actual_type, ...)` so per-type timeout overrides apply. (b) `_checkpoint_loop` now sleeps at least one `checkpoint_interval` even when the deadline has passed, preventing rapid strike accumulation. |
 | `~/.consilium/config.toml` | Raised global `[subagents] timeout_seconds` to `1800` as a fallback; kept per-type overrides for `translator` and `translation_reviewer` at `1800`. |
 
 ## Verification

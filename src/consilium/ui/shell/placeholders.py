@@ -31,8 +31,8 @@ _PASTED_TEXT_PLACEHOLDER_RE = re.compile(
     r"\[Pasted text #(?P<id>\d+)(?: \+(?P<lines>\d+) lines?)?\]"
 )
 
-_TEXT_PASTE_CHAR_THRESHOLD = get_env_int("KIMI_CLI_PASTE_CHAR_THRESHOLD", 1000)
-_TEXT_PASTE_LINE_THRESHOLD = get_env_int("KIMI_CLI_PASTE_LINE_THRESHOLD", 15)
+_TEXT_PASTE_CHAR_THRESHOLD = get_env_int("CONSILIUM_CLI_PASTE_CHAR_THRESHOLD", 1000)
+_TEXT_PASTE_LINE_THRESHOLD = get_env_int("CONSILIUM_CLI_PASTE_LINE_THRESHOLD", 15)
 
 
 def sanitize_surrogates(text: str) -> str:

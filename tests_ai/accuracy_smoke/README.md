@@ -1,6 +1,6 @@
 # Accuracy Smoke (Harbor + Terminal-Bench-2)
 
-This directory hosts a benchmark-backed accuracy smoke layer for `kimi-cli`.
+This directory hosts a benchmark-backed accuracy smoke layer for `consilium`.
 
 It is intentionally separate from `tests_ai/` root so we can:
 
@@ -56,16 +56,16 @@ GH_MIRROR_PREFIX=http://ghfast.top/ \
 
 ## API key configuration
 
-Harbor's custom local `kimi-cli` agent reads credentials from environment variables.
+Harbor's custom local `consilium` agent reads credentials from environment variables.
 Set one of the following before running smoke tasks:
 
-- `KIMI_API_KEY`
+- `CONSILIUM_API_KEY`
 - `MOONSHOT_API_KEY`
 
 Example:
 
 ```bash
-export KIMI_API_KEY="your_api_key"
+export CONSILIUM_API_KEY="your_api_key"
 bash tests_ai/accuracy_smoke/scripts/run_smoke.sh
 ```
 
@@ -76,12 +76,12 @@ Model selection:
 
 - `HARBOR_MODEL` (default: `kimi/kimi-for-coding`)
 
-## Use current kimi-cli source (not release build)
+## Use current consilium source (not release build)
 
 `run_smoke.sh` defaults to evaluating the current repository commit by using a
 custom Harbor agent import path:
 
-- `tests_ai.accuracy_smoke.local_kimi_cli_agent:LocalKimiCli`
+- `tests_ai.accuracy_smoke.local_consilium_agent:LocalKimiCli`
 
 By default, it builds a local wheel from your current workspace and installs
 that wheel inside the benchmark container. This means local unpushed changes
@@ -89,7 +89,7 @@ are included automatically.
 
 Wheel controls:
 
-- `KIMI_CLI_WHEEL_DIR` (default: `dist/accuracy_smoke`)
+- `CONSILIUM_CLI_WHEEL_DIR` (default: `dist/accuracy_smoke`)
 - `HARBOR_JOBS_DIR` (default: `jobs`)
 - `UV_PYTHON` (default: local `python3`)
 - `UV_PYTHON_INSTALL_MIRROR` (optional mirror for uv Python downloads)
@@ -97,7 +97,7 @@ Wheel controls:
 Example override:
 
 ```bash
-KIMI_CLI_WHEEL_DIR=/tmp/kimi-wheel-cache \
+CONSILIUM_CLI_WHEEL_DIR=/tmp/kimi-wheel-cache \
   bash tests_ai/accuracy_smoke/scripts/run_smoke.sh
 ```
 

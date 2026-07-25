@@ -7,7 +7,7 @@ import pytest
 
 @pytest.mark.asyncio
 async def test_mcp_oauth_storage_persists_tokens_in_share_dir(tmp_path, monkeypatch):
-    monkeypatch.setenv("KIMI_SHARE_DIR", str(tmp_path))
+    monkeypatch.setenv("CONSILIUM_SHARE_DIR", str(tmp_path))
 
     from mcp.shared.auth import OAuthToken
 
@@ -36,7 +36,7 @@ async def test_mcp_oauth_storage_persists_tokens_in_share_dir(tmp_path, monkeypa
 
 @pytest.mark.asyncio
 async def test_has_mcp_oauth_tokens_treats_unreadable_storage_as_missing(tmp_path, monkeypatch):
-    monkeypatch.setenv("KIMI_SHARE_DIR", str(tmp_path))
+    monkeypatch.setenv("CONSILIUM_SHARE_DIR", str(tmp_path))
     (tmp_path / "mcp-oauth").write_text("not a directory", encoding="utf-8")
 
     from consilium.mcp_oauth import has_mcp_oauth_tokens
@@ -45,7 +45,7 @@ async def test_has_mcp_oauth_tokens_treats_unreadable_storage_as_missing(tmp_pat
 
 
 def test_create_mcp_oauth_uses_persistent_storage_without_warning(tmp_path, monkeypatch):
-    monkeypatch.setenv("KIMI_SHARE_DIR", str(tmp_path))
+    monkeypatch.setenv("CONSILIUM_SHARE_DIR", str(tmp_path))
 
     from fastmcp.client.auth.oauth import OAuth, TokenStorageAdapter
 
@@ -61,7 +61,7 @@ def test_create_mcp_oauth_uses_persistent_storage_without_warning(tmp_path, monk
 
 
 def test_prepare_mcp_server_config_replaces_oauth_literal_without_mutating(tmp_path, monkeypatch):
-    monkeypatch.setenv("KIMI_SHARE_DIR", str(tmp_path))
+    monkeypatch.setenv("CONSILIUM_SHARE_DIR", str(tmp_path))
 
     from fastmcp.client.auth.oauth import OAuth
 
@@ -85,14 +85,14 @@ def test_prepare_mcp_server_config_replaces_oauth_literal_without_mutating(tmp_p
 async def test_load_mcp_tools_treats_unreadable_oauth_storage_as_unauthorized(
     tmp_path, monkeypatch, runtime
 ):
-    monkeypatch.setenv("KIMI_SHARE_DIR", str(tmp_path))
+    monkeypatch.setenv("CONSILIUM_SHARE_DIR", str(tmp_path))
     (tmp_path / "mcp-oauth").write_text("not a directory", encoding="utf-8")
 
     from fastmcp.mcp_config import MCPConfig
 
-    from consilium.soul.toolset import KimiToolset
+    from consilium.soul.toolset import ConsiliumToolset
 
-    toolset = KimiToolset()
+    toolset = ConsiliumToolset()
     mcp_config = MCPConfig.model_validate(
         {
             "mcpServers": {

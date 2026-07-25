@@ -192,65 +192,65 @@ class TestAPIErrorClassification:
         return exc
 
     def test_429_maps_to_rate_limit(self):
-        from consilium.soul.kimisoul import classify_api_error
+        from consilium.soul.consiliumsoul import classify_api_error
 
         et, sc = classify_api_error(self._mk_status_error(429))
         assert et == "rate_limit"
         assert sc == 429
 
     def test_401_maps_to_auth(self):
-        from consilium.soul.kimisoul import classify_api_error
+        from consilium.soul.consiliumsoul import classify_api_error
 
         et, sc = classify_api_error(self._mk_status_error(401))
         assert et == "auth"
         assert sc == 401
 
     def test_403_maps_to_auth(self):
-        from consilium.soul.kimisoul import classify_api_error
+        from consilium.soul.consiliumsoul import classify_api_error
 
         et, _ = classify_api_error(self._mk_status_error(403))
         assert et == "auth"
 
     def test_500_maps_to_5xx_server(self):
-        from consilium.soul.kimisoul import classify_api_error
+        from consilium.soul.consiliumsoul import classify_api_error
 
         et, sc = classify_api_error(self._mk_status_error(500))
         assert et == "5xx_server"
         assert sc == 500
 
     def test_502_maps_to_5xx_server(self):
-        from consilium.soul.kimisoul import classify_api_error
+        from consilium.soul.consiliumsoul import classify_api_error
 
         et, _ = classify_api_error(self._mk_status_error(502))
         assert et == "5xx_server"
 
     def test_400_maps_to_4xx_client(self):
-        from consilium.soul.kimisoul import classify_api_error
+        from consilium.soul.consiliumsoul import classify_api_error
 
         et, sc = classify_api_error(self._mk_status_error(400))
         assert et == "4xx_client"
         assert sc == 400
 
     def test_422_maps_to_4xx_client(self):
-        from consilium.soul.kimisoul import classify_api_error
+        from consilium.soul.consiliumsoul import classify_api_error
 
         et, _ = classify_api_error(self._mk_status_error(422))
         assert et == "4xx_client"
 
     def test_400_with_context_length_maps_to_context_overflow(self):
-        from consilium.soul.kimisoul import classify_api_error
+        from consilium.soul.consiliumsoul import classify_api_error
 
         et, _ = classify_api_error(self._mk_status_error(400, "Context length exceeded"))
         assert et == "context_overflow"
 
     def test_400_with_max_tokens_maps_to_context_overflow(self):
-        from consilium.soul.kimisoul import classify_api_error
+        from consilium.soul.consiliumsoul import classify_api_error
 
         et, _ = classify_api_error(self._mk_status_error(400, "Exceeded max tokens"))
         assert et == "context_overflow"
 
     def test_400_with_maximum_context_maps_to_context_overflow(self):
-        from consilium.soul.kimisoul import classify_api_error
+        from consilium.soul.consiliumsoul import classify_api_error
 
         et, _ = classify_api_error(self._mk_status_error(422, "Maximum context window exceeded"))
         assert et == "context_overflow"
@@ -258,7 +258,7 @@ class TestAPIErrorClassification:
     def test_connection_error_maps_to_network(self):
         from kosong.chat_provider import APIConnectionError
 
-        from consilium.soul.kimisoul import classify_api_error
+        from consilium.soul.consiliumsoul import classify_api_error
 
         et, sc = classify_api_error(APIConnectionError.__new__(APIConnectionError))
         assert et == "network"
@@ -267,13 +267,13 @@ class TestAPIErrorClassification:
     def test_api_timeout_maps_to_timeout(self):
         from kosong.chat_provider import APITimeoutError
 
-        from consilium.soul.kimisoul import classify_api_error
+        from consilium.soul.consiliumsoul import classify_api_error
 
         et, _ = classify_api_error(APITimeoutError.__new__(APITimeoutError))
         assert et == "timeout"
 
     def test_builtin_timeout_maps_to_timeout(self):
-        from consilium.soul.kimisoul import classify_api_error
+        from consilium.soul.consiliumsoul import classify_api_error
 
         et, _ = classify_api_error(TimeoutError("timed out"))
         assert et == "timeout"
@@ -281,14 +281,14 @@ class TestAPIErrorClassification:
     def test_empty_response_maps_to_empty_response(self):
         from kosong.chat_provider import APIEmptyResponseError
 
-        from consilium.soul.kimisoul import classify_api_error
+        from consilium.soul.consiliumsoul import classify_api_error
 
         et, sc = classify_api_error(APIEmptyResponseError.__new__(APIEmptyResponseError))
         assert et == "empty_response"
         assert sc is None
 
     def test_generic_exception_maps_to_other(self):
-        from consilium.soul.kimisoul import classify_api_error
+        from consilium.soul.consiliumsoul import classify_api_error
 
         et, sc = classify_api_error(RuntimeError("unexpected"))
         assert et == "other"
@@ -296,7 +296,7 @@ class TestAPIErrorClassification:
 
     def test_status_code_is_none_for_non_http_errors(self):
         """Only APIStatusError should produce a non-None status_code."""
-        from consilium.soul.kimisoul import classify_api_error
+        from consilium.soul.consiliumsoul import classify_api_error
 
         _, sc = classify_api_error(RuntimeError("other"))
         assert sc is None
@@ -887,10 +887,10 @@ class TestCompactionTracking:
     """compaction_finished / compaction_failed must fire on success / failure paths."""
 
     def _make_soul(self, *, before_tokens: int, estimated_after: int) -> Any:
-        """Construct a minimal KimiSoul stub bypassing __init__."""
-        from consilium.soul.kimisoul import KimiSoul
+        """Construct a minimal ConsiliumSoul stub bypassing __init__."""
+        from consilium.soul.consiliumsoul import ConsiliumSoul
 
-        soul = object.__new__(KimiSoul)
+        soul = object.__new__(ConsiliumSoul)
 
         runtime = MagicMock()
         runtime.llm = MagicMock()  # non-None so LLMNotSet is not raised
@@ -940,7 +940,7 @@ class TestCompactionTracking:
         soul = self._make_soul(before_tokens=12000, estimated_after=3000)
 
         with (
-            patch("consilium.soul.kimisoul.wire_send"),
+            patch("consilium.soul.consiliumsoul.wire_send"),
             patch("consilium.telemetry.track") as mock_track,
         ):
             await soul.compact_context()
@@ -965,7 +965,7 @@ class TestCompactionTracking:
         soul = self._make_soul(before_tokens=8000, estimated_after=2000)
 
         with (
-            patch("consilium.soul.kimisoul.wire_send"),
+            patch("consilium.soul.consiliumsoul.wire_send"),
             patch("consilium.telemetry.track") as mock_track,
         ):
             await soul.compact_context(manual=True)
@@ -982,7 +982,7 @@ class TestCompactionTracking:
         soul = self._make_soul(before_tokens=8000, estimated_after=2000)
 
         with (
-            patch("consilium.soul.kimisoul.wire_send"),
+            patch("consilium.soul.consiliumsoul.wire_send"),
             patch("consilium.telemetry.track") as mock_track,
         ):
             await soul.compact_context(manual=True, custom_instruction="focus on auth")
@@ -1001,7 +1001,7 @@ class TestCompactionTracking:
         soul._run_with_connection_recovery = AsyncMock(side_effect=RuntimeError("compaction boom"))
 
         with (
-            patch("consilium.soul.kimisoul.wire_send"),
+            patch("consilium.soul.consiliumsoul.wire_send"),
             patch("consilium.telemetry.track") as mock_track,
             pytest.raises(RuntimeError, match="compaction boom"),
         ):

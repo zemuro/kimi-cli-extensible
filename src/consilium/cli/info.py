@@ -36,7 +36,7 @@ def _emit_info(json_output: bool) -> None:
     agent_versions_text = ", ".join(str(version) for version in info["agent_spec_versions"])
 
     lines = [
-        f"kimi-cli version: {info['consilium_version']}",
+        f"consilium version: {info['consilium_version']}",
         f"agent spec versions: {agent_versions_text}",
         f"wire protocol: {info['wire_protocol_version']}",
         f"python version: {info['python_version']}",

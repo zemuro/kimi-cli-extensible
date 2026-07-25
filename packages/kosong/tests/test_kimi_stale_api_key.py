@@ -12,7 +12,7 @@ import httpx
 import pytest
 import respx
 
-from kosong.chat_provider.kimi import Kimi
+from kosong.chat_provider.consilium import Kimi
 
 
 def test_on_retryable_error_preserves_refreshed_api_key():

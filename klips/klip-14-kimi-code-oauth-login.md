@@ -4,20 +4,20 @@ Updated: 2026-01-24
 Status: Implemented
 ---
 
-# KLIP-14: Kimi Code OAuth /login
+# KLIP-14: Consilium OAuth /login
 
 ## 背景与现状
 
-* `/setup` 位于 `src/kimi_cli/ui/shell/setup.py`：选择平台 -> 输入 API key -> 拉取模型 ->
-  写入 `config.providers` / `config.models` / `default_model`，并在 Kimi Code 平台时自动配置
+* `/setup` 位于 `src/consilium/ui/shell/setup.py`：选择平台 -> 输入 API key -> 拉取模型 ->
+  写入 `config.providers` / `config.models` / `default_model`，并在 Consilium 平台时自动配置
   `services.moonshot_search` / `services.moonshot_fetch`。
-* Kimi Code 平台在 `src/kimi_cli/auth/platforms.py` 中定义，`base_url` 为
-  `https://api.kimi.com/coding/v1`。
+* Consilium 平台在 `src/consilium/auth/platforms.py` 中定义，`base_url` 为
+  `https://api.consilium.com/coding/v1`。
 * 现有配置以 API key 作为 `Authorization: Bearer <api_key>`，`/usage` 也依赖该 Bearer。
 
 ## 目标
 
-* 为 Kimi Code 平台提供基于 OAuth 的 `/login` 斜杠命令，替代手动 API key 输入。
+* 为 Consilium 平台提供基于 OAuth 的 `/login` 斜杠命令，替代手动 API key 输入。
 * 提供 `/logout` 与 `kimi logout`，清理 OAuth 凭据并撤销本地授权状态。
 * OAuth 流程基于 Device Authorization Grant（后端现有实现），CLI 轮询 token
   endpoint 获取 access_token；如后续支持，可扩展为 Authorization Code + PKCE。
@@ -33,13 +33,13 @@ Status: Implemented
 
 ## 设计概览
 
-### 1) Kimi Code OAuth 端点与要求（Device Authorization Grant）
+### 1) Consilium OAuth 端点与要求（Device Authorization Grant）
 
 后端当前提供 Device Authorization Grant（RFC 8628），CLI 需要对接实际端点：
 
 * OAuth host（可配置）：
-  * 默认：`https://auth.kimi.com`
-  * 可用环境变量覆盖：`KIMI_CODE_OAUTH_HOST` 或 `KIMI_OAUTH_HOST`
+  * 默认：`https://auth.consilium.com`
+  * 可用环境变量覆盖：`CONSILIUM_CODE_OAUTH_HOST` 或 `CONSILIUM_OAUTH_HOST`
 * Public client：
   * `client_id`: `17e5f671-d194-4dfb-9706-5516cb48c098`
   * 不需要 client secret
@@ -58,12 +58,12 @@ Status: Implemented
 所有 token 相关请求需要附带设备信息头（示例值按实际环境生成）：
 
 ```python
-from kimi_cli.constant import VERSION
+from consilium.constant import VERSION
 import platform
 import socket
 
 COMMON_HEADERS = {
-    "X-Msh-Platform": "kimi_cli",
+    "X-Msh-Platform": "consilium",
     "X-Msh-Version": VERSION,
     "X-Msh-Device-Name": platform.node() or socket.gethostname(),
     "X-Msh-Device-Model": "<os-name + version + arch>",
@@ -72,18 +72,18 @@ COMMON_HEADERS = {
 }
 ```
 
-* `X-Msh-Platform` 固定为 `kimi_cli`。
-* `X-Msh-Version` 使用 `kimi_cli.constant.VERSION`（实际版本号）。
+* `X-Msh-Platform` 固定为 `consilium`。
+* `X-Msh-Version` 使用 `consilium.constant.VERSION`（实际版本号）。
 * `X-Msh-Device-Name` 使用设备名（`platform.node()` / `socket.gethostname()`）。
 * `X-Msh-Device-Model` 使用系统名 + 版本号 + 架构（如 `Windows 11 AMD64`、
   `macOS 15.1.1 arm64`）。
 * `X-Msh-Os-Version` 使用 `platform.version()`（与 `Environment.os_version` 一致）。
-* `X-Msh-Device-Id` 为稳定 UUID，首次生成后持久化，建议存放于 `~/.kimi/device_id`
+* `X-Msh-Device-Id` 为稳定 UUID，首次生成后持久化，建议存放于 `~/.consilium/device_id`
   并设置权限 `0600`。
 
 ### 2) /login UX 流程
 
-1. `/login` 与 `kimi login` 仅支持 Kimi Code 平台；若不是默认 config location 则直接拒绝。
+1. `/login` 与 `kimi login` 仅支持 Consilium 平台；若不是默认 config location 则直接拒绝。
 2. `POST /api/oauth/device_authorization` 获取 `verification_uri_complete` 与 `user_code`。
 3. 直接 `webbrowser.open(verification_uri_complete)`，同时打印 Verification URL
    （`verification_uri_complete` 通常已包含 user_code）。
@@ -108,10 +108,10 @@ Verification URL: {verification_uri_complete}
 
 ### 4) /logout UX 流程
 
-1. `/logout` 与 `kimi logout` 仅支持 Kimi Code 平台；若不是默认 config location 则直接拒绝。
+1. `/logout` 与 `kimi logout` 仅支持 Consilium 平台；若不是默认 config location 则直接拒绝。
 2. 清理凭据存储：
    * keychain：删除 `service=kimi-code` + `key=oauth/kimi-code`
-   * 文件：删除 `~/.kimi/credentials/kimi-code.json`
+   * 文件：删除 `~/.consilium/credentials/kimi-code.json`
 3. 更新 `config.toml`（仅默认位置）：
    * 删除 `providers."managed:kimi-code"` 整体配置
    * 删除 `models` 中所有 `provider = "managed:kimi-code"` 的条目
@@ -128,7 +128,7 @@ Verification URL: {verification_uri_complete}
   * service: `kimi-code`
   * key: `oauth/kimi-code`
   * value: JSON（access_token、refresh_token、expires_at、scope、token_type）
-* 兜底：`~/.kimi/credentials/kimi-code.json`，权限 `0600`
+* 兜底：`~/.consilium/credentials/kimi-code.json`，权限 `0600`
 
 `config.toml` 仅保存非敏感元信息与引用，不直接写入 token。`expires_at` 与 `scope` 也放在
 凭据存储中以避免重复更新。provider 与 services 都使用同一套 oauth 引用，运行时通过
@@ -138,23 +138,23 @@ Verification URL: {verification_uri_complete}
 ```toml
 [providers."managed:kimi-code"]
 type = "kimi"
-base_url = "https://api.kimi.com/coding/v1"
+base_url = "https://api.consilium.com/coding/v1"
 api_key = ""
 oauth = { storage = "keyring", key = "oauth/kimi-code" } # keyring 不可用时为 file
 
 [services.moonshot_search]
-base_url = "https://api.kimi.com/coding/v1/search"
+base_url = "https://api.consilium.com/coding/v1/search"
 api_key = ""
 oauth = { storage = "keyring", key = "oauth/kimi-code" } # keyring 不可用时为 file
 
 [services.moonshot_fetch]
-base_url = "https://api.kimi.com/coding/v1/fetch"
+base_url = "https://api.consilium.com/coding/v1/fetch"
 api_key = ""
 oauth = { storage = "keyring", key = "oauth/kimi-code" } # keyring 不可用时为 file
 ```
 
 `api_key` 为空字符串仅作为占位，运行时注入 access_token。
-若 keychain 不可用，使用 `~/.kimi/credentials/kimi-code.json`；不允许写入 `config.toml`。
+若 keychain 不可用，使用 `~/.consilium/credentials/kimi-code.json`；不允许写入 `config.toml`。
 
 ### 6) Token 刷新策略
 
@@ -199,7 +199,7 @@ oauth = { storage = "keyring", key = "oauth/kimi-code" } # keyring 不可用时�
 
 ## 关键参考位置
 
-* `/setup` 入口：`src/kimi_cli/ui/shell/setup.py`
-* 平台定义：`src/kimi_cli/auth/platforms.py`
-* 配置结构：`src/kimi_cli/config.py`
+* `/setup` 入口：`src/consilium/ui/shell/setup.py`
+* 平台定义：`src/consilium/auth/platforms.py`
+* 配置结构：`src/consilium/config.py`
 * Kimi provider：`packages/kosong/src/kosong/chat_provider/kimi.py`

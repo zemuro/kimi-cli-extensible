@@ -224,13 +224,13 @@ class NotificationConfig(BaseModel):
     claim_stale_after_ms: int = Field(default=15_000, ge=1000)
 
 
-class MoonshotSearchConfig(BaseModel):
-    """Moonshot Search configuration."""
+class WebSearchConfig(BaseModel):
+    """Web Search configuration."""
 
     base_url: str
-    """Base URL for Moonshot Search service."""
+    """Base URL for Web Search service."""
     api_key: SecretStr
-    """API key for Moonshot Search service."""
+    """API key for Web Search service."""
     custom_headers: dict[str, str] | None = None
     """Custom headers to include in API requests."""
     oauth: OAuthRef | None = None
@@ -241,13 +241,13 @@ class MoonshotSearchConfig(BaseModel):
         return v.get_secret_value()
 
 
-class MoonshotFetchConfig(BaseModel):
-    """Moonshot Fetch configuration."""
+class WebFetchConfig(BaseModel):
+    """Web Fetch configuration."""
 
     base_url: str
-    """Base URL for Moonshot Fetch service."""
+    """Base URL for Web Fetch service."""
     api_key: SecretStr
-    """API key for Moonshot Fetch service."""
+    """API key for Web Fetch service."""
     custom_headers: dict[str, str] | None = None
     """Custom headers to include in API requests."""
     oauth: OAuthRef | None = None
@@ -261,10 +261,10 @@ class MoonshotFetchConfig(BaseModel):
 class Services(BaseModel):
     """Services configuration."""
 
-    moonshot_search: MoonshotSearchConfig | None = None
-    """Moonshot Search configuration."""
-    moonshot_fetch: MoonshotFetchConfig | None = None
-    """Moonshot Fetch configuration."""
+    web_search: WebSearchConfig | None = None
+    """Web Search configuration."""
+    web_fetch: WebFetchConfig | None = None
+    """Web Fetch configuration."""
 
 
 class MCPClientConfig(BaseModel):
@@ -544,7 +544,7 @@ class Config(BaseModel):
     )
     telemetry: bool = Field(
         default=True,
-        description="Enable anonymous telemetry to help improve kimi-cli. Set to false to disable.",
+        description="Enable anonymous telemetry to help improve consilium. Set to false to disable.",
     )
 
     @model_validator(mode="after")

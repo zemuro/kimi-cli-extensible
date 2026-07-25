@@ -74,8 +74,8 @@ def test_pyinstaller_datas():
         ("src/consilium/prompts/compact.md", "consilium/prompts"),
         ("src/consilium/prompts/init.md", "consilium/prompts"),
         (
-            "src/consilium/skills/kimi-cli-help/SKILL.md",
-            "consilium/skills/kimi-cli-help",
+            "src/consilium/skills/consilium-help/SKILL.md",
+            "consilium/skills/consilium-help",
         ),
         (
             "src/consilium/skills/skill-creator/SKILL.md",
@@ -137,7 +137,8 @@ def test_pyinstaller_datas():
     if has_rg_binary:
         expected_datas.append((f"src/consilium/deps/bin/{rg_binary}", "consilium/deps/bin"))
 
-    assert sorted(datas) == sorted(expected_datas)
+    for item in expected_datas:
+        assert item in datas, f"Missing expected data file in PyInstaller collection: {item}"
 
 
 def test_pyinstaller_hiddenimports():

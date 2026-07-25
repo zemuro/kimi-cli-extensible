@@ -107,13 +107,13 @@ class Kimi:
         **client_kwargs: Any,
     ):
         if api_key is None:
-            api_key = os.getenv("KIMI_API_KEY")
+            api_key = os.getenv("CONSILIUM_API_KEY")
         if api_key is None:
             raise ChatProviderError(
-                "The api_key client option or the KIMI_API_KEY environment variable is not set"
+                "The api_key client option or the CONSILIUM_API_KEY environment variable is not set"
             )
         if base_url is None:
-            base_url = os.getenv("KIMI_BASE_URL", "https://api.moonshot.ai/v1")
+            base_url = os.getenv("CONSILIUM_BASE_URL", "https://api.moonshot.ai/v1")
 
         self.model: str = model
         """The name of the model to use."""

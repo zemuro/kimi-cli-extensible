@@ -1,7 +1,7 @@
-"""Worker module for running KimiCLI in a subprocess.
+"""Worker module for running ConsiliumCLI in a subprocess.
 
-This module is the entry point for the subprocess that runs KimiCLI in wire mode.
-It reads the session configuration from disk and runs KimiCLI.run_wire_stdio().
+This module is the entry point for the subprocess that runs ConsiliumCLI in wire mode.
+It reads the session configuration from disk and runs ConsiliumCLI.run_wire_stdio().
 
 Usage:
     python -m consilium.web.runner.worker <session_id>
@@ -16,20 +16,20 @@ from typing import Any
 from uuid import UUID
 
 from consilium import logger
-from consilium.app import KimiCLI, enable_logging
+from consilium.app import ConsiliumCLI, enable_logging
 from consilium.cli.mcp import get_global_mcp_config_file
 from consilium.exception import MCPConfigError
 from consilium.web.store.sessions import load_session_by_id
 
 
 async def run_worker(session_id: UUID) -> None:
-    """Run the KimiCLI worker for a session."""
+    """Run the ConsiliumCLI worker for a session."""
     # Find session by ID using the web store
     joint_session = load_session_by_id(session_id)
     if joint_session is None:
         raise ValueError(f"Session not found: {session_id}")
 
-    # Get the kimi-cli session object
+    # Get the consilium session object
     session = joint_session.consilium_session
 
     # Load default MCP config file if it exists
@@ -49,9 +49,9 @@ async def run_worker(session_id: UUID) -> None:
     # vs a brand-new session that should honor config.default_plan_mode.
     resumed = (session.dir / "state.json").exists()
 
-    # Create KimiCLI instance with MCP configuration
+    # Create ConsiliumCLI instance with MCP configuration
     try:
-        consilium = await KimiCLI.create(
+        consilium = await ConsiliumCLI.create(
             session, mcp_configs=mcp_configs or None, resumed=resumed, ui_mode="wire"
         )
     except MCPConfigError as exc:
@@ -60,7 +60,7 @@ async def run_worker(session_id: UUID) -> None:
             path=default_mcp_file,
             error=exc,
         )
-        consilium = await KimiCLI.create(session, mcp_configs=None, resumed=resumed, ui_mode="wire")
+        consilium = await ConsiliumCLI.create(session, mcp_configs=None, resumed=resumed, ui_mode="wire")
 
     # Run in wire stdio mode
     await consilium.run_wire_stdio()
@@ -72,7 +72,7 @@ def main() -> None:
     from consilium.utils.proxy import normalize_proxy_env
 
     normalize_proxy_env()
-    set_process_title("kimi-code-worker")
+    set_process_title("consilium-code-worker")
 
     if len(sys.argv) < 2:
         print("Usage: python -m consilium.web.runner.worker <session_id>", file=sys.stderr)

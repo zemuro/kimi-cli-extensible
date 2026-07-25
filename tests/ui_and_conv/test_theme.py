@@ -15,7 +15,7 @@ from consilium.config import Config, get_default_config
 from consilium.exception import ConfigError
 from consilium.soul.agent import Agent, Runtime
 from consilium.soul.context import Context
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.ui.shell import Shell
 from consilium.ui.shell import slash as shell_slash
 from consilium.ui.theme import (
@@ -48,7 +48,7 @@ def _make_shell_app(runtime: Runtime, tmp_path: Path) -> SimpleNamespace:
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
     return SimpleNamespace(soul=soul)
 
 
@@ -282,7 +282,7 @@ async def test_shell_startup_initializes_theme_from_config(
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
     shell = RealShell(soul)
 
     set_theme_mock = Mock(side_effect=set_active_theme)

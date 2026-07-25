@@ -1,16 +1,16 @@
 # Agent Skills
 
-[Agent Skills](https://agentskills.io/) is an open format for adding specialized knowledge and workflows to AI agents. Kimi Code CLI supports loading Agent Skills to extend AI capabilities.
+[Agent Skills](https://agentskills.io/) is an open format for adding specialized knowledge and workflows to AI agents. Consilium CLI supports loading Agent Skills to extend AI capabilities.
 
 ## What are Agent Skills
 
-A skill is a directory containing a `SKILL.md` file. When Kimi Code CLI starts, it discovers all skills and injects their names, paths, and descriptions into the system prompt. The AI will decide on its own whether to read the specific `SKILL.md` file to get detailed guidance based on the current task's needs.
+A skill is a directory containing a `SKILL.md` file. When Consilium CLI starts, it discovers all skills and injects their names, paths, and descriptions into the system prompt. The AI will decide on its own whether to read the specific `SKILL.md` file to get detailed guidance based on the current task's needs.
 
 For example, you can create a "code style" skill to tell the AI your project's naming conventions, comment styles, etc.; or create a "security audit" skill to have the AI focus on specific security issues when reviewing code.
 
 **Skills vs plugins**
 
-Kimi Code CLI supports two extension mechanisms:
+Consilium CLI supports two extension mechanisms:
 
 - **Skills**: Provide knowledge-based guidance through `SKILL.md`; the AI reads and follows the specifications. Suitable for defining code styles, workflows, and best practices.
 - **Plugins**: Declare executable tools through `plugin.json`; the AI can directly invoke tools to get results. Suitable for wrapping scripts, API calls, and database queries.
@@ -19,7 +19,7 @@ For details about plugins, see the [Plugins](./plugins.md) documentation.
 
 ## Skill discovery
 
-Kimi Code CLI uses a layered loading mechanism to discover skills. Roots are scanned in priority order — when a skill name is defined in more than one scope, the more specific scope wins:
+Consilium CLI uses a layered loading mechanism to discover skills. Roots are scanned in priority order — when a skill name is defined in more than one scope, the more specific scope wins:
 
 **Project > User > Extra > Built-in**
 
@@ -32,7 +32,7 @@ Skills shipped with the package, providing basic capabilities. Lowest priority.
 Stored in the user's home directory, effective across all projects. Candidate directories are split into two groups; within each group, the first existing directory is selected, and results from both groups are merged independently (brand group has higher specificity and priority):
 
 - **Brand group** (mutually exclusive):
-  1. `~/.kimi/skills/`
+  1. `~/.consilium/skills/`
   2. `~/.claude/skills/`
   3. `~/.codex/skills/`
 - **Generic group** (mutually exclusive):
@@ -56,10 +56,10 @@ merge_all_available_skills = false
 
 **Project-level skills**
 
-Stored in the project directory, effective within that project. Candidate paths are resolved relative to the **project root** (the nearest `.git` ancestor of the work directory, falling back to the work directory itself when there is no `.git` marker), so launching kimi-cli from a subdirectory of a monorepo still surfaces skills defined at the repository root. The same two-group split as user-level skills applies:
+Stored in the project directory, effective within that project. Candidate paths are resolved relative to the **project root** (the nearest `.git` ancestor of the work directory, falling back to the work directory itself when there is no `.git` marker), so launching consilium from a subdirectory of a monorepo still surfaces skills defined at the repository root. The same two-group split as user-level skills applies:
 
 - **Brand group** (mutually exclusive):
-  1. `.kimi/skills/`
+  1. `.consilium/skills/`
   2. `.claude/skills/`
   3. `.codex/skills/`
 - **Generic group**: `.agents/skills/`
@@ -112,14 +112,14 @@ Regardless of form (subdirectory or flat), each skill's `description` is resolve
 3. `"No description provided."` (last resort)
 
 ::: tip
-Skills paths are independent of [`KIMI_SHARE_DIR`](../configuration/env-vars.md#kimi-share-dir). `KIMI_SHARE_DIR` customizes the storage location for configuration, sessions, logs, and other runtime data, but does not affect Skills search paths. Skills are cross-tool shared capability extensions (compatible with Kimi CLI, Claude, Codex, and others), which is a different type of data from application runtime data. To specify custom skills paths, use the `--skills-dir` flag or `extra_skill_dirs` config.
+Skills paths are independent of [`CONSILIUM_SHARE_DIR`](../configuration/env-vars.md#kimi-share-dir). `CONSILIUM_SHARE_DIR` customizes the storage location for configuration, sessions, logs, and other runtime data, but does not affect Skills search paths. Skills are cross-tool shared capability extensions (compatible with Consilium CLI, Claude, Codex, and others), which is a different type of data from application runtime data. To specify custom skills paths, use the `--skills-dir` flag or `extra_skill_dirs` config.
 :::
 
 ## Built-in skills
 
-Kimi Code CLI includes the following built-in skills:
+Consilium CLI includes the following built-in skills:
 
-- **kimi-cli-help**: Kimi Code CLI help. Answers questions about Kimi Code CLI installation, configuration, slash commands, keyboard shortcuts, MCP integration, providers, environment variables, and more.
+- **consilium-help**: Consilium CLI help. Answers questions about Consilium CLI installation, configuration, slash commands, keyboard shortcuts, MCP integration, providers, environment variables, and more.
 - **skill-creator**: Guide for creating skills. When you need to create a new skill (or update an existing skill) to extend Kimi's capabilities, you can use this skill to get detailed creation guidance and best practices.
 
 ## Creating a skill
@@ -251,7 +251,7 @@ Examples:
 
 ## Using slash commands to load a skill
 
-The `/skill:<name>` slash command lets you save commonly used prompt templates as skills and quickly invoke them when needed. When you enter the command, Kimi Code CLI reads the corresponding `SKILL.md` file content and sends it to the Agent as a prompt.
+The `/skill:<name>` slash command lets you save commonly used prompt templates as skills and quickly invoke them when needed. When you enter the command, Consilium CLI reads the corresponding `SKILL.md` file content and sends it to the Agent as a prompt.
 
 For example:
 

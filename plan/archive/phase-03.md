@@ -5,9 +5,9 @@ status: implemented
 dependencies:
   - phase-02
 files_involved:
-  - src/kimi_cli/do/
-  - src/kimi_cli/do/session.py
-  - src/kimi_cli/do/journal.py
+  - src/consilium/do/
+  - src/consilium/do/session.py
+  - src/consilium/do/journal.py
 ---
 
 **Goal:** Immutable-history agent loop with full versioning backend: git safety net, content-addressed blob store, turn-scoped change journal with unified diffs, and HTTP API for the VS Code: extension.
@@ -24,7 +24,7 @@ files_involved:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         BACKEND (kimi-cli Python)                           │
+│                         BACKEND (consilium Python)                           │
 │                                                                             │
 │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────┐  │
 │  │ GitSnapshot  │    │ ChangeJournal│    │ BlobStore    │    │ Web API  │  │
@@ -46,7 +46,7 @@ files_involved:
 
 ### 3.2 Module: Git Snapshotting
 
-**File:** `src/kimi_cli/do/git_snapshot.py`
+**File:** `src/consilium/do/git_snapshot.py`
 
 ```python
 """Git snapshotting for Do mode session safety."""
@@ -57,7 +57,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from kimi_cli.utils.logging import logger
+from consilium.utils.logging import logger
 
 
 @dataclass(frozen=True, slots=True)
@@ -316,7 +316,7 @@ class GitSnapshot:
 
 ### 3.3 Module: Blob Store
 
-**File:** `src/kimi_cli/do/blob_store.py`
+**File:** `src/consilium/do/blob_store.py`
 
 Content-addressed storage for file baselines. Used by both the change journal and the extension.
 
@@ -324,7 +324,7 @@ Content-addressed storage for file baselines. Used by both the change journal an
 """Content-addressed blob store for file snapshots.
 
 Layout:
-    ~/.kimi/blobs/
+    ~/.consilium/blobs/
     ├── ab/
     │   └── cdef1234...  (full sha256 filename)
     └── 12/
@@ -338,7 +338,7 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
-BLOB_DIR = Path.home() / ".kimi" / "blobs"
+BLOB_DIR = Path.home() / ".consilium" / "blobs"
 
 
 def _blob_path(content_hash: str) -> Path:
@@ -384,7 +384,7 @@ def exists(content_hash: str) -> bool:
 
 ### 3.4 Module: Change Journal
 
-**File:** `src/kimi_cli/do/journal.py`
+**File:** `src/consilium/do/journal.py`
 
 The journal is the single source of truth for all agent-made changes. It records metadata AND the unified diff for each file-modifying tool call.
 
@@ -392,7 +392,7 @@ The journal is the single source of truth for all agent-made changes. It records
 """Change journal for Do mode — turn-scoped versioning metadata.
 
 Storage:
-    ~/.kimi/do_sessions/{session_id}/
+    ~/.consilium/do_sessions/{session_id}/
     ├── journal.jsonl      # Append-only metadata entries
     └── diffs/
         └── {turn_index}-{step_index}-{entry_id}.patch  # Unified diff files
@@ -414,9 +414,9 @@ from pathlib import Path
 from typing import Literal
 from uuid import uuid4
 
-from kimi_cli.do.blob_store import store
+from consilium.do.blob_store import store
 
-JOURNAL_DIR = Path.home() / ".kimi" / "do_sessions"
+JOURNAL_DIR = Path.home() / ".consilium" / "do_sessions"
 
 
 @dataclass(slots=True)
@@ -641,7 +641,7 @@ class ChangeJournal:
 
 ### 3.5 Module: Unified Diff Computer
 
-**File:** `src/kimi_cli/do/diff_computer.py`
+**File:** `src/consilium/do/diff_computer.py`
 
 ```python
 """Compute unified diffs between two text contents."""
@@ -692,7 +692,7 @@ def compute_unified_diff(
 
 ### 3.6 Module: Do Session Wrapper
 
-**File:** `src/kimi_cli/do/session.py`
+**File:** `src/consilium/do/session.py`
 
 ```python
 """DoSession wraps KimiSoul with git snapshotting and change journaling."""
@@ -701,10 +701,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from kimi_cli.do.journal import ChangeJournal, DiffEntry
-from kimi_cli.do.diff_computer import compute_unified_diff
-from kimi_cli.do.git_snapshot import GitSnapshot
-from kimi_cli.utils.logging import logger
+from consilium.do.journal import ChangeJournal, DiffEntry
+from consilium.do.diff_computer import compute_unified_diff
+from consilium.do.git_snapshot import GitSnapshot
+from consilium.utils.logging import logger
 
 # Tools that modify files (must match extension's FILE_TOOLS set)
 FILE_MODIFYING_TOOLS = frozenset({
@@ -912,7 +912,7 @@ class DoSession:
 
 ### 3.7 Hooking Into KimiSoul
 
-**File:** `src/kimi_cli/soul/kimisoul.py` — modifications
+**File:** `src/consilium/soul/kimisoul.py` — modifications
 
 We add a minimal, additive hook mechanism to `KimiSoul`. The hook receives **both** the `ToolCall` and the `ToolResult`, so the consumer can access tool name, arguments, and return value.
 
@@ -969,7 +969,7 @@ for hook in self._post_tool_hooks:
 self._current_turn_index += 1
 ```
 
-**File:** `src/kimi_cli/do/registry.py` — new module
+**File:** `src/consilium/do/registry.py` — new module
 
 Module-level registry for DoSession instances, avoiding dynamic attributes on Runtime:
 
@@ -981,7 +981,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from kimi_cli.do.session import DoSession
+    from consilium.do.session import DoSession
 
 _DO_SESSIONS: dict[str, DoSession] = {}
 
@@ -998,7 +998,7 @@ def unregister_do_session(session_id: str) -> None:
     _DO_SESSIONS.pop(session_id, None)
 ```
 
-**File:** `src/kimi_cli/app.py` — modifications in `KimiCLI.create()`
+**File:** `src/consilium/app.py` — modifications in `KimiCLI.create()`
 
 After creating the `KimiSoul`, wrap it with `DoSession` when in Do mode:
 
@@ -1006,8 +1006,8 @@ After creating the `KimiSoul`, wrap it with `DoSession` when in Do mode:
 # After: soul = KimiSoul(agent, context=context)
 if do_mode:
     from pathlib import Path
-    from kimi_cli.do.registry import register_do_session
-    from kimi_cli.do.session import DoSession
+    from consilium.do.registry import register_do_session
+    from consilium.do.session import DoSession
 
     do_session = DoSession(soul, work_dir=Path(session.work_dir))
     await do_session.start()
@@ -1024,12 +1024,12 @@ if do_mode:
 
 ### 3.8 Slash Commands for Do Mode
 
-**File:** `src/kimi_cli/ui/shell/slash.py` — additions
+**File:** `src/consilium/ui/shell/slash.py` — additions
 
 ```python
-from kimi_cli.wire import wire_send
-from kimi_cli.wire.types import TextPart
-from kimi_cli.do.registry import get_do_session, unregister_do_session
+from consilium.wire import wire_send
+from consilium.wire.types import TextPart
+from consilium.do.registry import get_do_session, unregister_do_session
 
 
 @slash_command("/commit")
@@ -1093,7 +1093,7 @@ class SessionAborted(Exception):
 
 > **Note on registry cleanup:** `/abort` calls `unregister_do_session()`, but normal exit (`/exit`, EOF) does not. For a single-session CLI process this is harmless. If session reload (`/new`, `Reload` exception) is supported without process restart, add cleanup in `KimiCLI` shutdown or a `SessionEnd` hook.
 
-**File:** `src/kimi_cli/ui/shell/__init__.py` — or wherever `Shell.run_soul_command()` is defined
+**File:** `src/consilium/ui/shell/__init__.py` — or wherever `Shell.run_soul_command()` is defined
 
 Add `SessionAborted` to the exception handling in the soul command runner:
 
@@ -1117,7 +1117,7 @@ except LLMNotSet:
 
 These endpoints are needed for the VS Code: extension frontend, but the extension integration happens in Phase 5. For Phase 3, the journal is written to disk and can be read directly by local consumers.
 
-When implemented in Phase 5, add to `src/kimi_cli/web/api/sessions.py`:
+When implemented in Phase 5, add to `src/consilium/web/api/sessions.py`:
 - `GET /{session_id}/changes` — query journal entries
 - `GET /{session_id}/baselines/{content_hash}` — retrieve blob content
 - `GET /{session_id}/turns/{turn_index}/summary` — aggregated turn stats
@@ -1133,7 +1133,7 @@ See the original plan (git history) for the full endpoint implementations.
 The `ToolFileModifiedEvent` wire message is needed to notify the VS Code: extension of file changes in real time. For Phase 3, the extension can poll the journal file or use the existing `FileChangesUpdated` event.
 
 When implemented in Phase 5:
-1. Define `ToolFileModifiedEvent(BaseModel)` in `src/kimi_cli/wire/types.py`
+1. Define `ToolFileModifiedEvent(BaseModel)` in `src/consilium/wire/types.py`
 2. Ensure it's included in the `WireMessage` union type
 3. Send it directly via `wire_send(ToolFileModifiedEvent(...))` (NOT wrapped in `ContentPart`)
 4. Handle it in the extension's chat handler
@@ -1142,7 +1142,7 @@ When implemented in Phase 5:
 
 ### 3.11 Config Additions
 
-**File:** `src/kimi_cli/config.py`
+**File:** `src/consilium/config.py`
 
 ```python
 class DoConfig(BaseModel):

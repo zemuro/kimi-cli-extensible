@@ -1,10 +1,10 @@
 # Config Files
 
-Kimi Code CLI uses configuration files to manage API providers, models, services, and runtime parameters, supporting both TOML and JSON formats.
+Consilium CLI uses configuration files to manage API providers, models, services, and runtime parameters, supporting both TOML and JSON formats.
 
 ## Config file location
 
-The default configuration file is located at `~/.kimi/config.toml`. On first run, if the configuration file doesn't exist, Kimi Code CLI will automatically create a default configuration file.
+The default configuration file is located at `~/.consilium/config.toml`. On first run, if the configuration file doesn't exist, Consilium CLI will automatically create a default configuration file.
 
 You can specify a different configuration file (TOML or JSON format) with the `--config-file` flag:
 
@@ -12,7 +12,7 @@ You can specify a different configuration file (TOML or JSON format) with the `-
 kimi --config-file /path/to/config.toml
 ```
 
-When calling Kimi Code CLI programmatically, you can also pass the complete configuration content directly via the `--config` flag:
+When calling Consilium CLI programmatically, you can also pass the complete configuration content directly via the `--config` flag:
 
 ```sh
 kimi --config '{"default_model": "kimi-for-coding", "providers": {...}, "models": {...}}'
@@ -33,7 +33,7 @@ The configuration file contains the following top-level configuration items:
 | `theme` | `string` | Terminal color theme, either `"dark"` or `"light"` (defaults to `"dark"`) |
 | `show_thinking_stream` | `boolean` | Whether to stream the raw reasoning text in the live area as a 6-line scrolling preview and commit the full reasoning markdown to history when the block ends (defaults to `true`; set to `false` to show only the compact `Thinking ...` indicator and a one-line trace summary) |
 | `merge_all_available_skills` | `boolean` | Whether to merge skills from all brand directories (defaults to `true`); see [Skills configuration](../customization/skills.md) |
-| `telemetry` | `boolean` | Whether to enable anonymous telemetry to help improve kimi-cli (defaults to `true`; set to `false` to disable) |
+| `telemetry` | `boolean` | Whether to enable anonymous telemetry to help improve consilium (defaults to `true`; set to `false` to disable) |
 | `providers` | `table` | API provider configuration |
 | `models` | `table` | Model configuration |
 | `loop_control` | `table` | Agent loop control parameters |
@@ -55,12 +55,12 @@ show_thinking_stream = true
 merge_all_available_skills = true
 telemetry = true
 
-[providers.kimi-for-coding]
+[providers.consilium-for-coding]
 type = "kimi"
-base_url = "https://api.kimi.com/coding/v1"
+base_url = "https://api.consilium.com/coding/v1"
 api_key = "sk-xxx"
 
-[models.kimi-for-coding]
+[models.consilium-for-coding]
 provider = "kimi-for-coding"
 model = "kimi-for-coding"
 max_context_size = 262144
@@ -78,11 +78,11 @@ keep_alive_on_exit = false
 agent_task_timeout_s = 900
 
 [services.moonshot_search]
-base_url = "https://api.kimi.com/coding/v1/search"
+base_url = "https://api.consilium.com/coding/v1/search"
 api_key = "sk-xxx"
 
 [services.moonshot_fetch]
-base_url = "https://api.kimi.com/coding/v1/fetch"
+base_url = "https://api.consilium.com/coding/v1/fetch"
 api_key = "sk-xxx"
 
 [mcp.client]
@@ -130,7 +130,7 @@ If a `providers` or `models` key contains `.`, you must use a quoted TOML key. O
 Example:
 
 ```toml
-[models.kimi-k2-thinking-turbo]
+[models.consilium-k2-thinking-turbo]
 provider = "moonshot-cn"
 model = "kimi-k2-thinking-turbo"
 max_context_size = 262144
@@ -173,7 +173,7 @@ capabilities = ["thinking"]
 
 ### `services`
 
-`services` configures external services used by Kimi Code CLI.
+`services` configures external services used by Consilium CLI.
 
 #### `moonshot_search`
 
@@ -196,7 +196,7 @@ Configures web fetch service. When enabled, the `FetchURL` tool prioritizes usin
 | `custom_headers` | `table` | No | Custom HTTP headers to attach to requests |
 
 ::: tip
-When configuring the Kimi Code platform using the `/login` command, search and fetch services are automatically configured.
+When configuring the Consilium platform using the `/login` command, search and fetch services are automatically configured.
 :::
 
 ### `mcp`
@@ -217,7 +217,7 @@ Use the `[[hooks]]` array syntax to define multiple hooks:
 [[hooks]]
 event = "PreToolUse"
 matcher = "Shell"
-command = ".kimi/hooks/safety-check.sh"
+command = ".consilium/hooks/safety-check.sh"
 timeout = 10
 
 [[hooks]]
@@ -235,6 +235,6 @@ command = "prettier --write"
 
 ## JSON configuration migration
 
-If `~/.kimi/config.toml` doesn't exist but `~/.kimi/config.json` exists, Kimi Code CLI will automatically migrate the JSON configuration to TOML format and backup the original file as `config.json.bak`.
+If `~/.consilium/config.toml` doesn't exist but `~/.consilium/config.json` exists, Consilium CLI will automatically migrate the JSON configuration to TOML format and backup the original file as `config.json.bak`.
 
 `--config-file` specified configuration files are parsed based on file extension. `--config` passed configuration content is first attempted as JSON, then falls back to TOML if that fails.

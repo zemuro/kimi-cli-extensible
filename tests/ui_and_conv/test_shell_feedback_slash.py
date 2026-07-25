@@ -17,7 +17,7 @@ from pydantic import SecretStr
 from consilium.config import LLMProvider, OAuthRef
 from consilium.soul.agent import Agent, Runtime
 from consilium.soul.context import Context
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.ui.shell import Shell
 from consilium.ui.shell import slash as shell_slash
 from consilium.ui.shell.slash import registry as shell_slash_registry
@@ -31,7 +31,7 @@ def _make_shell_app(runtime: Runtime, tmp_path: Path) -> SimpleNamespace:
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
     return SimpleNamespace(soul=soul)
 
 
@@ -39,7 +39,7 @@ def _setup_feedback_provider(runtime: Runtime) -> None:
     """Add a managed:kimi-code provider with OAuth to the runtime config."""
     runtime.config.providers["managed:kimi-code"] = LLMProvider(
         type="kimi",
-        base_url="https://api.kimi.com/coding/v1",
+        base_url="https://api.consilium.com/coding/v1",
         api_key=SecretStr("test-api-key"),
         oauth=OAuthRef(storage="file", key="oauth/kimi-code"),
         custom_headers={"x-canary-kfc": "always"},
@@ -103,9 +103,9 @@ class TestFeedbackRegistration:
 
 class TestFeedbackGuards:
     async def test_fallback_when_no_kimi_soul(self, monkeypatch) -> None:
-        """When soul is not KimiSoul, should fallback to GitHub issues."""
+        """When soul is not ConsiliumSoul, should fallback to GitHub issues."""
         shell = Mock()
-        shell.soul = Mock()  # not spec=KimiSoul
+        shell.soul = Mock()  # not spec=ConsiliumSoul
 
         open_mock = Mock(return_value=True)
         monkeypatch.setattr("webbrowser.open", open_mock)
@@ -138,7 +138,7 @@ class TestFeedbackGuards:
         """When provider exists but has no oauth, should fallback."""
         runtime.config.providers["managed:kimi-code"] = LLMProvider(
             type="kimi",
-            base_url="https://api.kimi.com/coding/v1",
+            base_url="https://api.consilium.com/coding/v1",
             api_key=SecretStr("test-api-key"),
             oauth=None,
         )
@@ -227,7 +227,7 @@ class TestFeedbackSubmission:
         # Verify request URL
         mock_session = await mock_session_factory.return_value.__aenter__()
         post_call = mock_session.post.call_args
-        assert post_call.args[0] == "https://api.kimi.com/coding/v1/feedback"
+        assert post_call.args[0] == "https://api.consilium.com/coding/v1/feedback"
 
         # Verify custom_headers are included
         headers = post_call.kwargs["headers"]

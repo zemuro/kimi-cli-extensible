@@ -16,7 +16,7 @@ from rich.panel import Panel
 from rich.text import Text
 
 from consilium.background import TaskView, is_terminal_status
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.ui.shell.console import console
 from consilium.utils.datetime import format_duration, format_relative_time
 
@@ -46,7 +46,7 @@ def format_task_choice(view: TaskView, *, now: float | None = None) -> str:
 
 @dataclass(slots=True)
 class TaskBrowserModel:
-    soul: KimiSoul
+    soul: ConsiliumSoul
     filter_mode: TaskBrowserFilter = "all"
     message: str = ""
     message_expires_at: float | None = None
@@ -233,7 +233,7 @@ class TaskBrowserModel:
 
 
 class TaskBrowserApp:
-    def __init__(self, soul: KimiSoul):
+    def __init__(self, soul: ConsiliumSoul):
         self._model = TaskBrowserModel(soul)
         task_values, selected = self._model.refresh()
         self._task_list = RadioList(

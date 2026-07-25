@@ -4,7 +4,7 @@
 The plugin system is currently in Beta. The implementation details and configuration definitions may change in future releases. Please use with caution in production environments and stay tuned for updates.
 :::
 
-The plugin system allows you to add custom tools to Kimi Code CLI, extending the AI's capabilities. Unlike MCP servers, plugins are lightweight local toolkits ideal for packaging project-specific scripts and utilities.
+The plugin system allows you to add custom tools to Consilium CLI, extending the AI's capabilities. Unlike MCP servers, plugins are lightweight local toolkits ideal for packaging project-specific scripts and utilities.
 
 ## What are plugins
 
@@ -55,7 +55,7 @@ kimi plugin install https://github.com/user/repo.git/plugins/my-plugin
 kimi plugin install https://github.com/user/repo/tree/develop/plugins/my-plugin
 ```
 
-When a Git repository has no `plugin.json` at the root, Kimi Code CLI checks the root and its immediate subdirectories, then lists available plugins for you to choose from.
+When a Git repository has no `plugin.json` at the root, Consilium CLI checks the root and its immediate subdirectories, then lists available plugins for you to choose from.
 
 **List installed plugins**
 
@@ -148,7 +148,7 @@ my-plugin/
 
 ## Credential injection
 
-If your plugin needs to call LLM APIs, you can use the `inject` configuration to automatically receive Kimi Code CLI's credentials.
+If your plugin needs to call LLM APIs, you can use the `inject` configuration to automatically receive Consilium CLI's credentials.
 
 **`inject` configuration example**
 
@@ -180,10 +180,10 @@ If your plugin needs to call LLM APIs, you can use the `inject` configuration to
 }
 ```
 
-During installation, Kimi Code CLI injects the currently configured API key and base URL into the specified config file. If OAuth is configured, a valid token is automatically obtained and injected. Later, when the application starts, Kimi Code CLI will also try to write the latest credentials (such as the refreshed OAuth token) into the configuration file of the installed plugin.
+During installation, Consilium CLI injects the currently configured API key and base URL into the specified config file. If OAuth is configured, a valid token is automatically obtained and injected. Later, when the application starts, Consilium CLI will also try to write the latest credentials (such as the refreshed OAuth token) into the configuration file of the installed plugin.
 
 ::: tip
-Generally, there is no need to reinstall the plugin in order to update credentials: after switching the LLM provider or re-authorizing, restarting Kimi Code CLI will automatically refresh the credentials in the configuration file. The plugin tool will also obtain the currently valid credentials through environment variables when it is actually run. The plugin needs to be reinstalled only when the configuration structure of the plugin itself (such as `config_file` or `inject` mapping) is modified.
+Generally, there is no need to reinstall the plugin in order to update credentials: after switching the LLM provider or re-authorizing, restarting Consilium CLI will automatically refresh the credentials in the configuration file. The plugin tool will also obtain the currently valid credentials through environment variables when it is actually run. The plugin needs to be reinstalled only when the configuration structure of the plugin itself (such as `config_file` or `inject` mapping) is modified.
 :::
 
 ::: info About inject keys
@@ -306,7 +306,7 @@ rl.on("close", () => {
 
 ## Plugin installation location
 
-Plugins are installed in the `~/.kimi/plugins/` directory. Each plugin is an independent subdirectory containing the complete `plugin.json` and script files.
+Plugins are installed in the `~/.consilium/plugins/` directory. Each plugin is an independent subdirectory containing the complete `plugin.json` and script files.
 
 ::: info Note
 Plugins and MCP servers are complementary extension mechanisms:

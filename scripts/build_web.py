@@ -13,7 +13,7 @@ DIST_DIR = WEB_DIR / "dist"
 NODE_MODULES = WEB_DIR / "node_modules"
 STATIC_DIR = ROOT / "src" / "consilium" / "web" / "static"
 
-STRICT_VERSION = os.environ.get("KIMI_WEB_STRICT_VERSION", "").lower() in {"1", "true", "yes"}
+STRICT_VERSION = os.environ.get("CONSILIUM_WEB_STRICT_VERSION", "").lower() in {"1", "true", "yes"}
 
 REQUIRED_WEB_TYPE_FILES = (
     NODE_MODULES / "vite" / "client.d.ts",
@@ -81,7 +81,7 @@ def main() -> int:
         return 1
 
     expected_version = read_pyproject_version()
-    explicit_expected = os.environ.get("KIMI_WEB_EXPECT_VERSION")
+    explicit_expected = os.environ.get("CONSILIUM_WEB_EXPECT_VERSION")
     if explicit_expected and explicit_expected != expected_version:
         print(
             f"web version mismatch: pyproject={expected_version}, expected={explicit_expected}",

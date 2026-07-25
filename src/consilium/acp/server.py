@@ -16,14 +16,14 @@ from consilium.acp.session import ACPSession
 from consilium.acp.tools import replace_tools
 from consilium.acp.types import ACPContentBlock, MCPServer
 from consilium.acp.version import ACPVersionSpec, negotiate_version
-from consilium.app import KimiCLI
-from consilium.auth.oauth import KIMI_CODE_OAUTH_KEY, load_tokens
+from consilium.app import ConsiliumCLI
+from consilium.auth.oauth import CONSILIUM_CODE_OAUTH_KEY, load_tokens
 from consilium.config import LLMModel, OAuthRef, load_config, save_config
 from consilium.constant import NAME, VERSION
 from consilium.llm import create_llm, derive_model_capabilities
 from consilium.session import Session
 from consilium.soul.slash import registry as soul_slash_registry
-from consilium.soul.toolset import KimiToolset
+from consilium.soul.toolset import ConsiliumToolset
 from consilium.utils.logging import logger
 
 
@@ -87,7 +87,7 @@ class ACPServer:
                     "terminal-auth": {
                         "command": command,
                         "args": terminal_args,
-                        "label": "Kimi Code Login",
+                        "label": "Consilium Login",
                         "env": {},
                         "type": "terminal",
                     }
@@ -115,7 +115,7 @@ class ACPServer:
     @staticmethod
     def _check_token_usable() -> str | None:
         """Return ``None`` if the persisted OAuth token is usable, else a reason string."""
-        ref = OAuthRef(storage="file", key=KIMI_CODE_OAUTH_KEY)
+        ref = OAuthRef(storage="file", key=CONSILIUM_CODE_OAUTH_KEY)
         token = load_tokens(ref)
 
         if token is None or not token.access_token:
@@ -126,7 +126,7 @@ class ACPServer:
         return None
 
     def _check_auth(self) -> None:
-        """Check if Kimi Code authentication is complete. Raise AUTH_REQUIRED if not."""
+        """Check if Consilium authentication is complete. Raise AUTH_REQUIRED if not."""
         reason = self._check_token_usable()
         if reason:
             auth_methods_data: list[dict[str, Any]] = []
@@ -160,7 +160,7 @@ class ACPServer:
         session = await Session.create(KaosPath.unsafe_from_local_path(Path(cwd)))
 
         mcp_config = acp_mcp_servers_to_mcp_config(mcp_servers or [])
-        cli_instance = await KimiCLI.create(
+        cli_instance = await ConsiliumCLI.create(
             session,
             mcp_configs=[mcp_config],
             ui_mode="acp",
@@ -171,7 +171,7 @@ class ACPServer:
         model_id_conv = _ModelIDConv(config.default_model, config.default_thinking)
         self.sessions[session.id] = (acp_session, model_id_conv)
 
-        if isinstance(cli_instance.soul.agent.toolset, KimiToolset):
+        if isinstance(cli_instance.soul.agent.toolset, ConsiliumToolset):
             replace_tools(
                 self.client_capabilities,
                 self.conn,
@@ -230,7 +230,7 @@ class ACPServer:
             raise acp.RequestError.invalid_params({"session_id": "Session not found"})
 
         mcp_config = acp_mcp_servers_to_mcp_config(mcp_servers or [])
-        cli_instance = await KimiCLI.create(
+        cli_instance = await ConsiliumCLI.create(
             session,
             mcp_configs=[mcp_config],
             resumed=True,  # _setup_session loads existing sessions
@@ -242,7 +242,7 @@ class ACPServer:
         model_id_conv = _ModelIDConv(config.default_model, config.default_thinking)
         self.sessions[session.id] = (acp_session, model_id_conv)
 
-        if isinstance(cli_instance.soul.agent.toolset, KimiToolset):
+        if isinstance(cli_instance.soul.agent.toolset, ConsiliumToolset):
             replace_tools(
                 self.client_capabilities,
                 self.conn,

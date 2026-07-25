@@ -6,8 +6,8 @@ from pathlib import Path
 
 from consilium.soul.agent import Agent, Runtime
 from consilium.soul.context import Context
-from consilium.soul.kimisoul import KimiSoul
-from consilium.soul.toolset import KimiToolset
+from consilium.soul.consiliumsoul import ConsiliumSoul
+from consilium.soul.toolset import ConsiliumToolset
 from consilium.tools.ask_user import _BASE_DESCRIPTION, AskUserQuestion
 
 
@@ -15,8 +15,8 @@ class TestAskUserDescriptionStability:
     def test_description_stays_static_when_soul_toggles_plan_mode(
         self, runtime: Runtime, tmp_path: Path
     ) -> None:
-        """KimiSoul plan mode toggles must not alter AskUserQuestion's description."""
-        toolset = KimiToolset()
+        """ConsiliumSoul plan mode toggles must not alter AskUserQuestion's description."""
+        toolset = ConsiliumToolset()
         tool = AskUserQuestion()
         toolset.add(tool)
 
@@ -26,7 +26,7 @@ class TestAskUserDescriptionStability:
             toolset=toolset,
             runtime=runtime,
         )
-        soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+        soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
 
         before = tool.base.description
         soul._set_plan_mode(True, source="tool")

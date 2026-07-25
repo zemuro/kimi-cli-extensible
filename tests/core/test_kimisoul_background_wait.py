@@ -26,7 +26,7 @@ import pytest
 
 from consilium.cli import ExitCode, InputFormat
 from consilium.soul import RunCancelled
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.ui.print import Print
 
 
@@ -111,7 +111,7 @@ def _make_print_with_runtime(
     print_wait_ceiling_s: int = 3600,
     agent_task_timeout_s: int = 900,
 ) -> tuple[Print, AsyncMock]:
-    soul = AsyncMock(spec=KimiSoul)
+    soul = AsyncMock(spec=ConsiliumSoul)
     soul.runtime = MagicMock()
     soul.runtime.role = "root"
     soul.runtime.background_tasks = manager

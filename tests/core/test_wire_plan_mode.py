@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from consilium.soul.toolset import KimiToolset
+from consilium.soul.toolset import ConsiliumToolset
 from consilium.tools.plan import ExitPlanMode
 from consilium.tools.plan.enter import EnterPlanMode
 from consilium.wire.jsonrpc import ClientCapabilities
@@ -21,8 +21,8 @@ class TestClientCapabilities:
 
 
 class TestSyncPlanModeToolVisibility:
-    def _make_toolset_with_plan_tools(self) -> KimiToolset:
-        ts = KimiToolset()
+    def _make_toolset_with_plan_tools(self) -> ConsiliumToolset:
+        ts = ConsiliumToolset()
         ts.add(ExitPlanMode())
         ts.add(EnterPlanMode())
         return ts

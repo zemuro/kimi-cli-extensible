@@ -23,9 +23,9 @@ import sys
 from hashlib import md5
 from pathlib import Path
 
-KIMI_DIR = Path.home() / ".consilium"
-METADATA_FILE = KIMI_DIR / "consilium.json"
-SESSIONS_DIR = KIMI_DIR / "sessions"
+CONSILIUM_DIR = Path.home() / ".consilium"
+METADATA_FILE = CONSILIUM_DIR / "consilium.json"
+SESSIONS_DIR = CONSILIUM_DIR / "sessions"
 
 TMP_PREFIXES = (
     "/tmp/",

@@ -36,7 +36,7 @@ class TestCheckUpdateGate:
         from consilium.ui.shell.update import check_update_gate
 
         self.latest_file.write_text("2.0.0")
-        monkeypatch.setenv("KIMI_CLI_NO_AUTO_UPDATE", "1")
+        monkeypatch.setenv("CONSILIUM_CLI_NO_AUTO_UPDATE", "1")
         check_update_gate()
         self._run_gate_mock.assert_not_called()
 
@@ -401,7 +401,7 @@ class TestPrintWelcomeInfoSkipsVersion:
         from consilium.ui.shell import _print_welcome_info
 
         self.latest_file.write_text("2.0.0")
-        monkeypatch.setenv("KIMI_CLI_NO_AUTO_UPDATE", "1")
+        monkeypatch.setenv("CONSILIUM_CLI_NO_AUTO_UPDATE", "1")
         mock_console = MagicMock()
         monkeypatch.setattr("consilium.ui.shell.console", mock_console)
 

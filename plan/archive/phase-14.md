@@ -2,7 +2,7 @@
 
 ## Summary
 
-Perform the complete mechanical rename from `kimi-cli-extensible` (package `kimi_cli`) to **Consilium** (package `consilium`). All functional work (Phases 1–13) is now complete. This is a pure refactoring phase — no behavior changes.
+Perform the complete mechanical rename from `consilium-extensible` (package `consilium`) to **Consilium** (package `consilium`). All functional work (Phases 1–13) is now complete. This is a pure refactoring phase — no behavior changes.
 
 **Prerequisite:** All functional phases (1–13) complete.
 
@@ -15,9 +15,9 @@ Perform the complete mechanical rename from `kimi-cli-extensible` (package `kimi
 ## Scope
 
 ### In Scope
-- Package directory: `src/kimi_cli/` → `src/consilium/`
-- All Python imports: `from kimi_cli...` → `from consilium...`
-- Config/data paths: `~/.kimi/` → `~/.consilium/`
+- Package directory: `src/consilium/` → `src/consilium/`
+- All Python imports: `from consilium...` → `from consilium...`
+- Config/data paths: `~/.consilium/` → `~/.consilium/`
 - CLI entry point: `kimi` → `consilium`
 - Core class names: `KimiSoul` → `ConsiliumSoul`, `KimiCLI` → `ConsiliumCLI`, etc.
 - `pyproject.toml` package metadata
@@ -39,10 +39,10 @@ Perform the complete mechanical rename from `kimi-cli-extensible` (package `kimi
 
 ### Files
 
-#### `src/kimi_cli/` → `src/consilium/`
+#### `src/consilium/` → `src/consilium/`
 
 ```bash
-git mv src/kimi_cli src/consilium
+git mv src/consilium src/consilium
 ```
 
 #### `src/consilium/soul/kimisoul.py` → `src/consilium/soul/consilium_soul.py`
@@ -56,22 +56,22 @@ git mv src/consilium/soul/kimisoul.py src/consilium/soul/consilium_soul.py
 ```bash
 # Run from repo root
 find src/ tests/ tests_e2e/ tests_ai/ scripts/ examples/ -name "*.py" -exec \
-  sed -i 's/^from kimi_cli\./from consilium./g; s/^import kimi_cli/import consilium/g; s/kimi_cli\./consilium./g' {} +
+  sed -i 's/^from consilium\./from consilium./g; s/^import consilium/import consilium/g; s/consilium\./consilium./g' {} +
 ```
 
 #### `pyproject.toml`
 
 | Field | Change |
 |-------|--------|
-| `[project].name` | `kimi-cli` → `consilium` |
-| `[project.scripts].kimi` | remove |
+| `[project].name` | `consilium` → `consilium` |
+| `[project.scripts].consilium` | remove |
 | `[project.scripts].consilium` | `consilium.cli:main` |
 | `[tool.hatch.build.targets.wheel].packages` | `["src/consilium"]` |
-| `[tool.uv.sources.kimi-cli]` | update key name or remove |
+| `[tool.uv.sources.consilium-cli]` | update key name or remove |
 
 ### Acceptance Criteria
 - [ ] `src/consilium/` directory exists with full history
-- [ ] No `from kimi_cli` or `import kimi_cli` remain in source/tests
+- [ ] No `from consilium` or `import consilium` remain in source/tests
 - [ ] `uv pip install -e .` succeeds
 - [ ] `pytest tests/core/ -q` passes
 
@@ -81,10 +81,10 @@ find src/ tests/ tests_e2e/ tests_ai/ scripts/ examples/ -name "*.py" -exec \
 
 ### Files
 
-Search and replace `~/.kimi/` and hardcoded `.kimi` segments:
+Search and replace `~/.consilium/` and hardcoded `.consilium` segments:
 
 ```bash
-grep -rn "\.kimi" src/consilium/ --include="*.py"
+grep -rn "\.consilium" src/consilium/ --include="*.py"
 ```
 
 Key files to update:
@@ -96,9 +96,9 @@ Key files to update:
 - `src/consilium/think/inbox.py` — `INBOX_DIR` (from Phase 13)
 
 ### Acceptance Criteria
-- [ ] No `~/.kimi` or `.kimi/` hardcodes remain in `src/consilium/`
+- [ ] No `~/.consilium` or `.consilium/` hardcodes remain in `src/consilium/`
 - [ ] First run creates `~/.consilium/` automatically
-- [ ] Old `~/.kimi/` is not referenced or auto-deleted
+- [ ] Old `~/.consilium/` is not referenced or auto-deleted
 
 ---
 
@@ -122,7 +122,7 @@ grep -rn "kimiSoul\|kimiCLI\|kimiRuntime" src/ tests/ --include="*.py"
 
 Categories:
 - Log messages: `"KimiSoul started"` → `"ConsiliumSoul started"`
-- Error messages: `"Kimi CLI error"` → `"Consilium error"`
+- Error messages: `"Consilium CLI error"` → `"Consilium error"`
 - CLI banner: `"Kimi — AI-assisted software engineering"` → `"Consilium — AI-assisted software engineering"`
 - Help text in `cli/__init__.py`
 - Prompts in `src/consilium/prompts/`
@@ -159,19 +159,19 @@ All test files need import path updates (handled in 14.1). Additional test-speci
 - `README.md` — full rewrite of name/branding
 - `docs/AGENTS.md` — update CLI commands, paths
 - `docs/BEST_PRACTICES.md` — update references
-- `plan/phase-*.md` — update `src/kimi_cli/...` paths to `src/consilium/...`
+- `plan/phase-*.md` — update `src/consilium/...` paths to `src/consilium/...`
 - `plan/index.md` — update project name
 - `examples/` — rename directories, update imports and READMEs:
   - `examples/custom-kimi-soul/` → `examples/custom-consilium-soul/`
-  - `examples/kimi-cli-stream-json/` → `examples/consilium-stream-json/`
-  - `examples/kimi-cli-wire-messages/` → `examples/consilium-wire-messages/`
+  - `examples/consilium-stream-json/` → `examples/consilium-stream-json/`
+  - `examples/consilium-wire-messages/` → `examples/consilium-wire-messages/`
   - `examples/kimi-psql/` → `examples/consilium-psql/`
 - `.github/workflows/` — package name in install steps, artifact names
-- `.gitignore` — update `.kimi/` → `.consilium/`, `kimi_sessions/` → `consilium_sessions/`
+- `.gitignore` — update `.consilium/` → `.consilium/`, `kimi_sessions/` → `consilium_sessions/`
 - `AGENTS.md` (root) — update paths and command names
 
 ### Acceptance Criteria
-- [ ] `README.md` says "Consilium" not "Kimi CLI"
+- [ ] `README.md` says "Consilium" not "Consilium CLI"
 - [ ] All plan documents reference `src/consilium/`
 - [ ] Example directories renamed and buildable
 - [ ] CI workflows reference `consilium`
@@ -183,7 +183,7 @@ All test files need import path updates (handled in 14.1). Additional test-speci
 The extension repo (`kimi_extension_mod/`) already uses `consilium` as the CLI command and `consilium` publisher. However, check for:
 
 - Wire protocol type strings that contain `"kimi"` (audit `wire/types.py` separately)
-- Any hardcoded references to `kimi-cli` in extension docs or config
+- Any hardcoded references to `consilium` in extension docs or config
 
 **Decision:** Extension rebrand is minimal — it was already created as `consilium`. Only update if the CLI wire protocol changes affect it.
 
@@ -200,8 +200,8 @@ The extension repo (`kimi_extension_mod/`) already uses `consilium` as the CLI c
 - [ ] `consilium --help` works
 - [ ] `consilium --version` works
 - [ ] `pytest` passes (all tests)
-- [ ] No `kimi_cli` imports remain in source or tests
-- [ ] No `~/.kimi` paths remain in source
+- [ ] No `consilium` imports remain in source or tests
+- [ ] No `~/.consilium` paths remain in source
 - [ ] `README.md` fully rebranded
 - [ ] Extension connects without changes
 

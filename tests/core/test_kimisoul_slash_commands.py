@@ -7,12 +7,12 @@ import pytest
 from kaos.path import KaosPath
 from kosong.tooling.empty import EmptyToolset
 
-import consilium.soul.kimisoul as kimisoul_module
+import consilium.soul.consiliumsoul as kimisoul_module
 from consilium.skill import Skill
 from consilium.skill.flow import Flow, FlowEdge, FlowNode
 from consilium.soul.agent import Agent, Runtime
 from consilium.soul.context import Context
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.utils.slashcmd import SlashCommand
 
 
@@ -50,7 +50,7 @@ def test_flow_skill_registers_skill_and_flow_commands(runtime: Runtime, tmp_path
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
 
     command_names = {cmd.name for cmd in soul.available_slash_commands}
     assert "skill:flow-skill" in command_names
@@ -93,7 +93,7 @@ async def test_skill_slash_run_does_not_auto_generate_session_title(
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
     soul._turn = AsyncMock(return_value=None)  # type: ignore[method-assign]
     monkeypatch.setattr(kimisoul_module, "wire_send", lambda _msg: None)
 
@@ -112,7 +112,7 @@ async def test_flow_slash_run_does_not_auto_generate_session_title(
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    soul = KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    soul = ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
     soul._slash_command_map["flow:demo-flow"] = SlashCommand(
         name="flow:demo-flow",
         description="Demo flow",

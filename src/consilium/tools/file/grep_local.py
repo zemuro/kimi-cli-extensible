@@ -138,7 +138,7 @@ class Params(BaseModel):
 
 
 RG_VERSION = "15.0.0"
-RG_BASE_URL = "http://cdn.kimi.com/binaries/kimi-cli/rg"
+RG_BASE_URL = "http://cdn.consilium.com/binaries/consilium/rg"
 RG_TIMEOUT = 20  # seconds
 RG_MAX_BUFFER = 20_000_000  # 20MB stdout/stderr buffer limit
 RG_KILL_GRACE = 5  # seconds: SIGTERM → SIGKILL

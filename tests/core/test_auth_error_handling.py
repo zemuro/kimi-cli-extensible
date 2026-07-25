@@ -34,7 +34,7 @@ from consilium.llm import LLM
 from consilium.soul import run_soul
 from consilium.soul.agent import Agent, Runtime
 from consilium.soul.context import Context
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.utils.aioqueue import QueueShutDown
 from consilium.wire import Wire
 from consilium.wire.jsonrpc import (
@@ -271,7 +271,7 @@ _API_KEY_PROVIDER_CONFIG = LLMProvider(
 def _runtime_with_provider(runtime: Runtime, provider, *, oauth: bool = False) -> Runtime:
     llm = LLM(
         chat_provider=provider,
-        max_context_size=100_000,
+        max_context_size=1_000_000,
         capabilities=set(),
         provider_config=_OAUTH_PROVIDER_CONFIG if oauth else _API_KEY_PROVIDER_CONFIG,
     )
@@ -294,7 +294,7 @@ def _runtime_with_provider(runtime: Runtime, provider, *, oauth: bool = False) -
     )
 
 
-def _make_soul(runtime: Runtime, provider, tmp_path: Path, *, oauth: bool = False) -> KimiSoul:
+def _make_soul(runtime: Runtime, provider, tmp_path: Path, *, oauth: bool = False) -> ConsiliumSoul:
     rt = _runtime_with_provider(runtime, provider, oauth=oauth)
     agent = Agent(
         name="Auth Error Test Agent",
@@ -302,7 +302,7 @@ def _make_soul(runtime: Runtime, provider, tmp_path: Path, *, oauth: bool = Fals
         toolset=SimpleToolset(),
         runtime=rt,
     )
-    return KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    return ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
 
 
 async def _drain_ui_messages(wire: Wire) -> None:

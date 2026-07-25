@@ -87,7 +87,7 @@ type ToolType = CallableTool | CallableTool2[Any]
 
 if TYPE_CHECKING:
 
-    def type_check(kimi_toolset: KimiToolset):
+    def type_check(kimi_toolset: ConsiliumToolset):
         _: Toolset = kimi_toolset
 
 
@@ -122,7 +122,7 @@ def _append_reminder_to_return_value(return_value: Any) -> Any:
     return return_value.model_copy(update={"output": new_output})
 
 
-class KimiToolset:
+class ConsiliumToolset:
     def __init__(self) -> None:
         self._tool_dict: dict[str, ToolType] = {}
         self._hidden_tools: set[str] = set()
@@ -472,7 +472,7 @@ class KimiToolset:
         Load tools from paths like `consilium.tools.shell:Shell`.
 
         Raises:
-            InvalidToolError(KimiCLIException, ValueError): When any tool cannot be loaded.
+            InvalidToolError(ConsiliumCLIException, ValueError): When any tool cannot be loaded.
         """
 
         good_tools: list[str] = []
@@ -535,7 +535,7 @@ class KimiToolset:
         Load MCP tools from specified MCP configs.
 
         Raises:
-            MCPRuntimeError(KimiCLIException, RuntimeError): When any MCP server cannot be
+            MCPRuntimeError(ConsiliumCLIException, RuntimeError): When any MCP server cannot be
                 connected.
         """
         import fastmcp

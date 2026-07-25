@@ -18,7 +18,7 @@ from pydantic import SecretStr
 
 from consilium.auth.oauth import OAuthManager
 from consilium.background import BackgroundTaskManager
-from consilium.config import Config, MoonshotSearchConfig, get_default_config
+from consilium.config import Config, WebSearchConfig, get_default_config
 from consilium.llm import ALL_MODEL_CAPABILITIES, LLM
 from consilium.metadata import WorkDirMeta
 from consilium.notifications import NotificationManager
@@ -27,7 +27,7 @@ from consilium.session_state import SessionState
 from consilium.soul.agent import BuiltinSystemPromptArgs, LaborMarket, Runtime
 from consilium.soul.approval import Approval
 from consilium.soul.denwarenji import DenwaRenji
-from consilium.soul.toolset import KimiToolset
+from consilium.soul.toolset import ConsiliumToolset
 from consilium.subagents import AgentTypeDefinition, ToolPolicy
 from consilium.tools.agent import Agent as AgentTool
 from consilium.tools.background import (
@@ -55,8 +55,8 @@ from consilium.wire.file import WireFile
 def config() -> Config:
     """Create a Config instance."""
     conf = get_default_config()
-    conf.services.moonshot_search = MoonshotSearchConfig(
-        base_url="https://api.kimi.com/coding/v1/search",
+    conf.services.web_search = WebSearchConfig(
+        base_url="https://api.consilium.com/coding/v1/search",
         api_key=SecretStr("test-api-key"),
     )
     return conf
@@ -67,7 +67,7 @@ def llm() -> LLM:
     """Create a LLM instance."""
     return LLM(
         chat_provider=MockChatProvider([]),
-        max_context_size=100_000,
+        max_context_size=1_000_000,
         capabilities=ALL_MODEL_CAPABILITIES,
     )
 
@@ -98,14 +98,14 @@ def temp_share_dir() -> Generator[Path]:
 def builtin_args(temp_work_dir: KaosPath) -> BuiltinSystemPromptArgs:
     """Create builtin arguments with temporary work directory."""
     return BuiltinSystemPromptArgs(
-        KIMI_NOW="1970-01-01T00:00:00+00:00",
-        KIMI_WORK_DIR=temp_work_dir,
-        KIMI_WORK_DIR_LS="Test ls content",
-        KIMI_AGENTS_MD="Test agents content",
-        KIMI_SKILLS="No skills found.",
-        KIMI_ADDITIONAL_DIRS_INFO="",
-        KIMI_OS="macOS",
-        KIMI_SHELL="bash (`/bin/bash`)",
+        CONSILIUM_NOW="1970-01-01T00:00:00+00:00",
+        CONSILIUM_WORK_DIR=temp_work_dir,
+        CONSILIUM_WORK_DIR_LS="Test ls content",
+        CONSILIUM_AGENTS_MD="Test agents content",
+        CONSILIUM_SKILLS="No skills found.",
+        CONSILIUM_ADDITIONAL_DIRS_INFO="",
+        CONSILIUM_OS="macOS",
+        CONSILIUM_SHELL="bash (`/bin/bash`)",
     )
 
 
@@ -211,8 +211,8 @@ def runtime(
 
 
 @pytest.fixture
-def toolset() -> KimiToolset:
-    return KimiToolset()
+def toolset() -> ConsiliumToolset:
+    return ConsiliumToolset()
 
 
 @contextmanager

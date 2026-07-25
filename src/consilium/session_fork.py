@@ -234,7 +234,7 @@ async def fork_session(
     Raises:
         ValueError: If turn_index is out of range.
     """
-    from consilium.session import Session as KimiCLISession
+    from consilium.session import Session as ConsiliumCLISession
 
     wire_path = source_session_dir / "wire.jsonl"
     context_path = source_session_dir / "context.jsonl"
@@ -247,7 +247,7 @@ async def fork_session(
         truncated_wire_lines = _read_all_lines(wire_path)
         truncated_context_lines = _read_all_lines(context_path)
 
-    new_session = await KimiCLISession.create(work_dir=work_dir)
+    new_session = await ConsiliumCLISession.create(work_dir=work_dir)
     new_session_dir = new_session.dir
 
     # Copy referenced video files

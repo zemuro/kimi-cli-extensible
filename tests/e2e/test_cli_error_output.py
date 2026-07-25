@@ -16,7 +16,7 @@ def _repo_root() -> Path:
 
 def _run_kimi(args: list[str], *, share_dir: Path) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
-    env["KIMI_SHARE_DIR"] = str(share_dir)
+    env["CONSILIUM_SHARE_DIR"] = str(share_dir)
     # Stabilize rich/Click formatting across environments for snapshot tests.
     env["COLUMNS"] = "120"
     env["LINES"] = "40"

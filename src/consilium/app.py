@@ -14,11 +14,11 @@ import kaos
 from kaos.path import KaosPath
 from pydantic import SecretStr
 
-from consilium.agentspec import DEFAULT_AGENT_FILE
-from consilium.auth.oauth import KIMI_CODE_OAUTH_KEY, OAuthManager, get_device_id
+from consilium.agentspec import DEFAULT_AGENT_FILE, find_workspace_agent_file
+from consilium.auth.oauth import CONSILIUM_CODE_OAUTH_KEY, OAuthManager, get_device_id
 from consilium.background.models import is_terminal_status
 from consilium.cli import InputFormat, OutputFormat
-from consilium.config import Config, LLMModel, LLMProvider, load_config
+from consilium.config import Config, LLMModel, LLMProvider, SubagentOverrideConfig, load_config
 from consilium.constant import VERSION
 from consilium.llm import augment_provider_with_env_vars, create_llm, model_display_name
 from consilium.session import Session
@@ -26,7 +26,7 @@ from consilium.share import get_share_dir
 from consilium.soul import RunCancelled, run_soul
 from consilium.soul.agent import Runtime, _load_system_prompt, load_agent
 from consilium.soul.context import Context
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.utils.aioqueue import QueueShutDown
 from consilium.utils.envvar import get_env_bool
 from consilium.utils.logging import logger, open_original_stderr, redirect_stderr_to_logger
@@ -145,6 +145,7 @@ async def create_think_soul(
     budget_tokens: int | None,
     agent_file: Path | None = None,
     subagent_role_overrides: dict[str, Path] | None = None,
+    subagent_overrides: dict[str, SubagentOverrideConfig] | None = None,
     yolo: bool = False,
 ) -> tuple[Any, dict[str, str]]:
     """Create a ThinkSoul with the given configuration."""
@@ -236,15 +237,15 @@ async def create_think_soul(
         yolo=yolo,
         afk=False,
         subagent_role_overrides=subagent_role_overrides,
+        subagent_overrides=subagent_overrides,
     )
 
     from consilium.agentspec import load_agent_spec
     from consilium.subagents.models import AgentTypeDefinition, ToolPolicy
 
-    try:
-        builtin_agent_file = Path(__file__).parent / "agents" / "default" / "agent.yaml"
-        agent_spec = load_agent_spec(builtin_agent_file)
-        for subagent_name, subagent_spec in agent_spec.subagents.items():
+    def _register_subagents_from_spec(agent_spec_path: Path, source: str) -> None:
+        spec = load_agent_spec(agent_spec_path)
+        for subagent_name, subagent_spec in spec.subagents.items():
             builtin_spec = load_agent_spec(subagent_spec.path)
             tool_policy = (
                 ToolPolicy(mode="allowlist", tools=tuple(builtin_spec.allowed_tools))
@@ -266,10 +267,22 @@ async def create_think_soul(
                     ),
                 )
             )
+            logger.debug(
+                "Registered {source} subagent type: {subagent_name}",
+                source=source,
+                subagent_name=subagent_name,
+            )
+
+    try:
+        builtin_agent_file = Path(__file__).parent / "agents" / "default" / "agent.yaml"
+        _register_subagents_from_spec(builtin_agent_file, "builtin")
+        workspace_agent_file = find_workspace_agent_file(Path(session.work_dir))
+        if workspace_agent_file is not None:
+            _register_subagents_from_spec(workspace_agent_file, "workspace")
     except Exception as e:
         from consilium.utils.logging import logger
 
-        logger.warning(f"Failed to load builtin subagents for Think mode: {e}")
+        logger.warning(f"Failed to load builtin/workspace subagents for Think mode: {e}")
 
     # Load custom system prompt from agent file if provided.
     system_prompt: str | None = None
@@ -292,7 +305,7 @@ async def create_think_soul(
     return ThinkSoul(session, llm, _config, think_session, runtime=runtime, system_prompt=system_prompt), env_overrides
 
 
-class KimiCLI:
+class ConsiliumCLI:
     @staticmethod
     async def create(
         session: Session,
@@ -311,6 +324,7 @@ class KimiCLI:
         # Extensions
         agent_file: Path | None = None,
         subagent_role_overrides: dict[str, Path] | None = None,
+        subagent_overrides: dict[str, SubagentOverrideConfig] | None = None,
         mcp_configs: list[MCPConfig] | list[dict[str, Any]] | None = None,
         skills_dirs: list[KaosPath] | None = None,
         # Generation overrides (CLI > env > config)
@@ -326,9 +340,8 @@ class KimiCLI:
         seed_from_think: str | None = None,
         plan_file: Path | None = None,
         phase: str | None = None,
-    ) -> KimiCLI:
-        """
-        Create a KimiCLI instance.
+    ) -> ConsiliumCLI:
+        """Create a ConsiliumCLI instance.
 
         Args:
             session (Session): A session created by `Session.create` or `Session.continue_`.
@@ -360,13 +373,13 @@ class KimiCLI:
 
         Raises:
             FileNotFoundError: When the agent file is not found.
-            ConfigError(KimiCLIException, ValueError): When the configuration is invalid.
-            AgentSpecError(KimiCLIException, ValueError): When the agent specification is invalid.
-            SystemPromptTemplateError(KimiCLIException, ValueError): When the system prompt
+            ConfigError(ConsiliumCLIException, ValueError): When the configuration is invalid.
+            AgentSpecError(ConsiliumCLIException, ValueError): When the agent specification is invalid.
+            SystemPromptTemplateError(ConsiliumCLIException, ValueError): When the system prompt
                 template is invalid.
-            InvalidToolError(KimiCLIException, ValueError): When any tool cannot be loaded.
-            MCPConfigError(KimiCLIException, ValueError): When any MCP configuration is invalid.
-            MCPRuntimeError(KimiCLIException, RuntimeError): When any MCP server cannot be
+            InvalidToolError(ConsiliumCLIException, ValueError): When any tool cannot be loaded.
+            MCPConfigError(ConsiliumCLIException, ValueError): When any MCP configuration is invalid.
+            MCPRuntimeError(ConsiliumCLIException, RuntimeError): When any MCP server cannot be
                 connected.
         """
         _create_t0 = time.monotonic()
@@ -408,7 +421,7 @@ class KimiCLI:
 
         if not model:
             from consilium.config import OAuthRef
-            from consilium.auth.oauth import KIMI_CODE_OAUTH_KEY
+            from consilium.auth.oauth import CONSILIUM_CODE_OAUTH_KEY
 
             model = LLMModel(
                 provider="kimi", model=model_name or "kimi-for-coding", max_context_size=128_000
@@ -417,7 +430,7 @@ class KimiCLI:
                 type="kimi",
                 base_url="https://api.moonshot.cn/v1",
                 api_key=SecretStr(""),
-                oauth=OAuthRef(storage="file", key=KIMI_CODE_OAUTH_KEY),
+                oauth=OAuthRef(storage="file", key=CONSILIUM_CODE_OAUTH_KEY),
             )
 
         # try overwrite with environment variables
@@ -464,6 +477,7 @@ class KimiCLI:
             runtime_afk=runtime_afk,
             skills_dirs=skills_dirs,
             subagent_role_overrides=subagent_role_overrides,
+            subagent_overrides=subagent_overrides,
         )
         runtime.ui_mode = ui_mode
         runtime.resumed = resumed
@@ -487,7 +501,13 @@ class KimiCLI:
             logger.debug("Failed to refresh plugin configs, skipping")
 
         if agent_file is None:
-            agent_file = DEFAULT_AGENT_FILE
+            workspace_agent_file = find_workspace_agent_file(session.work_dir.unsafe_to_local_path())
+            if workspace_agent_file is not None:
+                logger.info(
+                    "Using workspace agent file: {workspace_agent_file}",
+                    workspace_agent_file=workspace_agent_file,
+                )
+            agent_file = workspace_agent_file if workspace_agent_file is not None else DEFAULT_AGENT_FILE
         if startup_progress is not None:
             startup_progress("Loading agent...")
 
@@ -624,7 +644,7 @@ class KimiCLI:
                         sid=seed_from_think,
                     )
 
-        soul = KimiSoul(agent, context=context)
+        soul = ConsiliumSoul(agent, context=context)
 
         # Wire up Do mode versioning (git snapshotting + change journal)
         if do_mode and config.do.auto_git_snapshot:
@@ -671,7 +691,7 @@ class KimiCLI:
         from consilium.telemetry import attach_sink, set_context
         from consilium.telemetry import disable as disable_telemetry
 
-        telemetry_disabled = not config.telemetry or get_env_bool("KIMI_DISABLE_TELEMETRY")
+        telemetry_disabled = not config.telemetry or get_env_bool("CONSILIUM_DISABLE_TELEMETRY")
         if telemetry_disabled:
             disable_telemetry()
         else:
@@ -681,7 +701,7 @@ class KimiCLI:
             from consilium.telemetry.transport import AsyncTransport
 
             def _get_token() -> str | None:
-                return oauth.get_cached_access_token(KIMI_CODE_OAUTH_KEY)
+                return oauth.get_cached_access_token(CONSILIUM_CODE_OAUTH_KEY)
 
             transport = AsyncTransport(device_id=device_id, get_access_token=_get_token)
             sink = EventSink(
@@ -715,7 +735,7 @@ class KimiCLI:
             mcp_ms=_phase_timings_ms.get("mcp_ms", 0),
         )
 
-        return KimiCLI(
+        return ConsiliumCLI(
             soul,
             runtime,
             env_overrides,
@@ -728,7 +748,7 @@ class KimiCLI:
 
     def __init__(
         self,
-        _soul: KimiSoul,
+        _soul: ConsiliumSoul,
         _runtime: Runtime,
         _env_overrides: dict[str, str],
         _bg_refresh_task: asyncio.Task[None] | None = None,
@@ -747,8 +767,8 @@ class KimiCLI:
         self._yolo = yolo
 
     @property
-    def soul(self) -> KimiSoul:
-        """Get the KimiSoul instance."""
+    def soul(self) -> ConsiliumSoul:
+        """Get the ConsiliumSoul instance."""
         return self._soul
 
     @property
@@ -885,7 +905,7 @@ class KimiCLI:
         merge_wire_messages: bool = False,
     ) -> AsyncGenerator[WireMessage]:
         """
-        Run the Kimi Code CLI instance without any UI and yield Wire messages directly.
+        Run the Consilium CLI instance without any UI and yield Wire messages directly.
 
         Args:
             user_input (str | list[ContentPart]): The user input to the agent.
@@ -893,7 +913,7 @@ class KimiCLI:
             merge_wire_messages (bool): Whether to merge Wire messages as much as possible.
 
         Yields:
-            WireMessage: The Wire messages from the `KimiSoul`.
+            WireMessage: The Wire messages from the `ConsiliumSoul`.
 
         Raises:
             LLMNotSet: When the LLM is not set.
@@ -1046,7 +1066,7 @@ class KimiCLI:
     async def run_shell(
         self, command: str | None = None, *, prefill_text: str | None = None
     ) -> bool:
-        """Run the Kimi Code CLI instance with shell UI."""
+        """Run the Consilium CLI instance with shell UI."""
         from consilium.ui.shell import Shell, WelcomeInfoItem
 
         if command is None:
@@ -1060,19 +1080,19 @@ class KimiCLI:
             ),
             WelcomeInfoItem(name="Session", value=self._runtime.session.id),
         ]
-        if base_url := self._env_overrides.get("KIMI_BASE_URL"):
+        if base_url := self._env_overrides.get("CONSILIUM_BASE_URL"):
             welcome_info.append(
                 WelcomeInfoItem(
                     name="API URL",
-                    value=f"{base_url} (from KIMI_BASE_URL)",
+                    value=f"{base_url} (from CONSILIUM_BASE_URL)",
                     level=WelcomeInfoItem.Level.WARN,
                 )
             )
-        if self._env_overrides.get("KIMI_API_KEY"):
+        if self._env_overrides.get("CONSILIUM_API_KEY"):
             welcome_info.append(
                 WelcomeInfoItem(
                     name="API Key",
-                    value="****** (from KIMI_API_KEY)",
+                    value="****** (from CONSILIUM_API_KEY)",
                     level=WelcomeInfoItem.Level.WARN,
                 )
             )
@@ -1084,11 +1104,11 @@ class KimiCLI:
                     level=WelcomeInfoItem.Level.WARN,
                 )
             )
-        elif "KIMI_MODEL_NAME" in self._env_overrides:
+        elif "CONSILIUM_MODEL_NAME" in self._env_overrides:
             welcome_info.append(
                 WelcomeInfoItem(
                     name="Model",
-                    value=f"{self._soul.model_name} (from KIMI_MODEL_NAME)",
+                    value=f"{self._soul.model_name} (from CONSILIUM_MODEL_NAME)",
                     level=WelcomeInfoItem.Level.WARN,
                 )
             )
@@ -1137,7 +1157,7 @@ class KimiCLI:
         *,
         final_only: bool = False,
     ) -> int:
-        """Run the Kimi Code CLI instance with print UI."""
+        """Run the Consilium CLI instance with print UI."""
         from consilium.ui.print import Print
 
         async with self._env():
@@ -1151,7 +1171,7 @@ class KimiCLI:
             return await print_.run(command)
 
     async def run_acp(self) -> None:
-        """Run the Kimi Code CLI instance as ACP server."""
+        """Run the Consilium CLI instance as ACP server."""
         from consilium.ui.acp import ACP
 
         async with self._env():
@@ -1159,14 +1179,14 @@ class KimiCLI:
             await acp.run()
 
     async def run_wire_stdio(self) -> None:
-        """Run the Kimi Code CLI instance as Wire server over stdio."""
+        """Run the Consilium CLI instance as Wire server over stdio."""
         from consilium.wire.server import WireServer
 
         async with self._env():
             mode = "do" if self._do_mode else "think"
             if mode == "think":
                 # Think tab is designed as a stateless reasoning agent. Use ThinkSoul
-                # instead of KimiSoul so it only exposes the spawn_subagent tool.
+                # instead of ConsiliumSoul so it only exposes the spawn_subagent tool.
                 think_soul, _ = await create_think_soul(
                     self.session,
                     config=self._runtime.config,

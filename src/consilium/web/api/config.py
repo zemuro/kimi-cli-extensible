@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from consilium import logger
 from consilium.config import LLMModel, get_config_file, load_config, save_config
 from consilium.llm import ProviderType, derive_model_capabilities
-from consilium.web.runner.process import KimiCLIRunner
+from consilium.web.runner.process import ConsiliumCLIRunner
 
 router = APIRouter(prefix="/api/config", tags=["config"])
 
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/config", tags=["config"])
 class ConfigModel(LLMModel):
     """Model configuration for frontend."""
 
-    name: str = Field(description="Model key in kimi-cli config (Config.models)")
+    name: str = Field(description="Model key in consilium config (Config.models)")
     provider_type: ProviderType = Field(description="Provider type (LLMProvider.type)")
 
 
@@ -74,7 +74,7 @@ class UpdateConfigTomlResponse(BaseModel):
 
 
 def _build_global_config() -> GlobalConfig:
-    """Build GlobalConfig from kimi-cli config."""
+    """Build GlobalConfig from consilium config."""
     config = load_config()
 
     models: list[ConfigModel] = []
@@ -105,8 +105,8 @@ def _build_global_config() -> GlobalConfig:
     )
 
 
-def _get_runner(req: Request) -> KimiCLIRunner:
-    """Get KimiCLIRunner from FastAPI app state."""
+def _get_runner(req: Request) -> ConsiliumCLIRunner:
+    """Get ConsiliumCLIRunner from FastAPI app state."""
     return req.app.state.runner
 
 
@@ -119,19 +119,19 @@ def _ensure_sensitive_apis_allowed(request: Request) -> None:
         )
 
 
-@router.get("/", summary="Get global (kimi-cli) config snapshot")
+@router.get("/", summary="Get global (consilium) config snapshot")
 async def get_global_config() -> GlobalConfig:
-    """Get global (kimi-cli) config snapshot."""
+    """Get global (consilium) config snapshot."""
     return _build_global_config()
 
 
-@router.patch("/", summary="Update global (kimi-cli) default model/thinking")
+@router.patch("/", summary="Update global (consilium) default model/thinking")
 async def update_global_config(
     request: UpdateGlobalConfigRequest,
     http_request: Request,
-    runner: KimiCLIRunner = Depends(_get_runner),
+    runner: ConsiliumCLIRunner = Depends(_get_runner),
 ) -> UpdateGlobalConfigResponse:
-    """Update global (kimi-cli) default model/thinking."""
+    """Update global (consilium) default model/thinking."""
     _ensure_sensitive_apis_allowed(http_request)
     config = load_config()
 
@@ -174,9 +174,9 @@ async def update_global_config(
     )
 
 
-@router.get("/toml", summary="Get kimi-cli config.toml")
+@router.get("/toml", summary="Get consilium config.toml")
 async def get_config_toml(http_request: Request) -> ConfigToml:
-    """Get kimi-cli config.toml."""
+    """Get consilium config.toml."""
     _ensure_sensitive_apis_allowed(http_request)
     config_file = get_config_file()
     if not config_file.exists():
@@ -184,12 +184,12 @@ async def get_config_toml(http_request: Request) -> ConfigToml:
     return ConfigToml(content=config_file.read_text(encoding="utf-8"), path=str(config_file))
 
 
-@router.put("/toml", summary="Update kimi-cli config.toml")
+@router.put("/toml", summary="Update consilium config.toml")
 async def update_config_toml(
     request: UpdateConfigTomlRequest,
     http_request: Request,
 ) -> UpdateConfigTomlResponse:
-    """Update kimi-cli config.toml."""
+    """Update consilium config.toml."""
     from consilium.config import load_config_from_string
 
     _ensure_sensitive_apis_allowed(http_request)

@@ -137,17 +137,17 @@ build-vis: ## Build vis UI and sync into consilium package.
 	@uv run scripts/build_vis.py
 build-bin: build-web build-vis ## Build the standalone executable with PyInstaller (one-file mode).
 	@echo "==> Injecting build SHA"
-	@KIMI_BUILD_SHA=$$(git rev-parse HEAD 2>/dev/null | cut -c1-12) uv run scripts/inject_build_sha.py
+	@CONSILIUM_BUILD_SHA=$$(git rev-parse HEAD 2>/dev/null | cut -c1-12) uv run scripts/inject_build_sha.py
 	@echo "==> Building PyInstaller binary (one-file)"
-	@KIMI_BUILD_SHA=$$(git rev-parse HEAD 2>/dev/null | cut -c1-12) uv run pyinstaller kimi.spec
+	@CONSILIUM_BUILD_SHA=$$(git rev-parse HEAD 2>/dev/null | cut -c1-12) uv run pyinstaller kimi.spec
 	@mkdir -p dist/onefile
 	@if [ -f dist/kimi.exe ]; then mv dist/kimi.exe dist/onefile/; elif [ -f dist/consilium ]; then mv dist/consilium dist/onefile/; fi
 build-bin-onedir: build-web build-vis ## Build the standalone executable with PyInstaller (one-dir mode).
 	@echo "==> Injecting build SHA"
-	@KIMI_BUILD_SHA=$$(git rev-parse HEAD 2>/dev/null | cut -c1-12) uv run scripts/inject_build_sha.py
+	@CONSILIUM_BUILD_SHA=$$(git rev-parse HEAD 2>/dev/null | cut -c1-12) uv run scripts/inject_build_sha.py
 	@echo "==> Building PyInstaller binary (one-dir)"
 	@rm -rf dist/onedir dist/kimi
-	@KIMI_BUILD_SHA=$$(git rev-parse HEAD 2>/dev/null | cut -c1-12) PYINSTALLER_ONEDIR=1 uv run pyinstaller kimi.spec
+	@CONSILIUM_BUILD_SHA=$$(git rev-parse HEAD 2>/dev/null | cut -c1-12) PYINSTALLER_ONEDIR=1 uv run pyinstaller kimi.spec
 	@if [ -f dist/kimi/kimi-exe.exe ]; then mv dist/kimi/kimi-exe.exe dist/kimi/kimi.exe; elif [ -f dist/kimi/kimi-exe ]; then mv dist/kimi/kimi-exe dist/kimi/kimi; fi
 	@mkdir -p dist/onedir && mv dist/consilium dist/onedir/
 .PHONY: ai-test

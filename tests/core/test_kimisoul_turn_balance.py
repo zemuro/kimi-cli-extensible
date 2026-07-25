@@ -7,11 +7,11 @@ from types import SimpleNamespace
 import pytest
 from kosong.tooling.empty import EmptyToolset
 
-import consilium.soul.kimisoul as kimisoul_module
+import consilium.soul.consiliumsoul as kimisoul_module
 from consilium.soul.agent import Agent, Runtime
 from consilium.soul.approval import Approval
 from consilium.soul.context import Context
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.wire.types import StepBegin, StepInterrupted, TextPart, TurnBegin, TurnEnd
 
 
@@ -21,14 +21,14 @@ def approval() -> Approval:
     return Approval(yolo=False)
 
 
-def _make_soul(runtime: Runtime, tmp_path: Path) -> KimiSoul:
+def _make_soul(runtime: Runtime, tmp_path: Path) -> ConsiliumSoul:
     agent = Agent(
         name="Turn Balance Agent",
         system_prompt="Test prompt.",
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    return KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    return ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
 
 
 @pytest.mark.asyncio

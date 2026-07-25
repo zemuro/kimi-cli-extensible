@@ -58,14 +58,14 @@ def work_dir(tmp_path: Path) -> KaosPath:
 
 @pytest.fixture
 def mock_shell(work_dir: KaosPath) -> Mock:
-    """Create a mock Shell whose soul passes the KimiSoul isinstance check.
+    """Create a mock Shell whose soul passes the ConsiliumSoul isinstance check.
 
     The mock session is treated as non-empty so that /new does not attempt
     to delete it (delete would fail on a plain Mock because it is not awaitable).
     """
-    from consilium.soul.kimisoul import KimiSoul
+    from consilium.soul.consiliumsoul import ConsiliumSoul
 
-    mock_soul = Mock(spec=KimiSoul)
+    mock_soul = Mock(spec=ConsiliumSoul)
     mock_soul.runtime.session.work_dir = work_dir
     mock_soul.runtime.session.id = "current-session-id"
     mock_soul.runtime.session.is_empty.return_value = False
@@ -192,9 +192,9 @@ class TestNewCommandBehavior:
         assert len(set(ids)) == 3
 
     async def test_returns_early_without_kimi_soul(self) -> None:
-        """When soul is not a KimiSoul, the command should silently return."""
+        """When soul is not a ConsiliumSoul, the command should silently return."""
         shell = Mock()
-        shell.soul = Mock()  # plain Mock, not spec=KimiSoul
+        shell.soul = Mock()  # plain Mock, not spec=ConsiliumSoul
 
         cmd = shell_slash_registry.find_command("new")
         assert cmd is not None
@@ -222,14 +222,14 @@ class TestNewCommandSessionCleanup:
         self, isolated_share_dir: Path, work_dir: KaosPath
     ) -> None:
         """An empty current session should be removed to avoid orphan directories."""
-        from consilium.soul.kimisoul import KimiSoul
+        from consilium.soul.consiliumsoul import ConsiliumSoul
 
         empty_session = await Session.create(work_dir)
         assert empty_session.is_empty()
         session_dir = empty_session.work_dir_meta.sessions_dir / empty_session.id
         assert session_dir.exists()
 
-        mock_soul = Mock(spec=KimiSoul)
+        mock_soul = Mock(spec=ConsiliumSoul)
         mock_soul.runtime.session = empty_session
         shell = Mock()
         shell.soul = mock_soul
@@ -246,14 +246,14 @@ class TestNewCommandSessionCleanup:
         self, isolated_share_dir: Path, work_dir: KaosPath
     ) -> None:
         """A session that already has content must NOT be deleted."""
-        from consilium.soul.kimisoul import KimiSoul
+        from consilium.soul.consiliumsoul import ConsiliumSoul
 
         session_with_content = await Session.create(work_dir)
         _write_context_message(session_with_content.context_file, "hello world")
         assert not session_with_content.is_empty()
         session_dir = session_with_content.work_dir_meta.sessions_dir / session_with_content.id
 
-        mock_soul = Mock(spec=KimiSoul)
+        mock_soul = Mock(spec=ConsiliumSoul)
         mock_soul.runtime.session = session_with_content
         shell = Mock()
         shell.soul = mock_soul
@@ -270,7 +270,7 @@ class TestNewCommandSessionCleanup:
         self, isolated_share_dir: Path, work_dir: KaosPath
     ) -> None:
         """Calling /new repeatedly should not leave orphan empty sessions."""
-        from consilium.soul.kimisoul import KimiSoul
+        from consilium.soul.consiliumsoul import ConsiliumSoul
 
         cmd = shell_slash_registry.find_command("new")
         assert cmd is not None
@@ -279,7 +279,7 @@ class TestNewCommandSessionCleanup:
         session_a = await Session.create(work_dir)
         dir_a = session_a.work_dir_meta.sessions_dir / session_a.id
 
-        mock_soul = Mock(spec=KimiSoul)
+        mock_soul = Mock(spec=ConsiliumSoul)
         mock_soul.runtime.session = session_a
         shell = Mock()
         shell.soul = mock_soul

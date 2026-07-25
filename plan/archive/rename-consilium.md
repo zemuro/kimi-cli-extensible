@@ -1,4 +1,4 @@
-# Rename Plan: kimi-cli-extensible → Consilium
+# Rename Plan: consilium-extensible → Consilium
 
 **Status:** DEFERRED — per `plan/reports/rename-consilium-review.md`  
 **Estimated effort:** 2–3 days (review says Phase A alone is a full day due to 2,977 references)  
@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-Rename the project from `kimi-cli-extensible` (package `kimi_cli`) to **Consilium** (package `consilium`). The upstream `kimi-cli` branding no longer reflects the fork's scope. This plan covers package names, imports, CLI commands, config paths, class names, user-facing strings, and migration strategy.
+Rename the project from `consilium-extensible` (package `consilium`) to **Consilium** (package `consilium`). The upstream `consilium` branding no longer reflects the fork's scope. This plan covers package names, imports, CLI commands, config paths, class names, user-facing strings, and migration strategy.
 
 **Principle:** Clean break. Zero users means zero backward compatibility obligations. Rename everything in one commit.
 
@@ -23,29 +23,29 @@ Rename the project from `kimi-cli-extensible` (package `kimi_cli`) to **Consiliu
 ### 1.1 Directory structure
 
 ```
-src/kimi_cli/              → src/consilium/
-src/kimi_cli/cli/          → src/consilium/cli/
-src/kimi_cli/do/           → src/consilium/do/
-src/kimi_cli/plan/         → src/consilium/plan/
-src/kimi_cli/soul/         → src/consilium/soul/
-src/kimi_cli/subagents/    → src/consilium/subagents/
-src/kimi_cli/think/        → src/consilium/think/
-src/kimi_cli/ui/           → src/consilium/ui/
-src/kimi_cli/utils/        → src/consilium/utils/
-src/kimi_cli/web/          → src/consilium/web/
-src/kimi_cli/wire/         → src/consilium/wire/
-src/kimi_cli/prompts/      → src/consilium/prompts/
+src/consilium/              → src/consilium/
+src/consilium/cli/          → src/consilium/cli/
+src/consilium/do/           → src/consilium/do/
+src/consilium/plan/         → src/consilium/plan/
+src/consilium/soul/         → src/consilium/soul/
+src/consilium/subagents/    → src/consilium/subagents/
+src/consilium/think/        → src/consilium/think/
+src/consilium/ui/           → src/consilium/ui/
+src/consilium/utils/        → src/consilium/utils/
+src/consilium/web/          → src/consilium/web/
+src/consilium/wire/         → src/consilium/wire/
+src/consilium/prompts/      → src/consilium/prompts/
 ```
 
-**Command:** `git mv src/kimi_cli src/consilium`
+**Command:** `git mv src/consilium src/consilium`
 
 **Note:** `git mv` preserves history. Do NOT `rm` + `mkdir` + `cp`.
 
-**Also rename:** `src/kimi_cli/__main__.py` → `src/consilium/__main__.py` (entry point).
+**Also rename:** `src/consilium/__main__.py` → `src/consilium/__main__.py` (entry point).
 
 ### 1.2 Internal package references
 
-All `from kimi_cli...` and `import kimi_cli...` statements across:
+All `from consilium...` and `import consilium...` statements across:
 - `src/consilium/**/*.py`
 - `tests/**/*.py`
 - `tests_e2e/**/*.py`
@@ -56,14 +56,14 @@ All `from kimi_cli...` and `import kimi_cli...` statements across:
 
 **Regex replacements:**
 ```
-^from kimi_cli\.          → from consilium.
-^import kimi_cli           → import consilium
-kimi_cli\.                 → consilium.
+^from consilium\.          → from consilium.
+^import consilium           → import consilium
+consilium\.                 → consilium.
 ```
 
 **Files to scan:**
 ```bash
-grep -rl "kimi_cli" src/ tests/ tests_e2e/ tests_ai/ scripts/ examples/ --include="*.py"
+grep -rl "consilium" src/ tests/ tests_e2e/ tests_ai/ scripts/ examples/ --include="*.py"
 ```
 
 **Scale:** 2,977 references (per review). Not a quick task.
@@ -76,19 +76,19 @@ grep -rl "kimi_cli" src/ tests/ tests_e2e/ tests_ai/ scripts/ examples/ --includ
 
 | Field | Current | New |
 |-------|---------|-----|
-| `[project].name` | `kimi-cli` | `consilium` |
-| `[project.scripts].kimi` | `kimi_cli.cli:main` | `consilium.cli:main` |
+| `[project].name` | `consilium` | `consilium` |
+| `[project.scripts].consilium` | `consilium.cli:main` | `consilium.cli:main` |
 | `[project.scripts].consilium` | *(none)* | `consilium.cli:main` |
-| `[project.urls].Homepage` | `github.com/zemuro/kimi-cli-extensible` | `github.com/zemuro/consilium` |
-| `[tool.hatch.build.targets.wheel].packages` | `["src/kimi_cli"]` | `["src/consilium"]` |
-| `[tool.uv.sources.kimi-cli]` | path = "packages/kosong" | remove or rename |
+| `[project.urls].Homepage` | `github.com/zemuro/consilium-extensible` | `github.com/zemuro/consilium` |
+| `[tool.hatch.build.targets.wheel].packages` | `["src/consilium"]` | `["src/consilium"]` |
+| `[tool.uv.sources.consilium-cli]` | path = "packages/kosong" | remove or rename |
 
 ### 2.2 `packages/kosong/` dependency
 
 The `kosong` package is an internal dependency specified as:
 ```toml
 [tool.uv.sources]
-kimi-cli = { path = "packages/kosong" }
+consilium = { path = "packages/kosong" }
 ```
 
 **Decision needed:** Is `kosong` still sourced as a path dependency under the old name? Update the source key if uv references it by package name.
@@ -96,9 +96,9 @@ kimi-cli = { path = "packages/kosong" }
 ### 2.3 `README.md` and `docs/`
 
 Update all references:
-- "Kimi CLI" → "Consilium"
-- "kimi-cli" → "consilium"
-- "kimi_cli" → "consilium"
+- "Consilium CLI" → "Consilium"
+- "consilium" → "consilium"
+- "consilium" → "consilium"
 - GitHub URLs
 
 ---
@@ -129,18 +129,18 @@ Update `src/consilium/cli/__init__.py`:
 
 | Purpose | Old | New |
 |---------|-----|-----|
-| Config dir | `~/.kimi/` | `~/.consilium/` |
-| Session storage | `~/.kimi/sessions/` | `~/.consilium/sessions/` |
-| Plans (upstream) | `~/.kimi/plans/` | `~/.consilium/plans/` |
-| Think outbox | `~/.kimi/think_outbox/` | `~/.consilium/think_outbox/` |
-| Dispatch | `~/.kimi/dispatch.json` | `~/.consilium/dispatch.json` |
-| Token logs | `~/.kimi/token_usage/` | `~/.consilium/token_usage/` |
+| Config dir | `~/.consilium/` | `~/.consilium/` |
+| Session storage | `~/.consilium/sessions/` | `~/.consilium/sessions/` |
+| Plans (upstream) | `~/.consilium/plans/` | `~/.consilium/plans/` |
+| Think outbox | `~/.consilium/think_outbox/` | `~/.consilium/think_outbox/` |
+| Dispatch | `~/.consilium/dispatch.json` | `~/.consilium/dispatch.json` |
+| Token logs | `~/.consilium/token_usage/` | `~/.consilium/token_usage/` |
 
 ### 4.2 Path constants to update
 
 Search for hardcoded path segments:
 ```bash
-grep -rn "\.kimi" src/consilium/ --include="*.py"
+grep -rn "\.consilium" src/consilium/ --include="*.py"
 ```
 
 Key files:
@@ -155,7 +155,7 @@ Key files:
 
 **Decision:** No migration. Zero users means no data to migrate.
 
-`~/.consilium/` is created fresh on first run. If a developer (you) has old `~/.kimi/` data, manually copy it once if needed.
+`~/.consilium/` is created fresh on first run. If a developer (you) has old `~/.consilium/` data, manually copy it once if needed.
 
 ---
 
@@ -187,7 +187,7 @@ grep -rni "kimi" src/consilium/ --include="*.py" | grep -v "# kimi" | grep -v "k
 
 Categories:
 - Log messages: `"KimiSoul started"` → `"ConsiliumSoul started"`
-- Error messages: `"Kimi CLI error"` → `"Consilium error"`
+- Error messages: `"Consilium CLI error"` → `"Consilium error"`
 - Wire events: Status text, UI labels
 - Prompts: `src/consilium/prompts/think_system.md` — check for "Kimi" references
 
@@ -200,8 +200,8 @@ Categories:
 All test files need import updates:
 ```python
 # Before
-from kimi_cli.token_tracker import TokenTracker
-from kimi_cli.think.models import ThinkSession
+from consilium.token_tracker import TokenTracker
+from consilium.think.models import ThinkSession
 
 # After
 from consilium.token_tracker import TokenTracker
@@ -225,9 +225,9 @@ Any tests using `pytest-snapshot` or file-based golden masters that contain "kim
 
 ### 7.1 `plan/` documents
 
-All `plan/phase-*.md` and `plan/index.md` contain references to `kimi-cli`, `kimi_cli`, `KimiSoul`, etc. Update:
+All `plan/phase-*.md` and `plan/index.md` contain references to `consilium`, `consilium`, `KimiSoul`, etc. Update:
 - Project name in frontmatter
-- File path references (`src/kimi_cli/...` → `src/consilium/...`)
+- File path references (`src/consilium/...` → `src/consilium/...`)
 - Class names in implementation details
 
 ### 7.2 `docs/` (human-facing)
@@ -249,8 +249,8 @@ Not tracked in git. Can be updated lazily or left as historical artifacts.
 
 Directory renames needed:
 - `examples/custom-kimi-soul/` → `examples/custom-consilium-soul/`
-- `examples/kimi-cli-stream-json/` → `examples/consilium-stream-json/`
-- `examples/kimi-cli-wire-messages/` → `examples/consilium-wire-messages/`
+- `examples/consilium-stream-json/` → `examples/consilium-stream-json/`
+- `examples/consilium-wire-messages/` → `examples/consilium-wire-messages/`
 - `examples/kimi-psql/` → `examples/consilium-psql/`
 
 Plus import updates and README updates inside each example.
@@ -274,18 +274,18 @@ Plus import updates and README updates inside each example.
 
 ### 8.5 `klips/`
 
-Kimi CLI Improvement Proposals contain the project name on every page. **Decision:** Archive as historical artifacts (do not update) or bulk-replace "Kimi CLI" → "Consilium". Recommend archive — they document upstream-era decisions.
+Consilium CLI Improvement Proposals contain the project name on every page. **Decision:** Archive as historical artifacts (do not update) or bulk-replace "Consilium CLI" → "Consilium". Recommend archive — they document upstream-era decisions.
 
 ### 8.6 `.agents/skills/`
 
-- `.agents/skills/kimi-cli-help/` → `.agents/skills/consilium-help/`
+- `.agents/skills/consilium-help/` → `.agents/skills/consilium-help/`
 - Check `skill-creator` skill for kimi-specific guidance
 - Update `SKILL.md` files that reference CLI commands or paths
 
 ### 8.7 `.gitignore`
 
 Root `.gitignore` and nested `.gitignore` files may contain:
-- `.kimi/`
+- `.consilium/`
 - `kimi_sessions/`
 - `kimi_*/`
 
@@ -294,7 +294,7 @@ Audit all `.gitignore` files and update patterns.
 ### 8.8 `AGENTS.md` files
 
 Root `AGENTS.md` and any nested `.agents/**/AGENTS.md` files contain:
-- `kimi_cli` paths
+- `consilium` paths
 - `KimiSoul` references
 - CLI command names
 
@@ -320,7 +320,7 @@ Check `.github/workflows/` for:
 
 ### 8.3 `scripts/`, `Makefile`, `.pre-commit-config.yaml`
 
-Any helper scripts that invoke `kimi` or reference `kimi_cli`:
+Any helper scripts that invoke `kimi` or reference `consilium`:
 ```bash
 grep -rn "kimi" scripts/ --include="*.py" --include="*.sh"
 grep -rn "kimi" Makefile .pre-commit-config.yaml 2>/dev/null
@@ -335,15 +335,15 @@ grep -rn "kimi" Makefile .pre-commit-config.yaml 2>/dev/null
 0. Ensure all tests pass, no open feature branches
 
 **Phase A — Mechanical (Day 1)**
-1. `git mv src/kimi_cli src/consilium`
+1. `git mv src/consilium src/consilium`
 2. Rename `src/consilium/soul/kimisoul.py` → `consilium_soul.py`
-3. Bulk replace imports (`kimi_cli` → `consilium`)
+3. Bulk replace imports (`consilium` → `consilium`)
 4. Update `pyproject.toml` (package name, scripts, workspace members)
 5. Update `examples/`, `packages/kimi-code/`, `sdks/kimi-sdk/` names
 6. Run tests, fix import errors
 
 **Phase B — Paths & Config (Day 1–2)**
-7. Update `~/.kimi/` → `~/.consilium/` in all path constants
+7. Update `~/.consilium/` → `~/.consilium/` in all path constants
 8. Update `.gitignore` entries
 9. Update test fixtures and path assertions
 10. Run tests
@@ -386,17 +386,17 @@ No migration helper to worry about. Rollback is a pure code revert.
 | Tests pass? | `pytest tests/core/ -q` |
 | Config loads? | `consilium --version` |
 | Migration ran? | Check `~/.consilium/` exists |
-| No `kimi_cli` imports remain? | `grep -r "kimi_cli" src/ tests/` |
-| No `~/.kimi` hardcodes remain? | `grep -r "\.kimi" src/consilium/` |
+| No `consilium` imports remain? | `grep -r "consilium" src/ tests/` |
+| No `~/.consilium` hardcodes remain? | `grep -r "\.consilium" src/consilium/` |
 
 ---
 
 ## Open Questions
 
-1. **Repo rename:** Should the GitHub repo be renamed from `kimi-cli-extensible` to `consilium`? This affects remote URLs and `pyproject.toml` homepage links. *(No users → rename freely.)*
+1. **Repo rename:** Should the GitHub repo be renamed from `consilium-extensible` to `consilium`? This affects remote URLs and `pyproject.toml` homepage links. *(No users → rename freely.)*
 
 2. **PyPI package:** Not published. No action needed.
 
 3. **`kosong` package:** Leave it — internal LLM abstraction, separate identity.
 
-4. **Session format:** Think session JSONL files contain the string `"kimi_cli"` nowhere (they store messages). Safe to leave as-is.
+4. **Session format:** Think session JSONL files contain the string `"consilium"` nowhere (they store messages). Safe to leave as-is.

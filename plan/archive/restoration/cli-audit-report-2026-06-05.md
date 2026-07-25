@@ -31,16 +31,16 @@
 
 ## 2. Config Regressions
 
-### Hardcoded `.kimi/` Paths (LEGITIMATE — shared with legacy)
+### Hardcoded `.consilium/` Paths (LEGITIMATE — shared with legacy)
 
-The `.kimi/` directory still exists and has **identical session content** to `.consilium/`:
+The `.consilium/` directory still exists and has **identical session content** to `.consilium/`:
 
 ```
-$ diff <(ls ~/.consilium/sessions | head -10) <(ls ~/.kimi/sessions | head -10)
+$ diff <(ls ~/.consilium/sessions | head -10) <(ls ~/.consilium/sessions | head -10)
 # No output — identical content
 ```
 
-This is by design: `get_share_dir()` returns `.consilium/`, but the old `.kimi/` dir was not migrated/deleted.
+This is by design: `get_share_dir()` returns `.consilium/`, but the old `.consilium/` dir was not migrated/deleted.
 
 ### Actual Regressions Found
 
@@ -48,16 +48,16 @@ This is by design: `get_share_dir()` returns `.consilium/`, but the old `.kimi/`
 |------|------|---------|----------|
 | `metadata.py:18` | `get_share_dir() / "kimi.json"` | Metadata file still named `kimi.json` | 🔶 Medium |
 | `app.py:61` | `get_share_dir() / "logs" / "kimi.log"` | Log file named `kimi.log` | 🔶 Medium |
-| `cli/__init__.py:43` | Documentation URL points to `moonshotai.github.io/kimi-cli/` | External URL unchanged | 🟢 Low (external) |
+| `cli/__init__.py:43` | Documentation URL points to `moonshotai.github.io/consilium/` | External URL unchanged | 🟢 Low (external) |
 | `cli/__init__.py:1059` | `get_share_dir() / "logs" / "kimi.log"` | Same log naming | 🔶 Medium |
-| `config.py:484` | `"help improve kimi-cli"` | Telemetry description mentions old name | 🟢 Low |
+| `config.py:484` | `"help improve consilium"` | Telemetry description mentions old name | 🟢 Low |
 | `do/git_snapshot.py:215` | `f"kimi-do-{session_id}-init"` | Git stash message prefix | 🟢 Low |
 
 ### Non-Regressions (Legitimate)
 
 | File | Line | Why It's OK |
 |------|------|-------------|
-| `auth/*.py` | Multiple | `kimi-code` is the **platform ID** (Kimi Code service), not the product name |
+| `auth/*.py` | Multiple | `kimi-code` is the **platform ID** (Consilium service), not the product name |
 | `llm.py` | Multiple | `kimi-for-coding` is the **model name** from the API |
 | `soul/kimisoul.py` | N/A | `KimiSoul` is the class name for the Do-mode agent |
 
@@ -86,9 +86,9 @@ This is by design: `get_share_dir()` returns `.consilium/`, but the old `.kimi/`
 
 ### Cross-Contamination Check
 
-`.kimi/` and `.consilium/` have **identical session listings** — this suggests either:
+`.consilium/` and `.consilium/` have **identical session listings** — this suggests either:
 1. Both dirs are being written to (bug), or
-2. `.kimi/` is a stale copy from before the rebrand
+2. `.consilium/` is a stale copy from before the rebrand
 
 **Verification needed:** Check if new sessions appear in both directories.
 
@@ -327,13 +327,13 @@ hooks = []
 
 3. **Metadata file named `kimi.json`** — should be `consilium.json`
 4. **Log file named `kimi.log`** — should be `consilium.log`
-5. **`.kimi/` directory still exists with identical content** — potential write duplication
+5. **`.consilium/` directory still exists with identical content** — potential write duplication
 6. **Plan subcommands are stubs** — `/plan add-phase`, `/plan update`, etc. return "Not yet implemented"
 
 ### 🟢 Low Priority
 
 7. **Documentation URLs point to old repo** — external, not user-facing
-8. **Telemetry description mentions `kimi-cli`** — minor string
+8. **Telemetry description mentions `consilium`** — minor string
 9. **Git stash prefix `kimi-do-`** — cosmetic
 
 ---

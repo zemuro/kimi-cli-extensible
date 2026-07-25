@@ -185,10 +185,10 @@ class TestToolExecutionLogging:
     async def test_toolset_tool_execution_error_logged(self):
         """When a tool raises an exception, toolset should log an ERROR."""
         from consilium.hooks.engine import HookEngine
-        from consilium.soul.toolset import KimiToolset
+        from consilium.soul.toolset import ConsiliumToolset
         from consilium.wire.types import ToolCall
 
-        toolset = KimiToolset()
+        toolset = ConsiliumToolset()
         toolset._hook_engine = HookEngine([], cwd="/tmp")
 
         class FailingTool:
@@ -214,10 +214,10 @@ class TestToolExecutionLogging:
 
     async def test_toolset_json_parse_error_logged(self):
         """When tool call arguments are invalid JSON, toolset should log a WARNING."""
-        from consilium.soul.toolset import KimiToolset
+        from consilium.soul.toolset import ConsiliumToolset
         from consilium.wire.types import ToolCall
 
-        toolset = KimiToolset()
+        toolset = ConsiliumToolset()
 
         class DummyTool:
             name = "DummyTool"
@@ -315,7 +315,7 @@ class TestLLMLogging:
 
             result = create_llm(
                 LLMProvider(type="kimi", base_url="", api_key=SecretStr("")),
-                LLMModel(provider="kimi", model="", max_context_size=100_000),
+                LLMModel(provider="kimi", model="", max_context_size=1_000_000),
             )
             assert result is None
             mock_logger.warning.assert_called_once()

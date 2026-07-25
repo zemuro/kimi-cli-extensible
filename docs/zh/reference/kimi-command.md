@@ -1,6 +1,6 @@
 # `kimi` 命令
 
-`kimi` 是 Kimi Code CLI 的主命令，用于启动交互式会话或执行单次查询。
+`kimi` 是 Consilium CLI 的主命令，用于启动交互式会话或执行单次查询。
 
 ```sh
 kimi [OPTIONS] COMMAND [ARGS]
@@ -13,7 +13,7 @@ kimi [OPTIONS] COMMAND [ARGS]
 | `--version` | `-V` | 显示版本号并退出 |
 | `--help` | `-h` | 显示帮助信息并退出 |
 | `--verbose` | | 输出详细运行信息 |
-| `--debug` | | 记录调试日志（输出到 `~/.kimi/logs/kimi.log`） |
+| `--debug` | | 记录调试日志（输出到 `~/.consilium/logs/kimi.log`） |
 
 ## Agent 配置
 
@@ -29,7 +29,7 @@ kimi [OPTIONS] COMMAND [ARGS]
 | 选项 | 说明 |
 |------|------|
 | `--config STRING` | 加载 TOML/JSON 配置字符串 |
-| `--config-file PATH` | 加载配置文件（默认 `~/.kimi/config.toml`） |
+| `--config-file PATH` | 加载配置文件（默认 `~/.consilium/config.toml`） |
 
 `--config` 和 `--config-file` 互斥。配置字符串和文件均支持 TOML 和 JSON 格式。详见 [配置文件](../configuration/config-files.md)。
 
@@ -66,7 +66,7 @@ kimi [OPTIONS] COMMAND [ARGS]
 | `--prompt TEXT` | `-p` | 传入用户提示，不进入交互模式 |
 | `--command TEXT` | `-c` | `--prompt` 的别名 |
 
-使用 `--prompt`（或 `--command`）时，Kimi Code CLI 会处理完查询后退出（除非指定 `--print`，否则仍以交互模式显示结果）。
+使用 `--prompt`（或 `--command`）时，Consilium CLI 会处理完查询后退出（除非指定 `--print`，否则仍以交互模式显示结果）。
 
 ## 循环控制
 
@@ -80,7 +80,7 @@ kimi [OPTIONS] COMMAND [ARGS]
 
 [Ralph](https://ghuntley.com/ralph/) 是一种把 Agent 放进循环的技术：同一条提示词会被反复喂给 Agent，让它围绕一个任务持续迭代。
 
-当 `--max-ralph-iterations` 非 `0` 时，Kimi Code CLI 会进入 Ralph 循环模式，自动循环执行任务，直到 Agent 输出 `<choice>STOP</choice>` 或达到迭代上限。
+当 `--max-ralph-iterations` 非 `0` 时，Consilium CLI 会进入 Ralph 循环模式，自动循环执行任务，直到 Agent 输出 `<choice>STOP</choice>` 或达到迭代上限。
 
 ## UI 模式
 
@@ -112,7 +112,7 @@ kimi [OPTIONS] COMMAND [ARGS]
 | `--mcp-config-file PATH` | 加载 MCP 配置文件，可多次指定 |
 | `--mcp-config JSON` | 加载 MCP 配置 JSON 字符串，可多次指定 |
 
-默认加载 `~/.kimi/mcp.json`（如果存在）。详见 [Model Context Protocol](../customization/mcp.md)。
+默认加载 `~/.consilium/mcp.json`（如果存在）。详见 [Model Context Protocol](../customization/mcp.md)。
 
 ## 审批控制
 
@@ -152,7 +152,7 @@ Thinking 模式需要模型支持。如果不指定，使用上次会话的设�
 |------|------|
 | `--skills-dir PATH` | 追加额外的 skills 目录（可重复指定） |
 
-不指定时，Kimi Code CLI 会按优先级自动发现用户级和项目级 Skills 目录。详见 [Agent Skills](../customization/skills.md)。
+不指定时，Consilium CLI 会按优先级自动发现用户级和项目级 Skills 目录。详见 [Agent Skills](../customization/skills.md)。
 
 ## 子命令
 
@@ -227,7 +227,7 @@ kimi vis [OPTIONS]
 
 ### `kimi web`
 
-启动 Web UI 服务器，通过浏览器访问 Kimi Code CLI。
+启动 Web UI 服务器，通过浏览器访问 Consilium CLI。
 
 ```sh
 kimi web [OPTIONS]

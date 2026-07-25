@@ -7,7 +7,7 @@ provider normalizes schemas locally so MCP tools from servers that emit
 type-less properties (e.g. some JetBrains MCP tools) keep working.
 """
 
-from kosong.chat_provider.kimi import _convert_tool  # pyright: ignore[reportPrivateUsage]
+from kosong.chat_provider.consilium import _convert_tool  # pyright: ignore[reportPrivateUsage]
 from kosong.tooling import Tool
 
 

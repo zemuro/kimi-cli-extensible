@@ -15,7 +15,7 @@ from consilium.soul.agent import Runtime, load_agent
 async def test_default_agent(runtime: Runtime):
     agent = await load_agent(DEFAULT_AGENT_FILE, runtime, mcp_configs=[])
     assert agent.system_prompt.replace(
-        f"{runtime.builtin_args.KIMI_WORK_DIR}", "/path/to/work/dir"
+        f"{runtime.builtin_args.CONSILIUM_WORK_DIR}", "/path/to/work/dir"
     ) == snapshot(
         """\
 You are Kimi Code CLI, an interactive general AI agent running on a user's computer.
@@ -128,7 +128,7 @@ The `AGENTS.md` instructions (merged from all applicable directories):
 Test agents content
 `````````
 
-`AGENTS.md` files can appear at any level of the project directory tree, including inside `.kimi/` directories. Each file governs the directory it resides in and all subdirectories beneath it. When multiple `AGENTS.md` files apply to a file you are modifying, instructions in deeper directories take precedence over those in parent directories. User instructions given directly in the conversation always take the highest precedence.
+`AGENTS.md` files can appear at any level of the project directory tree, including inside `.consilium/` directories. Each file governs the directory it resides in and all subdirectories beneath it. When multiple `AGENTS.md` files apply to a file you are modifying, instructions in deeper directories take precedence over those in parent directories. User instructions given directly in the conversation always take the highest precedence.
 
 When working on files in subdirectories, always check whether those directories contain their own `AGENTS.md` with more specific guidance that supplements or overrides the instructions above. You may also check `README`/`README.md` files for more information about the project.
 

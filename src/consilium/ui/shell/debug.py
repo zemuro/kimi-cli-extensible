@@ -10,7 +10,7 @@ from rich.rule import Rule
 from rich.syntax import Syntax
 from rich.text import Text
 
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.ui.shell.console import console
 from consilium.ui.shell.slash import registry
 from consilium.wire.types import (
@@ -147,7 +147,7 @@ def _format_message(msg: Message, index: int) -> Panel:
 @registry.command
 def debug(app: Shell, args: str):
     """Debug the context"""
-    assert isinstance(app.soul, KimiSoul)
+    assert isinstance(app.soul, ConsiliumSoul)
 
     context = app.soul.context
     history = context.history

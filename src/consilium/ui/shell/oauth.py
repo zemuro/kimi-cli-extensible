@@ -5,21 +5,21 @@ from typing import TYPE_CHECKING
 
 from rich.status import Status
 
-from consilium.auth import KIMI_CODE_PLATFORM_ID
+from consilium.auth import CONSILIUM_CODE_PLATFORM_ID
 from consilium.auth.oauth import login_kimi_code, logout_kimi_code
 from consilium.auth.platforms import is_managed_provider_key, parse_managed_provider_key
 from consilium.cli import Reload
 from consilium.config import save_config
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.ui.shell.console import console
 from consilium.ui.shell.setup import select_platform, setup_platform
-from consilium.ui.shell.slash import ensure_kimi_soul, registry
+from consilium.ui.shell.slash import ensure_consilium_soul, registry
 
 if TYPE_CHECKING:
     from consilium.ui.shell import Shell
 
 
-async def _login_kimi_code(soul: KimiSoul) -> bool:
+async def _login_kimi_code(soul: ConsiliumSoul) -> bool:
     status: Status | None = None
     ok = True
     try:
@@ -48,7 +48,7 @@ async def _login_kimi_code(soul: KimiSoul) -> bool:
     return ok
 
 
-def current_model_key(soul: KimiSoul) -> str | None:
+def current_model_key(soul: ConsiliumSoul) -> str | None:
     config = soul.runtime.config
     curr_model_cfg = soul.runtime.llm.model_config if soul.runtime.llm else None
     if curr_model_cfg is not None:
@@ -61,13 +61,13 @@ def current_model_key(soul: KimiSoul) -> str | None:
 @registry.command(aliases=["setup"])
 async def login(app: Shell, args: str) -> None:
     """Login or setup a platform."""
-    soul = ensure_kimi_soul(app)
+    soul = ensure_consilium_soul(app)
     if soul is None:
         return
     platform = await select_platform()
     if platform is None:
         return
-    if platform.id == KIMI_CODE_PLATFORM_ID:
+    if platform.id == CONSILIUM_CODE_PLATFORM_ID:
         ok = await _login_kimi_code(soul)
     else:
         ok = await setup_platform(platform)
@@ -84,7 +84,7 @@ async def login(app: Shell, args: str) -> None:
 @registry.command
 async def logout(app: Shell, args: str) -> None:
     """Logout from the current platform."""
-    soul = ensure_kimi_soul(app)
+    soul = ensure_consilium_soul(app)
     if soul is None:
         return
     config = soul.runtime.config
@@ -111,7 +111,7 @@ async def logout(app: Shell, args: str) -> None:
         console.print("[yellow]Current provider is not managed; nothing to logout.[/yellow]")
         return
 
-    if platform_id == KIMI_CODE_PLATFORM_ID:
+    if platform_id == CONSILIUM_CODE_PLATFORM_ID:
         ok = True
         async for event in logout_kimi_code(config):
             match event.type:

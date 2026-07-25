@@ -1,6 +1,6 @@
 # Best Practices — Think/Do Workflow
 
-> This guide is for users of the `kimi-cli-extensible` fork. It assumes you are familiar with the basic upstream Kimi CLI features.
+> This guide is for users of the `consilium-extensible` fork. It assumes you are familiar with the basic upstream Consilium CLI features.
 
 ---
 

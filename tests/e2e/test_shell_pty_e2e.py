@@ -633,13 +633,13 @@ def test_shell_background_agent_approval_preserves_running_draft(tmp_path: Path)
                         "type": "_scripted_echo",
                         "base_url": "",
                         "api_key": "",
-                        "env": {"KIMI_SCRIPTED_ECHO_SCRIPTS": str(root_scripts_path)},
+                        "env": {"CONSILIUM_SCRIPTED_ECHO_SCRIPTS": str(root_scripts_path)},
                     },
                     "sub_provider": {
                         "type": "_scripted_echo",
                         "base_url": "",
                         "api_key": "",
-                        "env": {"KIMI_SCRIPTED_ECHO_SCRIPTS": str(sub_scripts_path)},
+                        "env": {"CONSILIUM_SCRIPTED_ECHO_SCRIPTS": str(sub_scripts_path)},
                     },
                 },
             }

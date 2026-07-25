@@ -88,7 +88,7 @@ async def list_directory(work_dir: KaosPath) -> str:
     """Return a compact tree listing of *work_dir* (up to 2 levels).
 
     This helper is used mainly to provide context to the LLM (for example
-    ``KIMI_WORK_DIR_LS``) and to show top-level directory contents in tools.
+    ``CONSILIUM_WORK_DIR_LS``) and to show top-level directory contents in tools.
 
     Both depth and width are capped to keep the system-prompt token budget
     bounded (see GH-1809):

@@ -86,9 +86,9 @@ class LogEntry:
 ### Storage Layout
 
 ```
-~/.kimi/think_logs/{session_id}.jsonl   # Think log
-~/.kimi/do_logs/{session_id}.jsonl      # Do log
-~/.kimi/log_index.json                  # Session → log file mapping
+~/.consilium/think_logs/{session_id}.jsonl   # Think log
+~/.consilium/do_logs/{session_id}.jsonl      # Do log
+~/.consilium/log_index.json                  # Session → log file mapping
 ```
 
 Append-only. Never rewrite. Rotation for archival only.
@@ -405,8 +405,8 @@ ContextView(log, end_id=...).materialize()  # new view (prune)
 Even with zero shipped users, a simple feature flag saves debugging time:
 
 ```python
-# kimi_cli/config.py or env var
-USE_PERSISTENT_LOG = os.environ.get("KIMI_USE_PERSISTENT_LOG", "0") == "1"
+# consilium/config.py or env var
+USE_PERSISTENT_LOG = os.environ.get("CONSILIUM_USE_PERSISTENT_LOG", "0") == "1"
 ```
 
 - `0` (default): Uses legacy storage, but parallel writes still populate PersistentLog
@@ -456,10 +456,10 @@ This lets you bisect issues by toggling the flag, without reverting commits.
 ## Files to Create
 
 ```
-src/kimi_cli/plan/persistent_log.py    # ✅ DONE in 6a
-src/kimi_cli/plan/context_view.py      # ✅ DONE in 6a
-src/kimi_cli/plan/log_entry.py         # ✅ DONE in 6a
-src/kimi_cli/plan/bridge.py            # ✅ DONE in 6a
+src/consilium/plan/persistent_log.py    # ✅ DONE in 6a
+src/consilium/plan/context_view.py      # ✅ DONE in 6a
+src/consilium/plan/log_entry.py         # ✅ DONE in 6a
+src/consilium/plan/bridge.py            # ✅ DONE in 6a
 
 tests/core/test_persistent_log.py      # ✅ DONE in 6a
 tests/core/test_context_view.py        # ✅ DONE in 6a

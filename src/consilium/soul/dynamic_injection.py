@@ -10,7 +10,7 @@ from kosong.message import Message
 from consilium.notifications import is_notification_message
 
 if TYPE_CHECKING:
-    from consilium.soul.kimisoul import KimiSoul
+    from consilium.soul.consiliumsoul import ConsiliumSoul
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,7 +33,7 @@ class DynamicInjectionProvider(ABC):
     async def get_injections(
         self,
         history: Sequence[Message],
-        soul: KimiSoul,
+        soul: ConsiliumSoul,
     ) -> list[DynamicInjection]: ...
 
     async def on_context_compacted(self) -> None:

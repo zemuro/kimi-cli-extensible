@@ -5,8 +5,8 @@ status: implemented
 dependencies:
   - phase-04a
 files_involved:
-  - src/kimi_cli/do/session.py
-  - src/kimi_cli/think/push.py
+  - src/consilium/do/session.py
+  - src/consilium/think/push.py
 ---
 
 **Status: PLANNED — implement after Phase 4a report.**
@@ -51,14 +51,14 @@ async def test_think_push_do_flow():
 
 ### 4b.2 Journal Retention Policy
 
-**File:** `src/kimi_cli/do/journal.py` — modifications to `JournalStore`
+**File:** `src/consilium/do/journal.py` — modifications to `JournalStore`
 
-Old journals accumulate indefinitely in `~/.kimi/do_sessions/`. Add auto-archive:
+Old journals accumulate indefinitely in `~/.consilium/do_sessions/`. Add auto-archive:
 
 ```python
 class JournalStore:
     def archive_old_journals(self, max_age_days: int = 30) -> list[Path]:
-        """Move journals older than max_age_days to ~/.kimi/do_sessions/.archive/"""
+        """Move journals older than max_age_days to ~/.consilium/do_sessions/.archive/"""
         ...
 ```
 
@@ -70,14 +70,14 @@ journal_retention_days = 30  # 0 = disable archiving
 
 **Behavior:**
 - On `DoSession` startup, check and archive old journals (non-blocking, fire-and-forget)
-- Archive is a move, not delete — user can recover from `~/.kimi/do_sessions/.archive/`
+- Archive is a move, not delete — user can recover from `~/.consilium/do_sessions/.archive/`
 - Compact archived journals to a single `.tar.gz` per month if space is a concern
 
 ---
 
 ### 4b.3 Binary File Handling in Diffs
 
-**File:** `src/kimi_cli/do/diff.py` — modifications to `DiffComputer`
+**File:** `src/consilium/do/diff.py` — modifications to `DiffComputer`
 
 The diff system currently assumes text. Binary files (images, `.pyc`, `.so`, `.dll`) should be tracked in the journal but without unified diff text.
 
@@ -105,7 +105,7 @@ class DiffComputer:
 
 ### 4b.4 Windows Sandbox for Python Tool
 
-**File:** `src/kimi_cli/think/python_tool.py` — additions to `SandboxedExecutor`
+**File:** `src/consilium/think/python_tool.py` — additions to `SandboxedExecutor`
 
 The `sandboxed` restriction level currently falls back to `restricted` on non-macOS. Add Windows-specific sandboxing via Windows Job Objects:
 
@@ -139,7 +139,7 @@ def _create_job_object() -> wintypes.HANDLE:
 If implemented, these endpoints are useful when `kimi web` is explicitly running:
 
 ```python
-# src/kimi_cli/web/routes.py
+# src/consilium/web/routes.py
 @router.get("/{session_id}/changes")
 async def get_changes(session_id: str, since: int | None = None):
     ...
@@ -165,7 +165,7 @@ Document for future agents:
 - Think/Do relationship diagram (disjoint processes, unidirectional push)
 - File inventory (which files belong to Think vs Do vs shared)
 - Hook mechanism (`pre_tool` / `post_tool`)
-- Storage layout (`~/.kimi/think_sessions/` vs `~/.kimi/do_sessions/`)
+- Storage layout (`~/.consilium/think_sessions/` vs `~/.consilium/do_sessions/`)
 - Fork-specific features (`force_abort`, `ToolFileModifiedEvent`)
 - Testing strategy (`tests/core/` structure)
 

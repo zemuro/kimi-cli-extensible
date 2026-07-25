@@ -64,7 +64,7 @@ from consilium.soul.dynamic_injections.afk_mode import AfkModeInjectionProvider
 from consilium.soul.dynamic_injections.plan_mode import PlanModeInjectionProvider
 from consilium.soul.message import check_message, system, system_reminder, tool_result_to_message
 from consilium.soul.slash import registry as soul_slash_registry
-from consilium.soul.toolset import KimiToolset
+from consilium.soul.toolset import ConsiliumToolset
 from consilium.tools.dmail import NAME as SendDMail_NAME
 from consilium.tools.utils import ToolRejectedError
 from consilium.utils.logging import logger
@@ -90,7 +90,7 @@ from consilium.wire.types import (
 
 if TYPE_CHECKING:
 
-    def type_check(soul: KimiSoul):
+    def type_check(soul: ConsiliumSoul):
         _: Soul = soul
 
 
@@ -158,8 +158,8 @@ class TurnOutcome:
     step_count: int
 
 
-class KimiSoul:
-    """The soul of Kimi Code CLI."""
+class ConsiliumSoul:
+    """The soul of Consilium."""
 
     def __init__(
         self,
@@ -289,7 +289,7 @@ class KimiSoul:
 
     def set_hook_engine(self, engine: HookEngine) -> None:
         self._hook_engine = engine
-        if isinstance(self._agent.toolset, KimiToolset):
+        if isinstance(self._agent.toolset, ConsiliumToolset):
             self._agent.toolset.set_hook_engine(engine)
 
     def register_pre_tool_hook(self, hook: Callable[[ToolCall], Awaitable[None]]) -> None:
@@ -383,7 +383,7 @@ class KimiSoul:
 
     def _bind_plan_mode_tools(self) -> None:
         """Bind plan mode state to tools that support it."""
-        if not isinstance(self._agent.toolset, KimiToolset):
+        if not isinstance(self._agent.toolset, ConsiliumToolset):
             return
 
         def checker() -> bool:
@@ -575,19 +575,19 @@ class KimiSoul:
         return self._runtime.session.wire_file
 
     def _mcp_status_snapshot(self):
-        if not isinstance(self._agent.toolset, KimiToolset):
+        if not isinstance(self._agent.toolset, ConsiliumToolset):
             return None
         return self._agent.toolset.mcp_status_snapshot()
 
     async def start_background_mcp_loading(self) -> bool:
         """Start deferred MCP loading, if any, without exposing toolset internals."""
-        if not isinstance(self._agent.toolset, KimiToolset):
+        if not isinstance(self._agent.toolset, ConsiliumToolset):
             return False
         return await self._agent.toolset.start_deferred_mcp_tool_loading()
 
     async def wait_for_background_mcp_loading(self) -> None:
         """Wait for any in-flight MCP startup to finish."""
-        if not isinstance(self._agent.toolset, KimiToolset):
+        if not isinstance(self._agent.toolset, ConsiliumToolset):
             return
         await self._agent.toolset.wait_for_mcp_tools()
 
@@ -885,8 +885,8 @@ class KimiSoul:
     def _find_slash_command(self, name: str) -> SlashCommand[Any] | None:
         return self._slash_command_map.get(name)
 
-    def _make_skill_runner(self, skill: Skill) -> Callable[[KimiSoul, str], None | Awaitable[None]]:
-        async def _run_skill(soul: KimiSoul, args: str, *, _skill: Skill = skill) -> None:
+    def _make_skill_runner(self, skill: Skill) -> Callable[[ConsiliumSoul, str], None | Awaitable[None]]:
+        async def _run_skill(soul: ConsiliumSoul, args: str, *, _skill: Skill = skill) -> None:
             from consilium.telemetry import track
 
             track("skill_invoked", skill_name=_skill.name)
@@ -930,7 +930,7 @@ class KimiSoul:
             self._steer_queue.get_nowait()
 
         # ── 1a. MCP deferred loading ──────────────────────────────────────────
-        if isinstance(self._agent.toolset, KimiToolset):
+        if isinstance(self._agent.toolset, ConsiliumToolset):
             await self.start_background_mcp_loading()
             loading = bool((snapshot := self._mcp_status_snapshot()) and snapshot.loading)
             if loading:
@@ -1184,7 +1184,7 @@ class KimiSoul:
         async def _run_step_once() -> StepResult:
             """Single LLM invocation (wrapped by retry + connection recovery)."""
             # ── 2e.4.1. Toolset begin_step ────────────────────────────────────
-            if isinstance(self._agent.toolset, KimiToolset):
+            if isinstance(self._agent.toolset, ConsiliumToolset):
                 self._agent.toolset.begin_step(
                     self._last_tool_calls,
                     step_no=self._current_step_no,
@@ -1310,7 +1310,7 @@ class KimiSoul:
                     )
 
         # Update dedup tracking for the next step
-        if isinstance(self._agent.toolset, KimiToolset):
+        if isinstance(self._agent.toolset, ConsiliumToolset):
             self._last_tool_calls = self._agent.toolset.end_step()
 
         # If a tool (EnterPlanMode/ExitPlanMode) changed plan mode during execution,
@@ -1733,7 +1733,7 @@ class FlowRunner:
         max_moves = total_runs
         return FlowRunner(flow, max_moves=max_moves)
 
-    async def run(self, soul: KimiSoul, args: str) -> None:
+    async def run(self, soul: ConsiliumSoul, args: str) -> None:
         if args.strip():
             command = f"/{FLOW_COMMAND_PREFIX}{self._name}" if self._name else "/flow"
             logger.warning("Agent flow {command} ignores args: {args}", command=command, args=args)
@@ -1775,7 +1775,7 @@ class FlowRunner:
 
     async def _execute_flow_node(
         self,
-        soul: KimiSoul,
+        soul: ConsiliumSoul,
         node: FlowNode,
         edges: list[FlowEdge],
     ) -> tuple[str | None, int]:
@@ -1851,7 +1851,7 @@ class FlowRunner:
 
     @staticmethod
     async def _flow_turn(
-        soul: KimiSoul,
+        soul: ConsiliumSoul,
         prompt: str | list[ContentPart],
     ) -> TurnOutcome:
         wire_send(TurnBegin(user_input=prompt))

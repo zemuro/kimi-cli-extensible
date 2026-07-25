@@ -22,6 +22,7 @@ class SubagentOutputWriter:
     def __init__(self, path: Path, *, extra_paths: Sequence[Path] = ()) -> None:
         self._path = path
         self._extra_paths = extra_paths
+        self._writes = 0
 
     def stage(self, name: str) -> None:
         self._append(f"[stage] {name}\n")
@@ -60,7 +61,22 @@ class SubagentOutputWriter:
         elif isinstance(msg, ToolCallPart):
             pass  # incremental argument chunks — not useful in transcript
 
+    @property
+    def writes(self) -> int:
+        """Total number of append operations performed."""
+        return self._writes
+
+    def read(self) -> str:
+        """Read the current staged output, if any."""
+        if not self._path.exists():
+            return ""
+        try:
+            return self._path.read_text(encoding="utf-8")
+        except OSError:
+            return ""
+
     def _append(self, text: str) -> None:
+        self._writes += 1
         with self._path.open("a", encoding="utf-8") as f:
             f.write(text)
         for p in self._extra_paths:

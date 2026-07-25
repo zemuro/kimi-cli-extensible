@@ -30,7 +30,7 @@ def _make_config_with_model(
     model = LLMModel(
         provider="managed:kimi-code",
         model="kimi-for-coding",
-        max_context_size=100_000,
+        max_context_size=1_000_000,
         display_name=display_name,
     )
     return Config(
@@ -182,7 +182,7 @@ def test_model_display_name_prefers_config_display_name():
     model = LLMModel(
         provider="managed:kimi-code",
         model="kimi-for-coding",
-        max_context_size=100_000,
+        max_context_size=1_000_000,
         display_name="k2.6-code-preview",
     )
     assert model_display_name("kimi-for-coding", model) == "k2.6-code-preview"
@@ -193,7 +193,7 @@ def test_model_display_name_falls_back_to_hardcoded_when_missing():
     model = LLMModel(
         provider="managed:kimi-code",
         model="kimi-for-coding",
-        max_context_size=100_000,
+        max_context_size=1_000_000,
     )
     assert model_display_name("kimi-for-coding", model) == "kimi-for-coding"
 

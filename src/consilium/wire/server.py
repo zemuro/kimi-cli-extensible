@@ -20,8 +20,8 @@ from consilium.plan.parser import parse_plan_directory_from_path
 from consilium.plan.persistent_log import PersistentLog
 from consilium.session import Session
 from consilium.soul import LLMNotSet, LLMNotSupported, MaxStepsReached, RunCancelled, Soul, run_soul
-from consilium.soul.kimisoul import KimiSoul
-from consilium.soul.toolset import KimiToolset, WireExternalTool
+from consilium.soul.consiliumsoul import ConsiliumSoul
+from consilium.soul.toolset import ConsiliumToolset, WireExternalTool
 from consilium.utils.aioqueue import Queue, QueueShutDown
 from consilium.utils.logging import logger
 from consilium.utils.signals import install_sigint_handler
@@ -119,7 +119,7 @@ class WireServer:
 
     @property
     def _approval_runtime(self) -> ApprovalRuntime | None:
-        if isinstance(self._soul, KimiSoul):
+        if isinstance(self._soul, ConsiliumSoul):
             return self._soul.runtime.approval_runtime
         return None
 
@@ -137,7 +137,7 @@ class WireServer:
                 self._mode,
                 "idle",
             )
-        if isinstance(self._soul, KimiSoul) and self._soul.runtime.root_wire_hub is not None:
+        if isinstance(self._soul, ConsiliumSoul) and self._soul.runtime.root_wire_hub is not None:
             self._root_hub_queue = self._soul.runtime.root_wire_hub.subscribe()
             self._root_hub_task = asyncio.create_task(self._root_hub_loop())
         stop_event = asyncio.Event()
@@ -360,7 +360,7 @@ class WireServer:
                 await self._root_hub_task
             self._root_hub_task = None
         if (
-            isinstance(self._soul, KimiSoul)
+            isinstance(self._soul, ConsiliumSoul)
             and self._root_hub_queue is not None
             and self._soul.runtime.root_wire_hub is not None
         ):
@@ -447,7 +447,7 @@ class WireServer:
         accepted: list[str] = []
         rejected: list[dict[str, str]] = []
         toolset = None
-        if isinstance(self._soul, KimiSoul) and isinstance(self._soul.agent.toolset, KimiToolset):
+        if isinstance(self._soul, ConsiliumSoul) and isinstance(self._soul.agent.toolset, ConsiliumToolset):
             toolset = self._soul.agent.toolset
 
         if toolset and msg.params.external_tools:
@@ -609,7 +609,7 @@ class WireServer:
             result=result,
         )
 
-    def _sync_ask_user_tool_visibility(self, toolset: KimiToolset) -> None:
+    def _sync_ask_user_tool_visibility(self, toolset: ConsiliumToolset) -> None:
         """Hide or unhide the AskUserQuestion tool based on client capabilities."""
         from consilium.tools.ask_user import NAME as ASK_USER_TOOL_NAME
 
@@ -626,7 +626,7 @@ class WireServer:
                 tool=ASK_USER_TOOL_NAME,
             )
 
-    def _sync_plan_mode_tool_visibility(self, toolset: KimiToolset) -> None:
+    def _sync_plan_mode_tool_visibility(self, toolset: ConsiliumToolset) -> None:
         """Hide or unhide plan mode tools based on client capabilities."""
         from consilium.tools.plan import NAME as EXIT_PLAN_MODE_TOOL_NAME
         from consilium.tools.plan.enter import NAME as ENTER_PLAN_MODE_TOOL_NAME
@@ -654,7 +654,7 @@ class WireServer:
             set_client_info(name=client.name, version=client.version)
 
     def _track_session_started(self, client: ClientInfo | None) -> None:
-        if not isinstance(self._soul, KimiSoul):
+        if not isinstance(self._soul, ConsiliumSoul):
             return
 
         from consilium.telemetry import track_session_started_once
@@ -682,7 +682,7 @@ class WireServer:
             self._track_session_started(None)
 
         self._cancel_event = asyncio.Event()
-        runtime = self._soul.runtime if isinstance(self._soul, KimiSoul) else None
+        runtime = self._soul.runtime if isinstance(self._soul, ConsiliumSoul) else None
 
         if self._session is not None:
             from consilium.peer_status import update_own_peer_status
@@ -799,7 +799,7 @@ class WireServer:
     async def _handle_steer(
         self, msg: JSONRPCSteerMessage
     ) -> JSONRPCSuccessResponse | JSONRPCErrorResponse:
-        if not isinstance(self._soul, KimiSoul) or not self._is_streaming:
+        if not isinstance(self._soul, ConsiliumSoul) or not self._is_streaming:
             return JSONRPCErrorResponse(
                 id=msg.id,
                 error=JSONRPCErrorObject(
@@ -817,7 +817,7 @@ class WireServer:
     async def _handle_set_plan_mode(
         self, msg: JSONRPCSetPlanModeMessage
     ) -> JSONRPCSuccessResponse | JSONRPCErrorResponse:
-        if not isinstance(self._soul, KimiSoul):
+        if not isinstance(self._soul, ConsiliumSoul):
             return JSONRPCErrorResponse(
                 id=msg.id,
                 error=JSONRPCErrorObject(
@@ -848,7 +848,7 @@ class WireServer:
                 ),
             )
 
-        wire_file = self._soul.wire_file if isinstance(self._soul, KimiSoul) else None
+        wire_file = self._soul.wire_file if isinstance(self._soul, ConsiliumSoul) else None
 
         self._cancel_event = asyncio.Event()
         events = 0
@@ -1189,7 +1189,7 @@ class WireServer:
 
             work_dir = (
                 self._soul.runtime.session.work_dir
-                if isinstance(self._soul, KimiSoul)
+                if isinstance(self._soul, ConsiliumSoul)
                 else Path.cwd()
             )
             plan_path = work_dir / msg.params.plan_file

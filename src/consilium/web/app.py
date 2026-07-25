@@ -1,4 +1,4 @@
-"""Kimi Code CLI Web UI application."""
+"""Consilium CLI Web UI application."""
 
 import os
 import secrets
@@ -38,7 +38,7 @@ from consilium.web.auth import (
     is_private_ip,
     normalize_allowed_origins,
 )
-from consilium.web.runner.process import KimiCLIRunner
+from consilium.web.runner.process import ConsiliumCLIRunner
 
 # Configure logging based on LOG_LEVEL environment variable
 _log_level = os.environ.get("LOG_LEVEL", "WARNING").upper()
@@ -58,11 +58,11 @@ GZIP_MINIMUM_SIZE = 1024
 GZIP_COMPRESSION_LEVEL = 6
 DEFAULT_PORT = 5494
 MAX_PORT_ATTEMPTS = 10
-ENV_SESSION_TOKEN = "KIMI_WEB_SESSION_TOKEN"
-ENV_ALLOWED_ORIGINS = "KIMI_WEB_ALLOWED_ORIGINS"
-ENV_ENFORCE_ORIGIN = "KIMI_WEB_ENFORCE_ORIGIN"
-ENV_RESTRICT_SENSITIVE_APIS = "KIMI_WEB_RESTRICT_SENSITIVE_APIS"
-ENV_MAX_PUBLIC_PATH_DEPTH = "KIMI_WEB_MAX_PUBLIC_PATH_DEPTH"
+ENV_SESSION_TOKEN = "CONSILIUM_WEB_SESSION_TOKEN"
+ENV_ALLOWED_ORIGINS = "CONSILIUM_WEB_ALLOWED_ORIGINS"
+ENV_ENFORCE_ORIGIN = "CONSILIUM_WEB_ENFORCE_ORIGIN"
+ENV_RESTRICT_SENSITIVE_APIS = "CONSILIUM_WEB_RESTRICT_SENSITIVE_APIS"
+ENV_MAX_PUBLIC_PATH_DEPTH = "CONSILIUM_WEB_MAX_PUBLIC_PATH_DEPTH"
 
 # Cache durations
 _IMMUTABLE_MAX_AGE = 365 * 24 * 3600  # 1 year for content-hashed assets
@@ -109,7 +109,7 @@ def _load_env_flag(key: str) -> bool:
     return os.environ.get(key, "").strip().lower() in {"1", "true", "yes", "on"}
 
 
-ENV_LAN_ONLY = "KIMI_WEB_LAN_ONLY"
+ENV_LAN_ONLY = "CONSILIUM_WEB_LAN_ONLY"
 
 
 def create_app(
@@ -120,7 +120,7 @@ def create_app(
     max_public_path_depth: int | None = None,
     lan_only: bool | None = None,
 ) -> FastAPI:
-    """Create the FastAPI application for Kimi CLI web UI."""
+    """Create the FastAPI application for Consilium CLI web UI."""
 
     env_token = os.environ.get(ENV_SESSION_TOKEN) or None
     env_origins = normalize_allowed_origins(os.environ.get(ENV_ALLOWED_ORIGINS))
@@ -153,8 +153,8 @@ def create_app(
         app.state.max_public_path_depth = max_public_path_depth
         app.state.lan_only = lan_only
 
-        # Start KimiCLI runner
-        runner = KimiCLIRunner()
+        # Start ConsiliumCLI runner
+        runner = ConsiliumCLIRunner()
         app.state.runner = runner
         runner.start()
 
@@ -164,7 +164,7 @@ def create_app(
             await runner.stop()
 
     application = FastAPI(
-        title="Kimi Code CLI Web Interface",
+        title="Consilium Code CLI Web Interface",
         docs_url=None,
         lifespan=lifespan,
         separate_input_output_schemas=False,

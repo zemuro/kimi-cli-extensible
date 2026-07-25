@@ -4,7 +4,7 @@
 插件系统目前处于 Beta 阶段，具体的实现细节和配置定义可能会在未来版本中调整。请谨慎在生产环境中使用，并关注后续更新。
 :::
 
-插件系统让你可以为 Kimi Code CLI 添加自定义工具，扩展 AI 的能力。与 MCP 服务器不同，插件是轻量级的本地工具包，适合封装项目特定的脚本和实用程序。
+插件系统让你可以为 Consilium CLI 添加自定义工具，扩展 AI 的能力。与 MCP 服务器不同，插件是轻量级的本地工具包，适合封装项目特定的脚本和实用程序。
 
 ## 插件是什么
 
@@ -55,7 +55,7 @@ kimi plugin install https://github.com/user/repo.git/plugins/my-plugin
 kimi plugin install https://github.com/user/repo/tree/develop/plugins/my-plugin
 ```
 
-当 Git 仓库根目录没有 `plugin.json` 时，Kimi Code CLI 会检查根目录及其直接子目录，并列出可用的插件供你选择。
+当 Git 仓库根目录没有 `plugin.json` 时，Consilium CLI 会检查根目录及其直接子目录，并列出可用的插件供你选择。
 
 **列出已安装插件**
 
@@ -148,7 +148,7 @@ my-plugin/
 
 ## 凭证注入
 
-如果你的插件需要调用 LLM API，可以通过 `inject` 配置自动获取 Kimi Code CLI 的凭证配置。
+如果你的插件需要调用 LLM API，可以通过 `inject` 配置自动获取 Consilium CLI 的凭证配置。
 
 **`inject` 配置示例**
 
@@ -180,10 +180,10 @@ my-plugin/
 }
 ```
 
-安装时，Kimi Code CLI 会将当前配置的 API 密钥和 base URL 注入到指定的配置文件中。如果配置了 OAuth，会自动获取并注入有效的 token。之后在应用启动时，Kimi Code CLI 也会尝试将最新的凭证（如刷新后的 OAuth token）写入已安装插件的配置文件中。
+安装时，Consilium CLI 会将当前配置的 API 密钥和 base URL 注入到指定的配置文件中。如果配置了 OAuth，会自动获取并注入有效的 token。之后在应用启动时，Consilium CLI 也会尝试将最新的凭证（如刷新后的 OAuth token）写入已安装插件的配置文件中。
 
 ::: tip 提示
-一般情况下，不需要为了更新凭证而重新安装插件：切换 LLM 提供商或重新授权后，重启 Kimi Code CLI 即可自动刷新配置文件中的凭证，插件工具在实际运行时也会通过环境变量获得当前有效的凭证。只有在修改了插件本身的配置结构（例如 `config_file` 或 `inject` 映射）时，才需要重新安装插件。
+一般情况下，不需要为了更新凭证而重新安装插件：切换 LLM 提供商或重新授权后，重启 Consilium CLI 即可自动刷新配置文件中的凭证，插件工具在实际运行时也会通过环境变量获得当前有效的凭证。只有在修改了插件本身的配置结构（例如 `config_file` 或 `inject` 映射）时，才需要重新安装插件。
 :::
 
 ::: info 关于 inject 键名
@@ -306,7 +306,7 @@ rl.on("close", () => {
 
 ## 插件安装位置
 
-插件安装在 `~/.kimi/plugins/` 目录下。每个插件是一个独立的子目录，包含完整的 `plugin.json` 和脚本文件。
+插件安装在 `~/.consilium/plugins/` 目录下。每个插件是一个独立的子目录，包含完整的 `plugin.json` 和脚本文件。
 
 ::: info 说明
 插件与 MCP 服务器是互补的扩展机制：

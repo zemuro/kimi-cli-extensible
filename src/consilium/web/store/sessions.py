@@ -27,7 +27,7 @@ from uuid import UUID
 from pydantic import ConfigDict, Field
 
 from consilium.metadata import WorkDirMeta, load_metadata
-from consilium.session import Session as KimiCLISession
+from consilium.session import Session as ConsiliumCLISession
 from consilium.session_state import SessionState, load_session_state, save_session_state
 from consilium.web.models import Session
 from consilium.wire.file import WireFile
@@ -58,11 +58,11 @@ def invalidate_sessions_cache() -> None:
 
 
 class JointSession(Session):
-    """Combined session model with both web UI and kimi-cli session data."""
+    """Combined session model with both web UI and consilium session data."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    consilium_session: KimiCLISession = Field(exclude=True)
+    consilium_session: ConsiliumCLISession = Field(exclude=True)
 
 
 @dataclass(slots=True)
@@ -150,10 +150,10 @@ def _ensure_title(entry: SessionIndexEntry, *, refresh: bool) -> None:
     entry.title = _derive_title_from_wire(entry.session_dir)
 
 
-def _build_kimi_session(entry: SessionIndexEntry) -> KimiCLISession:
+def _build_consilium_session(entry: SessionIndexEntry) -> ConsiliumCLISession:
     from kaos.path import KaosPath
 
-    return KimiCLISession(
+    return ConsiliumCLISession(
         id=str(entry.session_id),
         work_dir=KaosPath.unsafe_from_local_path(Path(entry.work_dir)),
         work_dir_meta=entry.work_dir_meta,
@@ -166,7 +166,7 @@ def _build_kimi_session(entry: SessionIndexEntry) -> KimiCLISession:
 
 
 def _build_joint_session(entry: SessionIndexEntry) -> JointSession:
-    kimi_session = _build_kimi_session(entry)
+    consilium_session = _build_consilium_session(entry)
     return JointSession(
         session_id=entry.session_id,
         title=entry.title,
@@ -175,7 +175,7 @@ def _build_joint_session(entry: SessionIndexEntry) -> JointSession:
         status=None,
         work_dir=entry.work_dir,
         session_dir=str(entry.session_dir),
-        consilium_session=kimi_session,
+        consilium_session=consilium_session,
         archived=entry.state.archived,
     )
 

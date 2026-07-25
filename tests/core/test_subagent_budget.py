@@ -148,29 +148,29 @@ class TestBudgetConfig:
             SubagentBudgetConfig(max_tool_calls_per_task=0)
 
 
-class TestKimiSoulHooks:
+class TestConsiliumSoulHooks:
     def test_register_usage_hook(self) -> None:
-        from consilium.soul.kimisoul import KimiSoul
+        from consilium.soul.consiliumsoul import ConsiliumSoul
 
-        soul = MagicMock(spec=KimiSoul)
+        soul = MagicMock(spec=ConsiliumSoul)
         soul._usage_hooks = []
 
         def hook(usage: TokenUsage) -> None:
             pass
 
-        KimiSoul.register_usage_hook(soul, hook)
+        ConsiliumSoul.register_usage_hook(soul, hook)
         assert hook in soul._usage_hooks
 
     def test_register_step_gate(self) -> None:
-        from consilium.soul.kimisoul import KimiSoul
+        from consilium.soul.consiliumsoul import ConsiliumSoul
 
-        soul = MagicMock(spec=KimiSoul)
+        soul = MagicMock(spec=ConsiliumSoul)
         soul._step_gates = []
 
         def gate():
             return None
 
-        KimiSoul.register_step_gate(soul, gate)
+        ConsiliumSoul.register_step_gate(soul, gate)
         assert gate in soul._step_gates
 
     def test_usage_hook_called_with_total(self) -> None:

@@ -29,7 +29,7 @@ def _default_toad_command() -> list[str]:
         raise typer.Exit(code=1)
     if importlib.util.find_spec("toad") is None:
         typer.echo(
-            "Toad dependency is missing. Install kimi-cli with Python 3.14+ to use `kimi term`.",
+            "Toad dependency is missing. Install consilium with Python 3.14+ to use `kimi term`.",
             err=True,
         )
         raise typer.Exit(code=1)

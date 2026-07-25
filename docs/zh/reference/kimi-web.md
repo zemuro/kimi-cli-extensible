@@ -1,6 +1,6 @@
 # Web UI
 
-Web UI 提供了基于浏览器的交互界面，让你可以在网页中使用 Kimi Code CLI 的所有功能。相比终端界面，Web UI 提供了更丰富的视觉体验、更灵活的会话管理以及更便捷的文件操作。
+Web UI 提供了基于浏览器的交互界面，让你可以在网页中使用 Consilium CLI 的所有功能。相比终端界面，Web UI 提供了更丰富的视觉体验、更灵活的会话管理以及更便捷的文件操作。
 
 ## 启动 Web UI
 
@@ -152,13 +152,13 @@ kimi web --dangerously-omit-auth
 
 ## 从终端切换到 Web UI
 
-如果你正在终端的 Shell 模式中使用 Kimi Code CLI，可以输入 `/web` 命令快速切换到 Web UI：
+如果你正在终端的 Shell 模式中使用 Consilium CLI，可以输入 `/web` 命令快速切换到 Web UI：
 
 ```
 /web
 ```
 
-执行后，Kimi Code CLI 会自动启动 Web UI 服务器并在浏览器中打开当前会话。你可以继续在 Web UI 中进行对话，会话历史会保持同步。
+执行后，Consilium CLI 会自动启动 Web UI 服务器并在浏览器中打开当前会话。你可以继续在 Web UI 中进行对话，会话历史会保持同步。
 
 ## Web UI 功能特性
 
@@ -366,4 +366,4 @@ Web UI 基于以下技术构建：
 - **前端**：React + TypeScript + Vite
 - **API 协议**：符合 OpenAPI 规范，详见 `web/openapi.json`
 
-Web UI 通过 WebSocket 与 Kimi Code CLI 的 Wire 模式通信，实现实时的双向数据传输。
+Web UI 通过 WebSocket 与 Consilium CLI 的 Wire 模式通信，实现实时的双向数据传输。

@@ -10,7 +10,8 @@ from consilium.chat_provider_ext import patch_chat_provider
 
 
 class TestPatchChatProvider:
-    def test_patches_openai_like_provider(self) -> None:
+    @pytest.mark.asyncio
+    async def test_patches_openai_like_provider(self) -> None:
         provider = MagicMock()
         provider.__class__.__module__ = "kosong.chat_provider.kimi"
         provider.__class__.__name__ = "Kimi"
@@ -26,10 +27,12 @@ class TestPatchChatProvider:
         old_client = provider.client
         with patch("kosong.chat_provider.openai_common.create_openai_client") as mock_create:
             mock_create.return_value = MagicMock()
-            provider.force_abort()
+            task = provider.force_abort()
+            await task
         old_client.close.assert_called_once()
 
-    def test_patches_anthropic_provider(self) -> None:
+    @pytest.mark.asyncio
+    async def test_patches_anthropic_provider(self) -> None:
         provider = MagicMock()
         provider.__class__.__module__ = "kosong.contrib.chat_provider.anthropic"
         provider.__class__.__name__ = "Anthropic"
@@ -42,7 +45,8 @@ class TestPatchChatProvider:
         with patch("anthropic.AsyncAnthropic") as mock_anthropic:
             patch_chat_provider(provider)
             assert hasattr(provider, "force_abort")
-            provider.force_abort()
+            task = provider.force_abort()
+            await task
             old_client.close.assert_called_once()
             mock_anthropic.assert_called_once()
 

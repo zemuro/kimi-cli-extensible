@@ -54,13 +54,13 @@ async def test_uppercase_over_lowercase(temp_work_dir: KaosPath):
 
 
 # ---------------------------------------------------------------------------
-# .kimi/ directory
+# .consilium/ directory
 # ---------------------------------------------------------------------------
 
 
 async def test_kimi_dir_and_root_both_loaded(temp_work_dir: KaosPath):
-    """.kimi/AGENTS.md and AGENTS.md in the same dir are both loaded; .kimi/ first."""
-    kimi_dir = temp_work_dir / ".kimi"
+    """.consilium/AGENTS.md and AGENTS.md in the same dir are both loaded; .consilium/ first."""
+    kimi_dir = temp_work_dir / ".consilium"
     await kimi_dir.mkdir()
     await (kimi_dir / "AGENTS.md").write_text("kimi agents")
     await (temp_work_dir / "AGENTS.md").write_text("root agents")
@@ -73,9 +73,9 @@ async def test_kimi_dir_and_root_both_loaded(temp_work_dir: KaosPath):
 
 
 async def test_kimi_dir_in_parent(temp_work_dir: KaosPath):
-    """.kimi/AGENTS.md in a parent directory is discovered via hierarchy."""
+    """.consilium/AGENTS.md in a parent directory is discovered via hierarchy."""
     await (temp_work_dir / ".git").mkdir()
-    kimi_dir = temp_work_dir / ".kimi"
+    kimi_dir = temp_work_dir / ".consilium"
     await kimi_dir.mkdir()
     await (kimi_dir / "AGENTS.md").write_text("parent kimi")
 

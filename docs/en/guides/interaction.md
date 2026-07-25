@@ -1,13 +1,13 @@
 # Interaction and Input
 
-Kimi Code CLI provides rich interaction features to help you collaborate efficiently with AI.
+Consilium CLI provides rich interaction features to help you collaborate efficiently with AI.
 
 ## Agent and shell mode
 
-Kimi Code CLI has two input modes:
+Consilium CLI has two input modes:
 
 - **Agent mode**: The default mode, where input is sent to the AI for processing
-- **Shell mode**: Execute shell commands directly without leaving Kimi Code CLI
+- **Shell mode**: Execute shell commands directly without leaving Consilium CLI
 
 Press `Ctrl-X` to switch between the two modes. The current mode is displayed in the bottom status bar.
 
@@ -134,7 +134,7 @@ Press `Ctrl-V` to paste text, images, or video files from the clipboard.
 
 In agent mode, longer pasted text (over 1000 characters or 15 lines) is automatically collapsed into a `[Pasted text #n]` placeholder in the input box to keep the interface clean. The full content is still expanded and sent to the model when submitting. When using an external editor (`Ctrl-O`), placeholders are automatically expanded to the original text; unmodified portions are re-collapsed after saving.
 
-If the clipboard contains an image, Kimi Code CLI caches the image to disk and displays it as an `[image:…]` placeholder in the input box. After sending the message, the AI can see and analyze the image. If the clipboard contains a video file, its file path is inserted as text into the input box.
+If the clipboard contains an image, Consilium CLI caches the image to disk and displays it as an `[image:…]` placeholder in the input box. After sending the message, the AI can see and analyze the image. If the clipboard contains a video file, its file path is inserted as text into the input box.
 
 ::: tip
 Image input requires the model to support the `image_in` capability. Video input requires the `video_in` capability.
@@ -142,11 +142,11 @@ Image input requires the model to support the `image_in` capability. Video input
 
 ## Slash commands
 
-Slash commands are special instructions starting with `/`, used to execute Kimi Code CLI's built-in features, such as `/help`, `/login`, `/sessions`, etc. After typing `/`, a list of available commands will automatically appear. For the complete list of slash commands, see the [slash commands reference](../reference/slash-commands.md).
+Slash commands are special instructions starting with `/`, used to execute Consilium CLI's built-in features, such as `/help`, `/login`, `/sessions`, etc. After typing `/`, a list of available commands will automatically appear. For the complete list of slash commands, see the [slash commands reference](../reference/slash-commands.md).
 
 ## @ path completion
 
-When you type `@` in a message, Kimi Code CLI will auto-complete file and directory paths in the working directory. This allows you to conveniently reference files in your project:
+When you type `@` in a message, Consilium CLI will auto-complete file and directory paths in the working directory. This allows you to conveniently reference files in your project:
 
 ```
 Check if there are any issues with @src/components/Button.tsx
@@ -174,7 +174,7 @@ The AI only uses this tool when your choice genuinely affects subsequent actions
 
 ## Approvals and confirmations
 
-When the AI needs to perform operations that may have an impact (such as modifying files or running commands), Kimi Code CLI will request your confirmation.
+When the AI needs to perform operations that may have an impact (such as modifying files or running commands), Consilium CLI will request your confirmation.
 
 The confirmation prompt will show operation details, including shell command and file diff previews. If the content is long and truncated, you can press `Ctrl-E` to expand and view the full content. You can choose:
 
@@ -183,7 +183,7 @@ The confirmation prompt will show operation details, including shell command and
 - **Reject**: Do not execute this operation
 - **Reject with feedback**: Decline the operation and provide written feedback telling the agent how to adjust
 
-If you trust the AI's operations, or you're running Kimi Code CLI in a safe isolated environment, you can enable "YOLO mode" to automatically approve all tool calls:
+If you trust the AI's operations, or you're running Consilium CLI in a safe isolated environment, you can enable "YOLO mode" to automatically approve all tool calls:
 
 ```sh
 # Enable at startup

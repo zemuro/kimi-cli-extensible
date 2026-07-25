@@ -1,4 +1,4 @@
-"""Session process management for Kimi CLI web interface."""
+"""Session process management for Consilium CLI web interface."""
 
 from __future__ import annotations
 
@@ -52,12 +52,12 @@ JSONRPCOutMessageAdapter = TypeAdapter[JSONRPCOutMessage](JSONRPCOutMessage)
 
 
 class SessionProcess:
-    """Manages a single session's KimiCLI subprocess.
+    """Manages a single session's ConsiliumCLI subprocess.
 
     Handles:
     - Starting/stopping the subprocess
-    - Reading from stdout (wire messages from KimiCLI)
-    - Writing to stdin (user input to KimiCLI)
+    - Reading from stdout (wire messages from ConsiliumCLI)
+    - Writing to stdin (user input to ConsiliumCLI)
     - Broadcasting messages to connected WebSockets
 
     Concurrency model:
@@ -182,7 +182,7 @@ class SessionProcess:
         detail: str | None = None,
         restart_started_at: float | None = None,
     ) -> None:
-        """Start the KimiCLI subprocess."""
+        """Start the ConsiliumCLI subprocess."""
         async with self._lock:
             if self.is_alive:
                 if self._read_task is None or self._read_task.done():
@@ -513,7 +513,7 @@ class SessionProcess:
                     user_input.append(part)
                 # Special marker for file-only uploads
                 if isinstance(message.params.user_input, str):
-                    if message.params.user_input != "KIMI_FILE_UPLOAD_WITHOUT_MESSAGE":
+                    if message.params.user_input != "CONSILIUM_FILE_UPLOAD_WITHOUT_MESSAGE":
                         user_input.append(TextPart(text=message.params.user_input))
                 else:
                     user_input += message.params.user_input
@@ -665,7 +665,7 @@ class SessionProcess:
         await process.stdin.drain()
 
 
-class KimiCLIRunner:
+class ConsiliumCLIRunner:
     """Manages multiple session processes."""
 
     def __init__(self) -> None:

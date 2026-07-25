@@ -4,7 +4,7 @@
 Agent Tracing Visualizer is currently in Technical Preview and may be unstable. Features and interface may change in future releases.
 :::
 
-Agent Tracing Visualizer is a browser-based visualization dashboard for inspecting and analyzing Kimi Code CLI session traces. It helps you understand agent behavior, view Wire event timelines, analyze context usage, and browse historical sessions.
+Agent Tracing Visualizer is a browser-based visualization dashboard for inspecting and analyzing Consilium CLI session traces. It helps you understand agent behavior, view Wire event timelines, analyze context usage, and browse historical sessions.
 
 ## Launch
 
@@ -70,7 +70,7 @@ You can export session data as a ZIP file for offline analysis or sharing.
 
 ### Session import
 
-Supports importing ZIP-format session data into the Visualizer for viewing. Imported sessions are stored in a dedicated `~/.kimi/imported_sessions/` directory, separate from regular sessions.
+Supports importing ZIP-format session data into the Visualizer for viewing. Imported sessions are stored in a dedicated `~/.consilium/imported_sessions/` directory, separate from regular sessions.
 
 In the session explorer, you can use the "Imported" filter toggle to switch between viewing imported sessions. Imported sessions support deletion, with a confirmation dialog before removal.
 

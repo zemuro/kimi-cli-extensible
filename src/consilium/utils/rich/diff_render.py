@@ -19,7 +19,7 @@ from rich.text import Text
 
 from consilium.tools.display import DiffDisplayBlock
 from consilium.ui.theme import get_diff_colors
-from consilium.utils.rich.syntax import KimiSyntax
+from consilium.utils.rich.syntax import ConsiliumSyntax
 
 _INLINE_DIFF_MIN_RATIO = 0.5  # skip inline diff when lines are too dissimilar
 
@@ -131,13 +131,13 @@ def _build_diff_lines(
 # ---------------------------------------------------------------------------
 
 
-def _make_highlighter(path: str) -> KimiSyntax:
-    """Create a KimiSyntax instance for highlighting code by file extension."""
+def _make_highlighter(path: str) -> ConsiliumSyntax:
+    """Create a ConsiliumSyntax instance for highlighting code by file extension."""
     ext = path.rsplit(".", 1)[-1] if "." in path else ""
-    return KimiSyntax("", ext if ext else "text")
+    return ConsiliumSyntax("", ext if ext else "text")
 
 
-def _highlight(highlighter: KimiSyntax, code: str) -> Text:
+def _highlight(highlighter: ConsiliumSyntax, code: str) -> Text:
     t = highlighter.highlight(code)
     # Pygments appends a trailing newline (ensurenl=True); strip only that,
     # not trailing whitespace which may be meaningful in diffs.
@@ -182,7 +182,7 @@ def _build_offset_map(raw: str, rendered: str, tab_size: int) -> list[int]:
 
 
 def _apply_inline_diff(
-    highlighter: KimiSyntax,
+    highlighter: ConsiliumSyntax,
     del_lines: list[DiffLine],
     add_lines: list[DiffLine],
 ) -> None:
@@ -218,7 +218,7 @@ def _apply_inline_diff(
         add_lines[j].is_inline_paired = True
 
 
-def _highlight_hunk(highlighter: KimiSyntax, hunk: list[DiffLine]) -> None:
+def _highlight_hunk(highlighter: ConsiliumSyntax, hunk: list[DiffLine]) -> None:
     """Highlight all lines in a hunk, applying inline diff for paired -/+ blocks."""
     # First pass: find consecutive -/+ blocks and apply inline diff
     i = 0

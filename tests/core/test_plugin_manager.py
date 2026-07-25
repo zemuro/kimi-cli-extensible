@@ -211,8 +211,8 @@ async def test_skill_discovery_includes_plugins_dir(tmp_path: Path, monkeypatch)
         encoding="utf-8",
     )
 
-    # Point KIMI_SHARE_DIR to tmp_path so get_plugins_dir() returns tmp_path/plugins
-    monkeypatch.setenv("KIMI_SHARE_DIR", str(tmp_path))
+    # Point CONSILIUM_SHARE_DIR to tmp_path so get_plugins_dir() returns tmp_path/plugins
+    monkeypatch.setenv("CONSILIUM_SHARE_DIR", str(tmp_path))
 
     scoped = await resolve_skills_roots(KaosPath(str(tmp_path)))
     root_strs = [str(s.root) for s in scoped]

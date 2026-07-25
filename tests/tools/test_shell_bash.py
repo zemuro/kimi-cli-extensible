@@ -90,10 +90,10 @@ async def test_command_with_timeout(shell_tool: Shell):
 
 
 async def test_command_timeout_expires(shell_tool: Shell):
-    """Test command that times out."""
+    """Test command that hits the adaptive max wait timeout."""
     result = await shell_tool(Params(command="sleep 2", timeout=1))
     assert result.is_error
-    assert result.message == snapshot("Command killed by timeout (1s)")
+    assert result.message == snapshot("Command exceeded adaptive timeout (1s)")
     assert result.brief == snapshot("Killed by timeout (1s)")
 
 

@@ -189,7 +189,7 @@ def test_llm_not_set(tmp_path) -> None:
                 "type": "kimi",
                 "base_url": "",
                 "api_key": "",
-                "env": {"KIMI_SCRIPTED_ECHO_SCRIPTS": str(scripts_path)},
+                "env": {"CONSILIUM_SCRIPTED_ECHO_SCRIPTS": str(scripts_path)},
             }
         },
     }

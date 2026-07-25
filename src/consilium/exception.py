@@ -1,43 +1,43 @@
 from __future__ import annotations
 
 
-class KimiCLIException(Exception):
-    """Base exception class for Kimi Code CLI."""
+class ConsiliumCLIException(Exception):
+    """Base exception class for Consilium."""
 
     pass
 
 
-class ConfigError(KimiCLIException, ValueError):
+class ConfigError(ConsiliumCLIException, ValueError):
     """Configuration error."""
 
     pass
 
 
-class AgentSpecError(KimiCLIException, ValueError):
+class AgentSpecError(ConsiliumCLIException, ValueError):
     """Agent specification error."""
 
     pass
 
 
-class InvalidToolError(KimiCLIException, ValueError):
+class InvalidToolError(ConsiliumCLIException, ValueError):
     """Invalid tool error."""
 
     pass
 
 
-class SystemPromptTemplateError(KimiCLIException, ValueError):
+class SystemPromptTemplateError(ConsiliumCLIException, ValueError):
     """System prompt template error."""
 
     pass
 
 
-class MCPConfigError(KimiCLIException, ValueError):
+class MCPConfigError(ConsiliumCLIException, ValueError):
     """MCP config error."""
 
     pass
 
 
-class MCPRuntimeError(KimiCLIException, RuntimeError):
+class MCPRuntimeError(ConsiliumCLIException, RuntimeError):
     """MCP runtime error."""
 
     pass

@@ -38,8 +38,8 @@ shell UI, ACP server mode for IDE integrations, and MCP tool loading.
   Specs can `extend` base agents, select tools by import path, and register builtin subagent
   types via the `subagents` field. Subagent instances are persisted separately under the session
   directory and can be resumed by `agent_id`. System prompts live alongside specs; builtin args
-  include `KIMI_NOW`, `KIMI_WORK_DIR`, `KIMI_WORK_DIR_LS`, `KIMI_AGENTS_MD`, `KIMI_SKILLS`, `KIMI_OS`, `KIMI_SHELL`
-  (this file is injected via `KIMI_AGENTS_MD`).
+  include `CONSILIUM_NOW`, `CONSILIUM_WORK_DIR`, `CONSILIUM_WORK_DIR_LS`, `CONSILIUM_AGENTS_MD`, `CONSILIUM_SKILLS`, `CONSILIUM_OS`, `CONSILIUM_SHELL`
+  (this file is injected via `CONSILIUM_AGENTS_MD`).
 - **Prompt system**: The main system prompt is decomposed into sections under
   `src/consilium/prompts/system/`. The default `system.md` contains an assembly marker
   (`<!-- assembled-from-sections -->`) that causes `_load_system_prompt()` to load and join
@@ -149,7 +149,7 @@ See `PROMPT_EXTENSIBILITY.md` for the full user-facing customization guide.
 - Ruff handles lint + format (rules: E, F, UP, B, SIM, I); pyright + ty for type checks.
 - Tests use pytest + pytest-asyncio; files are `tests/test_*.py`.
 - CLI entry points: `consilium` / `consilium` -> `src/consilium/__main__.py` (routes to `src/consilium/cli/__init__.py`).
-- User config: `~/.kimi/config.toml`; logs, sessions, and MCP config live in `~/.kimi/`.
+- User config: `~/.consilium/config.toml`; logs, sessions, and MCP config live in `~/.consilium/`.
 
 ## Git commit messages
 

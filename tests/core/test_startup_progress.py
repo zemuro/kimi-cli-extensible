@@ -7,7 +7,7 @@ import pytest
 
 import consilium.app as app_module
 import consilium.ui.shell.startup as startup_module
-from consilium.app import KimiCLI
+from consilium.app import ConsiliumCLI
 from consilium.ui.shell.startup import ShellStartupProgress
 
 
@@ -102,11 +102,11 @@ async def test_consilium_create_reports_startup_phases(session, config, monkeypa
         def set_hook_engine(self, engine):
             pass
 
-    monkeypatch.setattr(app_module, "KimiSoul", _FakeSoul)
+    monkeypatch.setattr(app_module, "ConsiliumSoul", _FakeSoul)
 
-    cli = await KimiCLI.create(session, config=config, startup_progress=phases.append)
+    cli = await ConsiliumCLI.create(session, config=config, startup_progress=phases.append)
 
-    assert isinstance(cli, KimiCLI)
+    assert isinstance(cli, ConsiliumCLI)
     assert phases == [
         "Loading configuration...",
         "Scanning workspace...",
@@ -167,8 +167,8 @@ async def test_consilium_create_cleans_stale_running_foreground_subagents(
         def set_hook_engine(self, engine):
             pass
 
-    monkeypatch.setattr(app_module, "KimiSoul", _FakeSoul)
+    monkeypatch.setattr(app_module, "ConsiliumSoul", _FakeSoul)
 
-    await KimiCLI.create(session, config=config)
+    await ConsiliumCLI.create(session, config=config)
 
     update_instance.assert_called_once_with("afg1", status="failed")

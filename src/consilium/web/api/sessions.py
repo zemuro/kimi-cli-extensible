@@ -22,7 +22,7 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from consilium import logger
 from consilium.metadata import load_metadata, save_metadata
-from consilium.session import Session as KimiCLISession
+from consilium.session import Session as ConsiliumCLISession
 from consilium.utils.subprocess_env import get_clean_env
 from consilium.web.auth import is_origin_allowed, is_private_ip, verify_token
 from consilium.web.models import (
@@ -35,7 +35,7 @@ from consilium.web.models import (
     UpdateSessionRequest,
 )
 from consilium.web.runner.messages import new_session_status_message, send_history_complete
-from consilium.web.runner.process import KimiCLIRunner
+from consilium.web.runner.process import ConsiliumCLIRunner
 from consilium.web.store.sessions import (
     JointSession,
     invalidate_sessions_cache,
@@ -96,19 +96,19 @@ def sanitize_filename(filename: str) -> str:
     return safe.strip() or "unnamed"
 
 
-def get_runner(req: Request) -> KimiCLIRunner:
-    """Get the KimiCLIRunner from the FastAPI app state."""
+def get_runner(req: Request) -> ConsiliumCLIRunner:
+    """Get the ConsiliumCLIRunner from the FastAPI app state."""
     return req.app.state.runner
 
 
-def get_runner_ws(ws: WebSocket) -> KimiCLIRunner:
-    """Get the KimiCLIRunner from the FastAPI app state (for WebSocket routes)."""
+def get_runner_ws(ws: WebSocket) -> ConsiliumCLIRunner:
+    """Get the ConsiliumCLIRunner from the FastAPI app state (for WebSocket routes)."""
     return ws.app.state.runner
 
 
 def get_editable_session(
     session_id: UUID,
-    runner: KimiCLIRunner,
+    runner: ConsiliumCLIRunner,
 ) -> JointSession:
     """Get a session and verify it's not busy."""
     session = load_session_by_id(session_id)
@@ -247,7 +247,7 @@ async def replay_history(ws: WebSocket, session_dir: Path) -> None:
 
 @router.get("/", summary="List all sessions")
 async def list_sessions(
-    runner: KimiCLIRunner = Depends(get_runner),
+    runner: ConsiliumCLIRunner = Depends(get_runner),
     limit: int = 100,
     offset: int = 0,
     q: str | None = None,
@@ -284,7 +284,7 @@ async def list_sessions(
 @router.get("/{session_id}", summary="Get session")
 async def get_session(
     session_id: UUID,
-    runner: KimiCLIRunner = Depends(get_runner),
+    runner: ConsiliumCLIRunner = Depends(get_runner),
 ) -> Session | None:
     """Get a session by ID."""
     session = load_session_by_id(session_id)
@@ -331,7 +331,7 @@ async def create_session(request: CreateSessionRequest | None = None) -> Session
         work_dir = KaosPath.unsafe_from_local_path(work_dir_path)
     else:
         work_dir = KaosPath.unsafe_from_local_path(Path.home())
-    consilium_session = await KimiCLISession.create(work_dir=work_dir)
+    consilium_session = await ConsiliumCLISession.create(work_dir=work_dir)
     context_file = consilium_session.dir / "context.jsonl"
     invalidate_sessions_cache()
     invalidate_work_dirs_cache()
@@ -379,7 +379,7 @@ class UploadSessionFileResponse(BaseModel):
 async def upload_session_file(
     session_id: UUID,
     file: UploadFile,
-    runner: KimiCLIRunner = Depends(get_runner),
+    runner: ConsiliumCLIRunner = Depends(get_runner),
 ) -> UploadSessionFileResponse:
     """Upload a file to a session."""
     session = get_editable_session(session_id, runner)
@@ -548,8 +548,8 @@ async def get_session_file(
 
 def _update_last_session_id(session: JointSession) -> None:
     """Update last_session_id for the session's work directory."""
-    kimi_session = session.consilium_session
-    work_dir = kimi_session.work_dir
+    consilium_session = session.consilium_session
+    work_dir = consilium_session.work_dir
 
     metadata = load_metadata()
     work_dir_meta = metadata.get_work_dir_meta(work_dir)
@@ -557,12 +557,12 @@ def _update_last_session_id(session: JointSession) -> None:
     if work_dir_meta is None:
         work_dir_meta = metadata.new_work_dir_meta(work_dir)
 
-    work_dir_meta.last_session_id = kimi_session.id
+    work_dir_meta.last_session_id = consilium_session.id
     save_metadata(metadata)
 
 
 @router.delete("/{session_id}", summary="Delete a session")
-async def delete_session(session_id: UUID, runner: KimiCLIRunner = Depends(get_runner)) -> None:
+async def delete_session(session_id: UUID, runner: ConsiliumCLIRunner = Depends(get_runner)) -> None:
     """Delete a session."""
     session = get_editable_session(session_id, runner)
     session_process = runner.get_session(session_id)
@@ -586,7 +586,7 @@ async def delete_session(session_id: UUID, runner: KimiCLIRunner = Depends(get_r
 async def update_session(
     session_id: UUID,
     request: UpdateSessionRequest,
-    runner: KimiCLIRunner = Depends(get_runner),
+    runner: ConsiliumCLIRunner = Depends(get_runner),
 ) -> Session:
     """Update a session (e.g., rename title or archive/unarchive)."""
     from consilium.session_state import load_session_state, save_session_state
@@ -684,7 +684,7 @@ def extract_first_turn_from_wire(session_dir: Path) -> tuple[str, str] | None:
 async def fork_session_endpoint(
     session_id: UUID,
     request: ForkSessionRequest,
-    runner: KimiCLIRunner = Depends(get_runner),
+    runner: ConsiliumCLIRunner = Depends(get_runner),
 ) -> Session:
     """Fork a session, creating a new session with history up to the specified turn.
 
@@ -749,7 +749,7 @@ async def fork_session_endpoint(
 async def generate_session_title(
     session_id: UUID,
     request: GenerateTitleRequest | None = None,
-    runner: KimiCLIRunner = Depends(get_runner),
+    runner: ConsiliumCLIRunner = Depends(get_runner),
 ) -> GenerateTitleResponse:
     """Generate a concise session title using AI based on the first conversation turn.
 
@@ -883,7 +883,7 @@ Title:"""
 async def session_stream(
     session_id: UUID,
     websocket: WebSocket,
-    runner: KimiCLIRunner = Depends(get_runner_ws),
+    runner: ConsiliumCLIRunner = Depends(get_runner_ws),
 ) -> None:
     """WebSocket stream for a session.
 
@@ -1102,7 +1102,7 @@ async def get_work_dirs() -> list[str]:
 
 @work_dirs_router.get("/startup", summary="Get the startup directory")
 async def get_startup_dir(request: Request) -> str:
-    """Get the directory where kimi web was started."""
+    """Get the directory where consilium web was started."""
     return request.app.state.startup_dir
 
 

@@ -5,8 +5,8 @@ status: implemented
 dependencies:
   - phase-01
 files_involved:
-  - src/kimi_cli/think/
-  - src/kimi_cli/think/slash_commands.py
+  - src/consilium/think/
+  - src/consilium/think/slash_commands.py
 ---
 
 **Goal:** A mutable-history REPL for speculative reasoning, stored separately from upstream sessions.
@@ -14,7 +14,7 @@ files_involved:
 ### Data Model
 
 ```python
-# src/kimi_cli/think/models.py
+# src/consilium/think/models.py
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal
@@ -42,33 +42,33 @@ class ThinkSession:
 
 ### Storage Format (JSONL)
 
-Path: `~/.kimi/think_sessions/{session_id}.jsonl`
+Path: `~/.consilium/think_sessions/{session_id}.jsonl`
 
 Each line is a JSON object representing one `ThinkMessage`. The first line is always the system message.
 
-Checkpoints: `~/.kimi/think_sessions/{session_id}/checkpoints/{name}.json` — full `ThinkSession` serialized.
+Checkpoints: `~/.consilium/think_sessions/{session_id}/checkpoints/{name}.json` — full `ThinkSession` serialized.
 
 ### Implementation Steps
 
-#### Step 2.1: Create `src/kimi_cli/think/` package
+#### Step 2.1: Create `src/consilium/think/` package
 
 Files to create:
-- `src/kimi_cli/think/__init__.py`
-- `src/kimi_cli/think/models.py` — dataclasses above
-- `src/kimi_cli/think/storage.py` — JSONL load/save
-- `src/kimi_cli/think/history.py` — CRUD operations
-- `src/kimi_cli/think/context.py` — assemble active context for API
-- `src/kimi_cli/think/repl.py` — Think mode REPL loop
+- `src/consilium/think/__init__.py`
+- `src/consilium/think/models.py` — dataclasses above
+- `src/consilium/think/storage.py` — JSONL load/save
+- `src/consilium/think/history.py` — CRUD operations
+- `src/consilium/think/context.py` — assemble active context for API
+- `src/consilium/think/repl.py` — Think mode REPL loop
 
 #### Step 2.2: Implement JSONL storage
 
 ```python
-# src/kimi_cli/think/storage.py
+# src/consilium/think/storage.py
 import json
 from pathlib import Path
 from .models import ThinkSession, ThinkMessage
 
-THINK_DIR = Path.home() / ".kimi" / "think_sessions"
+THINK_DIR = Path.home() / ".consilium" / "think_sessions"
 
 def save_session(session: ThinkSession) -> None:
     path = THINK_DIR / f"{session.id}.jsonl"
@@ -105,7 +105,7 @@ def list_sessions() -> list[tuple[str, datetime]]:
 #### Step 2.3: Implement history CRUD
 
 ```python
-# src/kimi_cli/think/history.py
+# src/consilium/think/history.py
 from .models import ThinkSession, ThinkMessage
 
 class HistoryManager:
@@ -145,7 +145,7 @@ class HistoryManager:
 #### Step 2.4: Implement context assembly
 
 ```python
-# src/kimi_cli/think/context.py
+# src/consilium/think/context.py
 from kosong.message import Message, TextPart
 from .models import ThinkSession
 
@@ -169,7 +169,7 @@ def assemble_context(session: ThinkSession, budget_tokens: int | None = None) ->
 #### Step 2.5: Implement REPL loop
 
 ```python
-# src/kimi_cli/think/repl.py
+# src/consilium/think/repl.py
 async def think_repl(
     session: ThinkSession,
     llm: LLM,
@@ -215,7 +215,7 @@ async def call_llm(messages: list[Message], llm: LLM, config: Config) -> str:
 
 #### Step 2.6: Wire CLI entry points
 
-**File:** `src/kimi_cli/cli/__init__.py`
+**File:** `src/consilium/cli/__init__.py`
 
 Modify the main `kimi` command to default to Think mode. Add explicit subcommands:
 
@@ -256,7 +256,7 @@ else:
 #### Step 2.7: Implement `$EDITOR` integration
 
 ```python
-# src/kimi_cli/utils/editor.py
+# src/consilium/utils/editor.py
 import os
 import subprocess
 import tempfile

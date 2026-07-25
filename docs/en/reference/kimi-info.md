@@ -1,6 +1,6 @@
 # `kimi info` Subcommand
 
-`kimi info` displays version and protocol information for Kimi Code CLI.
+`kimi info` displays version and protocol information for Consilium CLI.
 
 ```sh
 kimi info [--json]
@@ -16,7 +16,7 @@ kimi info [--json]
 
 | Field | Description |
 |-------|-------------|
-| `kimi_cli_version` | Kimi Code CLI version number |
+| `consilium_version` | Consilium CLI version number |
 | `agent_spec_versions` | List of supported agent spec versions |
 | `wire_protocol_version` | Wire protocol version |
 | `python_version` | Python runtime version |
@@ -27,7 +27,7 @@ kimi info [--json]
 
 ```sh
 $ kimi info
-kimi-cli version: 1.20.0
+consilium version: 1.20.0
 agent spec versions: 1
 wire protocol: 1.10
 python version: 3.13.1
@@ -37,5 +37,5 @@ python version: 3.13.1
 
 ```sh
 $ kimi info --json
-{"kimi_cli_version": "1.20.0", "agent_spec_versions": ["1"], "wire_protocol_version": "1.10", "python_version": "3.13.1"}
+{"consilium_version": "1.20.0", "agent_spec_versions": ["1"], "wire_protocol_version": "1.10", "python_version": "3.13.1"}
 ```

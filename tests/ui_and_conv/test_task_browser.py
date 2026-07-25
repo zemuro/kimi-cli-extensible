@@ -9,19 +9,19 @@ from kosong.tooling.empty import EmptyToolset
 from consilium.background import TaskRuntime, TaskSpec, TaskStatus
 from consilium.soul.agent import Agent, Runtime
 from consilium.soul.context import Context
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.ui.shell import task_browser as task_browser_module
 from consilium.ui.shell.task_browser import TaskBrowserApp, TaskBrowserModel
 
 
-def _make_soul(runtime: Runtime, tmp_path: Path) -> KimiSoul:
+def _make_soul(runtime: Runtime, tmp_path: Path) -> ConsiliumSoul:
     agent = Agent(
         name="Test Agent",
         system_prompt="Test system prompt.",
         toolset=EmptyToolset(),
         runtime=runtime,
     )
-    return KimiSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
+    return ConsiliumSoul(agent, context=Context(file_backend=tmp_path / "history.jsonl"))
 
 
 def _write_task(

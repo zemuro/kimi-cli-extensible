@@ -65,7 +65,7 @@ def _detect_remote() -> str:
 
 def _detect_sha() -> str:
     """Return the build SHA from env or git, empty string if unavailable."""
-    if sha := os.environ.get("KIMI_BUILD_SHA", "").strip():
+    if sha := os.environ.get("CONSILIUM_BUILD_SHA", "").strip():
         return sha
 
     try:

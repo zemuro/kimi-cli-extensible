@@ -5,7 +5,7 @@ status: implemented
 dependencies:
   []
 files_involved:
-  - src/kimi_cli/token_tracker.py
+  - src/consilium/token_tracker.py
 ---
 
 **Goal:** Global token usage logging and a `/token-usage` slash command.
@@ -20,7 +20,7 @@ The infrastructure already exists:
 ### Data Model
 
 ```python
-# src/kimi_cli/token_tracker.py
+# src/consilium/token_tracker.py
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -39,7 +39,7 @@ class TokenTracker:
     """Append-only CSV logger for token usage across all sessions."""
 
     CSV_HEADER = "timestamp,session_id,turn_id,model,tokens_in,tokens_out,active_context\n"
-    LOG_DIR: Path = Path.home() / ".kimi" / "token_log"
+    LOG_DIR: Path = Path.home() / ".consilium" / "token_log"
 
     def __init__(self) -> None:
         self.LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -66,7 +66,7 @@ class TokenTracker:
 
 ### Implementation Steps
 
-#### Step 1.1: Create `src/kimi_cli/token_tracker.py`
+#### Step 1.1: Create `src/consilium/token_tracker.py`
 
 - Implement `TokenLogEntry` dataclass
 - Implement `TokenTracker` with CSV append logic
@@ -76,7 +76,7 @@ class TokenTracker:
 
 #### Step 1.2: Hook into `KimiSoul._turn()`
 
-**File:** `src/kimi_cli/soul/kimisoul.py`
+**File:** `src/consilium/soul/kimisoul.py`
 
 Locate the section after `_kosong_step_with_retry()` returns (around line 1119). The code already captures:
 ```python
@@ -87,7 +87,7 @@ usage = result.usage
 After this block, add:
 ```python
 if usage and self._runtime.llm:
-    from kimi_cli.token_tracker import TokenLogEntry, TokenTracker
+    from consilium.token_tracker import TokenLogEntry, TokenTracker
     tracker = TokenTracker()
     tracker.log(TokenLogEntry(
         timestamp=datetime.now(timezone.utc),
@@ -104,14 +104,14 @@ if usage and self._runtime.llm:
 
 #### Step 1.3: Add `/token-usage` slash command
 
-**File:** `src/kimi_cli/ui/shell/slash.py`
+**File:** `src/consilium/ui/shell/slash.py`
 
 Register a new slash command handler:
 ```python
 @slash_command("/token-usage")
 async def slash_token_usage(soul: KimiSoul, args: str) -> None:
     """Show token usage summary for the current session."""
-    from kimi_cli.token_tracker import TokenTracker
+    from consilium.token_tracker import TokenTracker
     tracker = TokenTracker()
     summary = tracker.get_session_summary(soul._runtime.session.id)
     # Format and print summary via soul's output channel
@@ -121,7 +121,7 @@ The soul object has access to `soul._runtime.session.id` for the current session
 
 #### Step 1.4: Add `--budget-tokens` CLI flag
 
-**File:** `src/kimi_cli/cli/__init__.py`
+**File:** `src/consilium/cli/__init__.py`
 
 Add after the existing `--max-tokens` flag:
 ```python
@@ -136,11 +136,11 @@ budget_tokens: Annotated[
 
 Pass through to `KimiCLI.create()` in the `instance = await KimiCLI.create(...)` call.
 
-**File:** `src/kimi_cli/app.py`
+**File:** `src/consilium/app.py`
 
 Add `budget_tokens: int | None = None` to `KimiCLI.create()` signature. Store on the `KimiCLI` instance or `Runtime` config.
 
-**File:** `src/kimi_cli/soul/kimisoul.py`
+**File:** `src/consilium/soul/kimisoul.py`
 
 In `_turn()`, before calling the LLM, check if budget is exceeded:
 ```python

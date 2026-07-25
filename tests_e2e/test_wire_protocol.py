@@ -86,8 +86,8 @@ def test_initialize_handshake(tmp_path) -> None:
                             "aliases": [],
                         },
                         {
-                            "name": "skill:kimi-cli-help",
-                            "description": "Answer Kimi Code CLI usage, configuration, and troubleshooting questions. Use when user asks about Kimi Code CLI installation, setup, configuration, slash commands, keyboard shortcuts, MCP integration, providers, environment variables, how something works internally, or any questions about Kimi Code CLI itself.",
+                            "name": "skill:consilium-help",
+                            "description": "Answer Consilium CLI usage, configuration, and troubleshooting questions. Use when user asks about Consilium CLI installation, setup, configuration, slash commands, keyboard shortcuts, MCP integration, providers, environment variables, how something works internally, or any questions about Consilium CLI itself.",
                             "aliases": [],
                         },
                         {
@@ -196,8 +196,8 @@ def test_initialize_external_tool_conflict(tmp_path) -> None:
                             "aliases": [],
                         },
                         {
-                            "name": "skill:kimi-cli-help",
-                            "description": "Answer Kimi Code CLI usage, configuration, and troubleshooting questions. Use when user asks about Kimi Code CLI installation, setup, configuration, slash commands, keyboard shortcuts, MCP integration, providers, environment variables, how something works internally, or any questions about Kimi Code CLI itself.",
+                            "name": "skill:consilium-help",
+                            "description": "Answer Consilium CLI usage, configuration, and troubleshooting questions. Use when user asks about Consilium CLI installation, setup, configuration, slash commands, keyboard shortcuts, MCP integration, providers, environment variables, how something works internally, or any questions about Consilium CLI itself.",
                             "aliases": [],
                         },
                         {

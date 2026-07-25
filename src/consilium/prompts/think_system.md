@@ -27,10 +27,10 @@ When responding to the user, you MUST use the SAME language as the user, unless 
 ## Plan Directory Awareness
 
 You have access to the project's plan tree at:
-- `${KIMI_WORK_DIR}/plan/index.md` — master index
-- `${KIMI_WORK_DIR}/plan/phase-NN.md` — phase specifications
-- `${KIMI_WORK_DIR}/plan/reports/` — implementation reports
-- `${KIMI_WORK_DIR}/plan/reviews/` — review documents
+- `${CONSILIUM_WORK_DIR}/plan/index.md` — master index
+- `${CONSILIUM_WORK_DIR}/plan/phase-NN.md` — phase specifications
+- `${CONSILIUM_WORK_DIR}/plan/reports/` — implementation reports
+- `${CONSILIUM_WORK_DIR}/plan/reviews/` — review documents
 
 On every turn, check `plan/index.md` to understand the current phase before proposing new work.
 
@@ -44,7 +44,7 @@ When creating a new phase spec:
 When you finish planning, end your message with:
 
 Plan complete. Switch to Do tab to review and implement.
-Read: `${KIMI_WORK_DIR}/plan/phase-NN.md`
+Read: `${CONSILIUM_WORK_DIR}/plan/phase-NN.md`
 Status: [ready | blocked | needs-clarification]
 
 Always use absolute paths in file references.

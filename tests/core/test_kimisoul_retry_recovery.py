@@ -24,7 +24,7 @@ from consilium.llm import LLM
 from consilium.soul import run_soul
 from consilium.soul.agent import Agent, Runtime
 from consilium.soul.context import Context
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.utils.aioqueue import QueueShutDown
 from consilium.wire import Wire
 from consilium.wire.types import StepBegin, StepRetry
@@ -300,7 +300,7 @@ def _runtime_with_llm(runtime: Runtime, llm: LLM) -> Runtime:
     )
 
 
-def _make_soul(runtime: Runtime, llm: LLM, tmp_path: Path) -> tuple[KimiSoul, Context]:
+def _make_soul(runtime: Runtime, llm: LLM, tmp_path: Path) -> tuple[ConsiliumSoul, Context]:
     agent = Agent(
         name="Retry Test Agent",
         system_prompt="Retry test prompt.",
@@ -308,7 +308,7 @@ def _make_soul(runtime: Runtime, llm: LLM, tmp_path: Path) -> tuple[KimiSoul, Co
         runtime=_runtime_with_llm(runtime, llm),
     )
     context = Context(file_backend=tmp_path / "history.jsonl")
-    return KimiSoul(agent, context=context), context
+    return ConsiliumSoul(agent, context=context), context
 
 
 async def _drain_ui_messages(wire: Wire) -> None:
@@ -335,7 +335,7 @@ async def test_step_retry_recovers_retryable_provider(runtime: Runtime, tmp_path
     provider = RecoveringSequenceProvider()
     llm = LLM(
         chat_provider=provider,
-        max_context_size=100_000,
+        max_context_size=1_000_000,
         capabilities=set(),
     )
     soul, context = _make_soul(runtime, llm, tmp_path)
@@ -355,7 +355,7 @@ async def test_step_connection_error_recovery_only_retries_once(
     provider = AlwaysConnectionErrorProvider()
     llm = LLM(
         chat_provider=provider,
-        max_context_size=100_000,
+        max_context_size=1_000_000,
         capabilities=set(),
     )
     soul, _ = _make_soul(runtime, llm, tmp_path)
@@ -376,7 +376,7 @@ async def test_step_status_error_still_uses_tenacity_retries(
     provider = StatusErrorThenSuccessProvider(status_code=status_code)
     llm = LLM(
         chat_provider=provider,
-        max_context_size=100_000,
+        max_context_size=1_000_000,
         capabilities=set(),
     )
     soul, context = _make_soul(runtime, llm, tmp_path)
@@ -394,7 +394,7 @@ async def test_step_retry_event_after_partial_stream(runtime: Runtime, tmp_path:
     provider = PartialStreamThenStatusErrorProvider(status_code=429)
     llm = LLM(
         chat_provider=provider,
-        max_context_size=100_000,
+        max_context_size=1_000_000,
         capabilities=set(),
     )
     soul, context = _make_soul(runtime, llm, tmp_path)
@@ -432,7 +432,7 @@ async def test_step_non_retryable_provider_keeps_tenacity_connection_retries(
     provider = NonRetryableConnectionProvider()
     llm = LLM(
         chat_provider=provider,
-        max_context_size=100_000,
+        max_context_size=1_000_000,
         capabilities=set(),
     )
     soul, context = _make_soul(runtime, llm, tmp_path)
@@ -458,7 +458,7 @@ async def test_step_connection_recovery_then_401_triggers_oauth_refresh(
     oauth_model = LLMModel(
         provider="managed:kimi-code",
         model="kimi-for-coding",
-        max_context_size=100_000,
+        max_context_size=1_000_000,
     )
     runtime.config.providers[oauth_model.provider] = oauth_provider
     runtime.config.models["kimi-code/kimi-for-coding"] = oauth_model
@@ -466,7 +466,7 @@ async def test_step_connection_recovery_then_401_triggers_oauth_refresh(
     provider = ConnectionThen401ThenSuccessProvider()
     llm = LLM(
         chat_provider=provider,
-        max_context_size=100_000,
+        max_context_size=1_000_000,
         capabilities=set(),
         model_config=oauth_model,
         provider_config=oauth_provider,

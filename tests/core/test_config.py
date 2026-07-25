@@ -54,7 +54,7 @@ def test_default_config_dump():
             "notifications": {
                 "claim_stale_after_ms": 15000,
             },
-            "services": {"moonshot_search": None, "moonshot_fetch": None},
+            "services": {"web_search": None, "web_fetch": None},
             "mcp": {"client": {"tool_call_timeout_ms": 60000}},
             "hooks": [],
             "merge_all_available_skills": True,
@@ -62,7 +62,7 @@ def test_default_config_dump():
             "system_prompt_overrides": {},
             "budget_tokens": None,
             "think": {
-                "default_temperature": 0.7,
+                "default_temperature": 0.6,
                 "max_context_tokens": 200000,
                 "enable_checkpoints": True,
                 "python": {
@@ -73,7 +73,7 @@ def test_default_config_dump():
                     "auto_approve": False,
                 },
                 "compaction_enabled": True,
-                "compaction_threshold": 0.75,
+                "compaction_threshold": 0.85,
                 "compaction_preserve_messages": 6,
             },
             "do": {
@@ -93,15 +93,14 @@ def test_default_config_dump():
             },
             "subagents": {
                 "enabled": True,
-                "timeout_seconds": 300,
+                "timeout_seconds": 900,
                 "default_type": "explore",
                 "budget": {
                     "max_tokens_per_task": 80000,
                     "max_tool_calls_per_task": 100,
                     "warn_tokens_ratio": 0.8,
                     "warn_tool_calls_ratio": 0.8,
-                },
-            },
+                }, "overrides": {}},
             "telemetry": True,
             "skip_afk_prompt_injection": False,
         }

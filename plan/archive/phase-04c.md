@@ -5,8 +5,8 @@ status: implemented
 dependencies:
   - phase-04b
 files_involved:
-  - src/kimi_cli/think/subagents.py
-  - src/kimi_cli/do/review_gate.py
+  - src/consilium/think/subagents.py
+  - src/consilium/do/review_gate.py
 ---
 
 **Status: PLANNED.**
@@ -54,12 +54,12 @@ Think: "Found 3 thread-local sites.
 
 | Class | File | Status |
 |-------|------|--------|
-| `SubagentBuilder` | `src/kimi_cli/subagents/builder.py` | ✅ Exists |
-| `ForegroundSubagentRunner` | `src/kimi_cli/subagents/runner.py` | ✅ Exists |
-| `BackgroundAgentRunner` | `src/kimi_cli/background/agent_runner.py` | ✅ Exists |
-| `BackgroundTaskManager` | `src/kimi_cli/background/manager.py` | ✅ Exists |
-| `SubagentStore` | `src/kimi_cli/subagents/store.py` | ✅ Exists |
-| `ForegroundRunRequest` | `src/kimi_cli/subagents/runner.py` | ✅ Exists |
+| `SubagentBuilder` | `src/consilium/subagents/builder.py` | ✅ Exists |
+| `ForegroundSubagentRunner` | `src/consilium/subagents/runner.py` | ✅ Exists |
+| `BackgroundAgentRunner` | `src/consilium/background/agent_runner.py` | ✅ Exists |
+| `BackgroundTaskManager` | `src/consilium/background/manager.py` | ✅ Exists |
+| `SubagentStore` | `src/consilium/subagents/store.py` | ✅ Exists |
+| `ForegroundRunRequest` | `src/consilium/subagents/runner.py` | ✅ Exists |
 
 **Key correction:** `ForegroundRunRequest` field is `requested_type` (not `subagent_type`):
 
@@ -76,7 +76,7 @@ class ForegroundRunRequest:
 **Background task entry point:** Background agents are spawned via `BackgroundTaskManager.create_agent_task()`:
 
 ```python
-from kimi_cli.background.manager import BackgroundTaskManager
+from consilium.background.manager import BackgroundTaskManager
 
 view = background_tasks.create_agent_task(
     agent_id=agent_id,
@@ -89,13 +89,13 @@ view = background_tasks.create_agent_task(
 )
 ```
 
-**"explore" agent spec:** Confirmed at `src/kimi_cli/agents/default/explore.yaml`. Read-only toolset:
+**"explore" agent spec:** Confirmed at `src/consilium/agents/default/explore.yaml`. Read-only toolset:
 - `Shell`, `ReadFile`, `ReadMediaFile`, `Glob`, `Grep`, `SearchWeb`, `FetchURL`
 - Excludes: `Agent`, `AskUserQuestion`, `SetTodoList`, `WriteFile`, `StrReplaceFile`
 
 #### New module: `ThinkSubagentSpawner`
 
-**File:** `src/kimi_cli/think/subagent_spawner.py` — new module
+**File:** `src/consilium/think/subagent_spawner.py` — new module
 
 ```python
 """Thin wrapper for spawning subagents from Think mode.
@@ -120,7 +120,7 @@ class ThinkSubagentSpawner:
         Caps prevent runaway exploration, duplicate work, and token budget
         exhaustion on deep research tasks.
         """
-        from kimi_cli.subagents.runner import ForegroundSubagentRunner, ForegroundRunRequest
+        from consilium.subagents.runner import ForegroundSubagentRunner, ForegroundRunRequest
 
         runner = ForegroundSubagentRunner(self._runtime)
         req = ForegroundRunRequest(
@@ -147,7 +147,7 @@ class ThinkSubagentSpawner:
         Hard caps prevent token budget exhaustion when investigating
         multiple angles simultaneously.
         """
-        from kimi_cli.subagents.runner import ForegroundSubagentRunner, ForegroundRunRequest
+        from consilium.subagents.runner import ForegroundSubagentRunner, ForegroundRunRequest
         req = ForegroundRunRequest(
             description="Think explore",
             prompt=prompt,
@@ -166,7 +166,7 @@ class ThinkSubagentSpawner:
         for notifications. This is significantly more complex than foreground.
         Consider deferring /investigate until /explore is proven working.
         """
-        from kimi_cli.background.manager import BackgroundTaskManager
+        from consilium.background.manager import BackgroundTaskManager
 
         views = []
         for angle in angles:
@@ -189,7 +189,7 @@ class ThinkSubagentSpawner:
 
 #### ThinkSoul integration
 
-**File:** `src/kimi_cli/think/soul.py` — modifications to `ThinkSoul`
+**File:** `src/consilium/think/soul.py` — modifications to `ThinkSoul`
 
 ```python
 class ThinkSoul:
@@ -222,7 +222,7 @@ class ThinkSoul:
 
 #### New slash commands
 
-**File:** `src/kimi_cli/think/slash.py` — additions
+**File:** `src/consilium/think/slash.py` — additions
 
 **⚠️ Correction:** Think slash commands receive `(history: HistoryManager, session: ThinkSession, args: str)`, not `(soul: ThinkSoul, args: str)`.
 
@@ -262,7 +262,7 @@ async def slash_investigate(history: HistoryManager, session: ThinkSession, args
 **ThinkSoul registry for slash command access:**
 
 ```python
-# src/kimi_cli/think/soul_registry.py — new module
+# src/consilium/think/soul_registry.py — new module
 import weakref
 let's 
 _think_souls: dict[str, weakref.ref[ThinkSoul]] = {}
@@ -284,7 +284,7 @@ ThinkSoul registers itself on init and unregisters on cleanup:
 class ThinkSoul:
     def __init__(self, session_id: str, ...):
         # ... existing ...
-        from kimi_cli.think.soul_registry import register_think_soul
+        from consilium.think.soul_registry import register_think_soul
         register_think_soul(session_id, self)
 ```
 
@@ -292,7 +292,7 @@ Slash commands use the registry:
 
 ```python
 def _get_think_soul_from_session(session: ThinkSession) -> ThinkSoul:
-    from kimi_cli.think.soul_registry import get_think_soul
+    from consilium.think.soul_registry import get_think_soul
     soul = get_think_soul(session.id)
     if soul is None:
         raise RuntimeError(f"ThinkSoul not found for session {session.id}")
@@ -329,7 +329,7 @@ max_depth = 2              # Max subagent recursion (subagent spawning subagent)
 | **Thin wrapper, not full KimiSoul port** | ThinkSoul stays lightweight. Only the spawner touches subagent infrastructure. |
 | **Foreground = `/explore`, Background = `/investigate`** | Simple mental model: explore goes deep, investigate goes wide. |
 | **Results injected as assistant messages** | Natural fit for Think's mutable history. Subagent findings become first-class context. |
-| **Subagent type = "explore"** | Reuses existing explore spec (read-only, fast). Must verify spec exists in `src/kimi_cli/agents/`. Can add custom "think_deep" type later. |
+| **Subagent type = "explore"** | Reuses existing explore spec (read-only, fast). Must verify spec exists in `src/consilium/agents/`. Can add custom "think_deep" type later. |
 | **Audit before implementation** | Subagent API surface is assumed from patterns, not verified. Prevents wasted effort on wrong abstractions. |
 
 ---
@@ -377,29 +377,29 @@ User sees report:
 
 #### Externalized agent spec
 
-**File:** `src/kimi_cli/agents/default/plan_reviewer.yaml` — new
+**File:** `src/consilium/agents/default/plan_reviewer.yaml` — new
 
 ```yaml
 agent:
   name: "plan-reviewer"
   system_prompt_path: ./plan_review_system.md
   tools:
-    - "kimi_cli.tools.read:ReadFile"
-    - "kimi_cli.tools.search:Grep"
-    - "kimi_cli.tools.search:Glob"
-    - "kimi_cli.tools.shell:Shell"
-    - "kimi_cli.tools.web:FetchURL"
-    - "kimi_cli.tools.web:SearchWeb"
+    - "consilium.tools.read:ReadFile"
+    - "consilium.tools.search:Grep"
+    - "consilium.tools.search:Glob"
+    - "consilium.tools.shell:Shell"
+    - "consilium.tools.web:FetchURL"
+    - "consilium.tools.web:SearchWeb"
   exclude_tools:
-    - "kimi_cli.tools.shell:Bash"
-    - "kimi_cli.tools.file:WriteFile"
-    - "kimi_cli.tools.file:PatchFile"
-    - "kimi_cli.tools.agent:Agent"
-    - "kimi_cli.tools.multiagent:Task"
+    - "consilium.tools.shell:Bash"
+    - "consilium.tools.file:WriteFile"
+    - "consilium.tools.file:PatchFile"
+    - "consilium.tools.agent:Agent"
+    - "consilium.tools.multiagent:Task"
   max_steps_per_turn: 5
 ```
 
-**File:** `src/kimi_cli/prompts/plan_review_system.md` — new
+**File:** `src/consilium/prompts/plan_review_system.md` — new
 
 ```markdown
 # Plan Review System Prompt
@@ -427,7 +427,7 @@ Summary: ...
 4. Verify no conflicting changes exist
 ```
 
-**File:** `src/kimi_cli/prompts/plan_review_user.md` — template
+**File:** `src/consilium/prompts/plan_review_user.md` — template
 
 ```markdown
 Plan to review:
@@ -441,7 +441,7 @@ Git status: {{git_status}}
 
 #### Implementation
 
-**File:** `src/kimi_cli/do/plan_review.py` — new module
+**File:** `src/consilium/do/plan_review.py` — new module
 
 ```python
 import re
@@ -488,7 +488,7 @@ class PlanReviewer:
 
     async def review(self, plan_text: str) -> PlanReviewReport:
         """Spawn a foreground plan-reviewer subagent and return parsed report."""
-        from kimi_cli.subagents.runner import ForegroundSubagentRunner, ForegroundRunRequest
+        from consilium.subagents.runner import ForegroundSubagentRunner, ForegroundRunRequest
 
         runner = ForegroundSubagentRunner(self._runtime)
         req = ForegroundRunRequest(
@@ -538,7 +538,7 @@ class PlanReviewer:
 
 **⚠️ Control flow correction:** The review gate must live in the **execution path**, not `DoSession.start()`.
 
-**File:** `src/kimi_cli/do/session.py` — modifications
+**File:** `src/consilium/do/session.py` — modifications
 
 ```python
 class DoSession:
@@ -583,7 +583,7 @@ class DoSession:
 Instead of wrapping `soul.run()` at every call site (shell UI, ACP, wire, print mode), add a hook point inside `KimiSoul.run()`:
 
 ```python
-# src/kimi_cli/soul/kimisoul.py — additions to KimiSoul
+# src/consilium/soul/kimisoul.py — additions to KimiSoul
 
 class KimiSoul:
     def __init__(self, ...):
@@ -614,7 +614,7 @@ class KimiSoul:
 **DoSession registers the hook during initialization:**
 
 ```python
-# src/kimi_cli/do/session.py — in DoSession.__init__() or start()
+# src/consilium/do/session.py — in DoSession.__init__() or start()
 
 async def _plan_review_hook(self, user_input: Message) -> bool:
     """Pre-run hook: pause for plan review if seeded from Think."""
@@ -645,8 +645,8 @@ self.soul.register_pre_run_hook(self._plan_review_hook)
 **New slash commands for Do mode:**
 
 ```python
-# src/kimi_cli/soul/slash.py  (Do-mode slash commands)
-from kimi_cli.do.registry import get_do_session
+# src/consilium/soul/slash.py  (Do-mode slash commands)
+from consilium.do.registry import get_do_session
 
 async def slash_approve(soul: KimiSoul, args: str) -> None:
     """/approve — Approve pending plan review and proceed with execution."""
@@ -674,7 +674,7 @@ async def slash_reject(soul: KimiSoul, args: str) -> None:
 
 **Wire event for review report:**
 
-**File:** `src/kimi_cli/wire/types.py` — additions
+**File:** `src/consilium/wire/types.py` — additions
 
 ```python
 class PlanReviewEvent(BaseModel):
@@ -725,7 +725,7 @@ plan_review_model = null  # Optional: override model for review (e.g., "kimi-for
 plan_review_system_prompt_path = null  # Optional: custom system prompt
 ```
 
-**File:** `src/kimi_cli/config.py` — additions
+**File:** `src/consilium/config.py` — additions
 
 ```python
 class PlanReviewConfig(BaseModel):

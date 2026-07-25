@@ -1,5 +1,5 @@
 ---
-plan_id: kimi-cli-extensible
+plan_id: consilium-extensible
 created: 2026-05-30
 last_updated: 2026-06-02
 current_phase: phase-13
@@ -8,7 +8,7 @@ overall_status: 20 / 26 implemented, 2 planned, 4 pending
 
 # Plan: Kimi-CLI Extensible Fork
 
-Phased implementation of strategic features on top of the MoonshotAI/kimi-cli upstream.
+Phased implementation of strategic features on top of the MoonshotAI/consilium upstream.
 
 ## Phase Status Table
 
@@ -114,7 +114,7 @@ The following deferred features have been consolidated into new phases (see phas
 
 → **Phase 16** — Local token quota implemented; dollar conversion remains low priority.
 
-### Kimi Code Platform Quota Overlay
+### Consilium Platform Quota Overlay
 
 → **Phase 16** — Backend endpoint for extension quota overlay. Platform API integration optional.
 
@@ -148,7 +148,7 @@ The following deferred features have been consolidated into new phases (see phas
 
 11. **Plan synthesis quality:** LLM-generated plans may be incomplete or have incorrect dependencies. Should we add a `/plan review` subcommand (distinct from Do-mode audit) where Think mode validates the synthesized plan before `/push-to-do`? Consider adding this to Phase 11 or as a Phase 11.5 enhancement.
 
-12. **Dispatch file format:** Phase 11 specifies `~/.kimi/dispatch.json` as the handoff mechanism. Should this use a more structured format (e.g., SQLite table or a queue directory) to support multiple pending dispatches? For now, single-file dispatch is sufficient; scale later if needed.
+12. **Dispatch file format:** Phase 11 specifies `~/.consilium/dispatch.json` as the handoff mechanism. Should this use a more structured format (e.g., SQLite table or a queue directory) to support multiple pending dispatches? For now, single-file dispatch is sufficient; scale later if needed.
 
 13. **ADR versioning:** ADRs have `supersedes`/`superseded_by` fields. Should `/plan update` automatically chain ADRs when a decision changes, or is manual creation sufficient? Manual is simpler; automation can be added later.
 

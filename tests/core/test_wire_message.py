@@ -225,14 +225,14 @@ async def test_wire_message_serde():
 
     msg = PlanDisplay(
         content="## Plan\n\n1. Step one\n2. Step two",
-        file_path="/Users/test/.kimi/plans/iron-man-spider-man.md",
+        file_path="/Users/test/.consilium/plans/iron-man-spider-man.md",
     )
     assert serialize_wire_message(msg) == snapshot(
         {
             "type": "PlanDisplay",
             "payload": {
                 "content": "## Plan\n\n1. Step one\n2. Step two",
-                "file_path": "/Users/test/.kimi/plans/iron-man-spider-man.md",
+                "file_path": "/Users/test/.consilium/plans/iron-man-spider-man.md",
             },
         }
     )

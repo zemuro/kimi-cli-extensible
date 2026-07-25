@@ -106,7 +106,7 @@ def acp_share_dir(tmp_path: Path) -> Path:
     scripts_path = tmp_path / "scripts.json"
     scripts_path.write_text(json.dumps(scripts), encoding="utf-8")
 
-    trace_env = os.getenv("KIMI_SCRIPTED_ECHO_TRACE", "0")
+    trace_env = os.getenv("CONSILIUM_SCRIPTED_ECHO_TRACE", "0")
     config_data = {
         "default_model": "scripted",
         "models": {
@@ -122,8 +122,8 @@ def acp_share_dir(tmp_path: Path) -> Path:
                 "base_url": "",
                 "api_key": "",
                 "env": {
-                    "KIMI_SCRIPTED_ECHO_SCRIPTS": str(scripts_path),
-                    "KIMI_SCRIPTED_ECHO_TRACE": trace_env,
+                    "CONSILIUM_SCRIPTED_ECHO_SCRIPTS": str(scripts_path),
+                    "CONSILIUM_SCRIPTED_ECHO_TRACE": trace_env,
                 },
             }
         },
@@ -166,7 +166,7 @@ async def acp_client(
     test_client = ACPTestClient()
     env = {
         **os.environ,
-        "KIMI_SHARE_DIR": str(acp_share_dir),
+        "CONSILIUM_SHARE_DIR": str(acp_share_dir),
     }
 
     async with acp.spawn_agent_process(

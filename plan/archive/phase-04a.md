@@ -5,8 +5,8 @@ status: implemented
 dependencies:
   - phase-03
 files_involved:
-  - src/kimi_cli/think/python_runner.py
-  - src/kimi_cli/think/push.py
+  - src/consilium/think/python_runner.py
+  - src/consilium/think/push.py
 ---
 
 ### Architecture
@@ -36,7 +36,7 @@ Think mode becomes a first-class strategist. It runs as a **completely disjoint*
 
 ### 4.1 Python Execution Tool
 
-**File:** `src/kimi_cli/think/python_tool.py` — new module
+**File:** `src/consilium/think/python_tool.py` — new module
 
 Think mode gets a `run_python` tool. The LLM generates Python code; the tool executes it and returns output.
 
@@ -56,8 +56,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from kimi_cli.config import Config
-from kimi_cli.utils.logging import logger
+from consilium.config import Config
+from consilium.utils.logging import logger
 
 
 class PythonExecutionError(Exception):
@@ -155,9 +155,9 @@ class PythonTool:
         # Environment
         env = os.environ.copy()
         env["PYTHONIOENCODING"] = "utf-8"
-        env["KIMI_WORK_DIR"] = str(self.work_dir)
+        env["CONSILIUM_WORK_DIR"] = str(self.work_dir)
         if restricted:
-            env["KIMI_PYTHON_RESTRICTED"] = "1"
+            env["CONSILIUM_PYTHON_RESTRICTED"] = "1"
             # Prevent importing from arbitrary paths
             env["PYTHONPATH"] = str(self.work_dir)
             env["PYTHONNOUSERSITE"] = "1"
@@ -205,7 +205,7 @@ class PythonTool:
 import builtins
 import os
 _original_open = builtins.open
-_WORK_DIR = os.environ.get("KIMI_WORK_DIR", ".")
+_WORK_DIR = os.environ.get("CONSILIUM_WORK_DIR", ".")
 
 def _restricted_open(path, *args, **kwargs):
     abs_path = os.path.abspath(path)
@@ -246,13 +246,13 @@ except Exception:
 | `restricted` | Work dir only | Configurable | Blocked: `os`, `subprocess`, `socket`, network libs | All |
 | `sandboxed` | Seatbelt profile | Configurable | Same as restricted | macOS only |
 
-**File:** `src/kimi_cli/think/__init__.py` — modifications
+**File:** `src/consilium/think/__init__.py` — modifications
 
 Register `run_python` as a tool available to ThinkSoul:
 
 ```python
 # In ThinkSoul.__init__() or tool registration:
-from kimi_cli.think.python_tool import PythonTool
+from consilium.think.python_tool import PythonTool
 
 self._python_tool = PythonTool(
     work_dir=Path(session.work_dir),
@@ -327,11 +327,11 @@ Expose the new settings to the extension's config module so they can be passed a
 
 ### 4.3 Think → Do Bridge
 
-**⚠️ SUPERCEDED by §4d (Plan-Driven Think/Do Orchestration).** The original design below pushed raw conversation history via JSON outbox files. The current architecture (§4d) uses structured Markdown plan documents in `plan/index.md` with phased implementation, external memory, and bidirectional artifact exchange. The code in `src/kimi_cli/think/push.py` and the `--seed-from-think` flag remain for backward compatibility but are considered legacy.
+**⚠️ SUPERCEDED by §4d (Plan-Driven Think/Do Orchestration).** The original design below pushed raw conversation history via JSON outbox files. The current architecture (§4d) uses structured Markdown plan documents in `plan/index.md` with phased implementation, external memory, and bidirectional artifact exchange. The code in `src/consilium/think/push.py` and the `--seed-from-think` flag remain for backward compatibility but are considered legacy.
 
 **Concept:** Think produces plans, reviews, audit results. The user (or automation) pushes selected content into a Do session. Think continues independently.
 
-**File:** `src/kimi_cli/think/push.py` — new module
+**File:** `src/consilium/think/push.py` — new module
 
 ```python
 """Think → Do bridge: export Think history for Do session seeding."""
@@ -345,10 +345,10 @@ from typing import Any
 
 from kosong.message import Message
 
-from kimi_cli.think.models import ThinkMessage, ThinkSession
-from kimi_cli.think.storage import think_path
+from consilium.think.models import ThinkMessage, ThinkSession
+from consilium.think.storage import think_path
 
-OUTBOX_DIR = Path.home() / ".kimi" / "think_outbox"
+OUTBOX_DIR = Path.home() / ".consilium" / "think_outbox"
 
 
 def export_think_history(
@@ -393,7 +393,7 @@ def export_think_history(
     return seed_file
 ```
 
-**File:** `src/kimi_cli/think/slash.py` — additions (Think mode slash commands)
+**File:** `src/consilium/think/slash.py` — additions (Think mode slash commands)
 
 ```python
 @slash_command("/push-to-do")
@@ -406,7 +406,7 @@ async def slash_push_to_do(soul: ThinkSoul, args: str) -> None:
         /push-to-do 5-10    # Export messages 5 through 10
         /push-to-do -5      # Export last 5 messages
     """
-    from kimi_cli.think.push import export_think_history
+    from consilium.think.push import export_think_history
 
     think_session = soul._think_session
     turn_range = None
@@ -429,7 +429,7 @@ async def slash_push_to_do(soul: ThinkSoul, args: str) -> None:
     ))
 ```
 
-**File:** `src/kimi_cli/cli/__init__.py` — additions
+**File:** `src/consilium/cli/__init__.py` — additions
 
 Add `--seed-from-think` CLI flag:
 
@@ -443,14 +443,14 @@ seed_from_think: Annotated[
 ] = None,
 ```
 
-**File:** `src/kimi_cli/app.py` — modifications in `KimiCLI.create()`
+**File:** `src/consilium/app.py` — modifications in `KimiCLI.create()`
 
 When `do_mode=True` and `seed_from_think` is provided, pre-populate the context:
 
 ```python
 # After creating Context, before KimiSoul:
 if do_mode and seed_from_think:
-    from kimi_cli.think.push import OUTBOX_DIR
+    from consilium.think.push import OUTBOX_DIR
     seed_file = OUTBOX_DIR / f"{seed_from_think}.json"
     if seed_file.exists():
         seed_data = json.loads(seed_file.read_text(encoding="utf-8"))
@@ -459,7 +459,7 @@ if do_mode and seed_from_think:
         logger.info("Seeded Do context from Think session %s", seed_from_think)
 ```
 
-**File:** `src/kimi_cli/soul/kimisoul.py` — additions
+**File:** `src/consilium/soul/kimisoul.py` — additions
 
 Expose a wire command or slash command to receive pushed messages directly from the extension:
 
@@ -487,7 +487,7 @@ async def slash_inject(soul: KimiSoul, args: str) -> None:
 
 The web server (`kimi web`) is only started by explicit commands and is not available in wire/ACP/shell modes. The extension runs the CLI in wire mode (`kimi --wire`), so HTTP endpoints are unreachable.
 
-**Alternative:** The extension reads the journal file directly from disk at `~/.kimi/do_sessions/{session_id}/journal.jsonl`. No CLI changes needed.
+**Alternative:** The extension reads the journal file directly from disk at `~/.consilium/do_sessions/{session_id}/journal.jsonl`. No CLI changes needed.
 
 When the web server is running, these endpoints would be useful:
 - `GET /{session_id}/changes` — query journal entries
@@ -498,7 +498,7 @@ See git history for the full endpoint implementations if needed in the future.
 
 ### 4.5 Wire Protocol Extension
 
-**File:** `src/kimi_cli/wire/types.py` — additions
+**File:** `src/consilium/wire/types.py` — additions
 
 ```python
 class ToolFileModifiedEvent(BaseModel):
@@ -520,14 +520,14 @@ class ToolFileModifiedEvent(BaseModel):
     lines_removed: int
 ```
 
-**File:** `src/kimi_cli/do/session.py` — additions in `on_tool_result()`
+**File:** `src/consilium/do/session.py` — additions in `on_tool_result()`
 
 After recording the diff in the journal, send a wire event:
 
 ```python
 # After: await self.journal.append(entry)
-from kimi_cli.wire import wire_send
-from kimi_cli.wire.types import ToolFileModifiedEvent
+from consilium.wire import wire_send
+from consilium.wire.types import ToolFileModifiedEvent
 
 wire_send(ToolFileModifiedEvent(
     entry_id=entry.id,
@@ -545,7 +545,7 @@ wire_send(ToolFileModifiedEvent(
 
 ### 4.6 Config Additions
 
-**File:** `src/kimi_cli/config.py` — additions
+**File:** `src/consilium/config.py` — additions
 
 ```python
 class PythonConfig(BaseModel):
@@ -613,7 +613,7 @@ We repurpose this pattern into an explicit `force_abort()` method that can be ca
 
 #### Provider changes
 
-**File:** `src/kimi_cli/chat_provider_ext.py` — new module
+**File:** `src/consilium/chat_provider_ext.py` — new module
 
 ```python
 """Fork-specific extensions to kosong chat providers for instant cancellation."""
@@ -621,7 +621,7 @@ We repurpose this pattern into an explicit `force_abort()` method that can be ca
 from kosong.chat_provider.openai_common import close_replaced_openai_client
 from kosong.contrib.chat_provider.openai_responses import OpenAIResponses
 from kosong.contrib.chat_provider.openai_legacy import OpenAILegacy
-from kosong.chat_provider.kimi import Kimi
+from kosong.chat_provider.consilium import Kimi
 
 
 async def _force_abort_openai(provider: OpenAIResponses | OpenAILegacy | Kimi) -> None:
@@ -647,7 +647,7 @@ Kimi.force_abort = lambda self: _force_abort_openai(self)
 **Anthropic provider** (`packages/kosong/src/kosong/contrib/chat_provider/anthropic.py`) needs a separate implementation because it uses the Anthropic SDK, not OpenAI:
 
 ```python
-# In src/kimi_cli/chat_provider_ext.py or a provider-specific patch
+# In src/consilium/chat_provider_ext.py or a provider-specific patch
 async def _force_abort_anthropic(provider: Anthropic) -> None:
     old_client = provider._client
     # Anthropic client recreation
@@ -664,7 +664,7 @@ async def _force_abort_anthropic(provider: Anthropic) -> None:
 
 #### Wire server changes
 
-**File:** `src/kimi_cli/wire/server.py` — modification to `_handle_cancel()`
+**File:** `src/consilium/wire/server.py` — modification to `_handle_cancel()`
 
 ```python
 async def _handle_cancel(self, msg: JSONRPCCancelMessage) -> ...:

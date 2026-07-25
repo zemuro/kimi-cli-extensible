@@ -5,7 +5,7 @@ status: implemented
 dependencies:
   - phase-02
 files_involved:
-  - src/kimi_cli/think/compaction.py
+  - src/consilium/think/compaction.py
 ---
 
 **Status: IMPLEMENTED — 10 tests passing, ruff clean.**

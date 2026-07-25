@@ -6,7 +6,7 @@ from functools import cache
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-NAME = "Kimi Code CLI"
+NAME = "Consilium"
 
 if TYPE_CHECKING:
     VERSION: str
@@ -25,7 +25,7 @@ def get_version() -> str:
 
 @cache
 def get_user_agent() -> str:
-    return f"KimiCLI/{get_version()}"
+    return f"Consilium/{get_version()}"
 
 
 def _normalize_remote(url: str) -> str:
@@ -50,12 +50,12 @@ def get_build_sha() -> str:
     Format: ``remote@sha`` when remote is available, otherwise just ``sha``.
 
     Priority:
-    1. KIMI_BUILD_SHA environment variable (dev / CI override)
+    1. CONSILIUM_BUILD_SHA environment variable (dev / CI override)
     2. Hardcoded BUILD_SHA from _build_info.py (set by wheel / PyInstaller build)
     3. git remote + git rev-parse HEAD from the package directory (dev mode)
     4. Empty string (fallback)
     """
-    if build_id := os.environ.get("KIMI_BUILD_SHA", "").strip():
+    if build_id := os.environ.get("CONSILIUM_BUILD_SHA", "").strip():
         return build_id
 
     try:

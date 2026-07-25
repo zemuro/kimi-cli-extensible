@@ -1301,7 +1301,7 @@ async def test_agent_tool_returns_error_when_final_response_is_none(
 
     # Patch run_with_summary_continuation to return (None, None) — simulating
     # the defensive scenario where final_response is None but failure is also None.
-    async def fake_run_with_summary(soul, prompt, ui_loop_fn, wire_path):
+    async def fake_run_with_summary(soul, prompt, ui_loop_fn, wire_path, *, min_summary_length=0):
         return None, None
 
     monkeypatch.setattr(

@@ -1,6 +1,6 @@
 # Slash Commands
 
-Slash commands are built-in commands for Kimi Code CLI, used to control sessions, configuration, and debugging. Enter a command starting with `/` in the input box to trigger.
+Slash commands are built-in commands for Consilium CLI, used to control sessions, configuration, and debugging. Enter a command starting with `/` in the input box to trigger.
 
 ::: tip Shell mode
 Some slash commands are also available in shell mode, including `/help`, `/exit`, `/version`, `/editor`, `/theme`, `/changelog`, `/feedback`, `/export`, `/import`, and `/task`.
@@ -16,7 +16,7 @@ Aliases: `/h`, `/?`
 
 ### `/version`
 
-Display Kimi Code CLI version number.
+Display Consilium CLI version number.
 
 ### `/changelog`
 
@@ -26,7 +26,7 @@ Alias: `/release-notes`
 
 ### `/feedback`
 
-Submit feedback to help improve Kimi Code CLI. You will be prompted to enter your feedback and submit it. If the network request fails or times out, the command automatically falls back to opening the GitHub Issues page.
+Submit feedback to help improve Consilium CLI. You will be prompted to enter your feedback and submit it. If the network request fails or times out, the command automatically falls back to opening the GitHub Issues page.
 
 ## Account and configuration
 
@@ -34,10 +34,10 @@ Submit feedback to help improve Kimi Code CLI. You will be prompted to enter you
 
 Log in or configure an API platform. After execution, first select a platform:
 
-- **Kimi Code**: Automatically opens a browser for OAuth authorization
+- **Consilium**: Automatically opens a browser for OAuth authorization
 - **Other platforms**: Enter an API key, then select an available model
 
-After configuration, settings are automatically saved to `~/.kimi/config.toml` and reloaded. See [Providers](../configuration/providers.md) for details.
+After configuration, settings are automatically saved to `~/.consilium/config.toml` and reloaded. See [Providers](../configuration/providers.md) for details.
 
 Alias: `/setup`
 
@@ -47,7 +47,7 @@ This command is only available when using the default configuration file. If a c
 
 ### `/logout`
 
-Log out from the current platform. This clears stored credentials and removes related configuration from the config file. After logout, Kimi Code CLI will automatically reload the configuration.
+Log out from the current platform. This clears stored credentials and removes related configuration from the config file. After logout, Consilium CLI will automatically reload the configuration.
 
 ### `/model`
 
@@ -55,7 +55,7 @@ Switch models and thinking mode.
 
 This command first refreshes the available models list from the API platform. When called without arguments, displays an interactive selection interface where you first select a model, then choose whether to enable thinking mode (if the model supports it).
 
-After selection, Kimi Code CLI will automatically update the configuration file and reload.
+After selection, Consilium CLI will automatically update the configuration file and reload.
 
 ::: tip
 This command is only available when using the default configuration file. If a configuration was specified via `--config` or `--config-file`, this command cannot be used.
@@ -67,7 +67,7 @@ Set the external editor. When called without arguments, displays an interactive 
 
 ### `/theme`
 
-Switch the terminal color theme. Kimi Code CLI provides dark and light color palettes, defaulting to dark.
+Switch the terminal color theme. Consilium CLI provides dark and light color palettes, defaulting to dark.
 
 Usage:
 
@@ -79,7 +79,7 @@ After switching, the configuration is saved to `config.toml` and the shell reloa
 
 ### `/reload`
 
-Reload the configuration file without exiting Kimi Code CLI.
+Reload the configuration file without exiting Consilium CLI.
 
 ### `/debug`
 
@@ -97,7 +97,7 @@ Display API usage and quota information, showing quota usage with progress bars 
 Alias: `/status`
 
 ::: tip
-This command only works with the Kimi Code platform.
+This command only works with the Consilium platform.
 :::
 
 ### `/mcp`
@@ -120,7 +120,7 @@ Output includes:
 
 ### `/new`
 
-Create a new session and switch to it immediately, without exiting Kimi Code CLI. If the current session has no content, the empty session directory is automatically cleaned up.
+Create a new session and switch to it immediately, without exiting Consilium CLI. If the current session has no content, the empty session directory is automatically cleaned up.
 
 ### `/sessions`
 
@@ -145,7 +145,7 @@ After the first conversation turn, the title is automatically derived from the u
 
 ### `/undo`
 
-Roll back to a previous turn and retry. An interactive selector shows all historical turns with the user message (truncated to 80 characters). After selecting a turn, Kimi Code CLI forks a new session containing all conversation history **before** that turn and pre-fills the selected turn's user message into the input box for re-editing. The original session is always preserved.
+Roll back to a previous turn and retry. An interactive selector shows all historical turns with the user message (truncated to 80 characters). After selecting a turn, Consilium CLI forks a new session containing all conversation history **before** that turn and pre-fills the selected turn's user message into the input box for re-editing. The original session is always preserved.
 
 Use arrow keys to navigate, `Enter` to confirm, `Ctrl-C` to cancel.
 
@@ -190,7 +190,7 @@ Alias: `/reset`
 
 Manually compact the context to reduce token usage. You can append custom instructions after the command to tell the AI which information to prioritize preserving during compaction, e.g., `/compact preserve database-related discussions`.
 
-When the context is too long, Kimi Code CLI will automatically trigger compaction. This command allows manually triggering the compaction process.
+When the context is too long, Consilium CLI will automatically trigger compaction. This command allows manually triggering the compaction process.
 
 ## Skills
 
@@ -320,11 +320,11 @@ AFK skips all approval confirmations and removes the clarifying-question safety 
 
 ### `/web`
 
-Switch to Web UI. Kimi Code CLI will start a Web UI server and open the current session in your browser, allowing you to continue the conversation in the Web UI. See [Web UI](./kimi-web.md) for details.
+Switch to Web UI. Consilium CLI will start a Web UI server and open the current session in your browser, allowing you to continue the conversation in the Web UI. See [Web UI](./kimi-web.md) for details.
 
 ### `/vis`
 
-Switch to the Agent Tracing Visualizer. Kimi Code CLI will start the visualizer server and open the current session's tracing view in the browser, where you can inspect Wire event timelines, context messages, and usage statistics. See [Agent Tracing Visualizer](./kimi-vis.md) for details.
+Switch to the Agent Tracing Visualizer. Consilium CLI will start the visualizer server and open the current session's tracing view in the browser, where you can inspect Wire event timelines, context messages, and usage statistics. See [Agent Tracing Visualizer](./kimi-vis.md) for details.
 
 ## Command completion
 

@@ -50,7 +50,7 @@ class KeyboardListener:
         self._listener = threading.Thread(
             target=_listen_for_keyboard_thread,
             args=(self._cancel_event, self._pause_event, self._paused_event, emit),
-            name="kimi-cli-keyboard-listener",
+            name="consilium-keyboard-listener",
             daemon=True,
         )
         self._listener.start()

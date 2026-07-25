@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from kaos.path import KaosPath
 
 from consilium.ui.shell.console import console
-from consilium.ui.shell.slash import ensure_kimi_soul, registry, shell_mode_registry
+from consilium.ui.shell.slash import ensure_consilium_soul, registry, shell_mode_registry
 from consilium.utils.export import is_sensitive_file
 from consilium.utils.path import sanitize_cli_path, shorten_home
 from consilium.wire.types import TurnBegin, TurnEnd
@@ -26,7 +26,7 @@ async def export(app: Shell, args: str):
     """Export current session context to a markdown file"""
     from consilium.utils.export import perform_export
 
-    soul = ensure_kimi_soul(app)
+    soul = ensure_consilium_soul(app)
     if soul is None:
         return
 
@@ -66,7 +66,7 @@ async def import_context(app: Shell, args: str):
     """Import context from a file or session ID"""
     from consilium.utils.export import perform_import
 
-    soul = ensure_kimi_soul(app)
+    soul = ensure_consilium_soul(app)
     if soul is None:
         return
 

@@ -16,11 +16,11 @@ class LocalKimiCli(KimiCli):
         return "kimi-cli-local"
 
     async def install(self, environment: BaseEnvironment) -> None:
-        wheel_path = os.environ.get("KIMI_CLI_WHEEL_PATH")
+        wheel_path = os.environ.get("CONSILIUM_CLI_WHEEL_PATH")
         if wheel_path:
             wheel_file = Path(wheel_path)
             if not wheel_file.is_file():
-                raise ValueError(f"KIMI_CLI_WHEEL_PATH does not exist: {wheel_path}")
+                raise ValueError(f"CONSILIUM_CLI_WHEEL_PATH does not exist: {wheel_path}")
             await self.exec_as_root(
                 environment,
                 command="apt-get update && apt-get install -y curl",
@@ -38,4 +38,4 @@ class LocalKimiCli(KimiCli):
             await self.exec_as_agent(environment, command=install_cmd)
             return
 
-        raise ValueError("KIMI_CLI_WHEEL_PATH is required.")
+        raise ValueError("CONSILIUM_CLI_WHEEL_PATH is required.")

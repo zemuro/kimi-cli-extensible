@@ -65,7 +65,7 @@ Authorize an MCP server that uses OAuth.
 kimi mcp auth NAME
 ```
 
-This will open a browser for the OAuth authorization flow. After successful authorization, the token is cached in `~/.kimi/mcp-oauth/` for future use.
+This will open a browser for the OAuth authorization flow. After successful authorization, the token is cached in `~/.consilium/mcp-oauth/` for future use.
 
 **Arguments**
 

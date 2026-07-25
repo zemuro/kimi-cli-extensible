@@ -195,7 +195,7 @@ Add `ci-kimi-sdk.yml`:
 ## Migration & Compatibility
 
 - Migration from `kosong` is only import path changes.
-- Environment variables keep the same semantics (`KIMI_API_KEY`, `KIMI_BASE_URL`).
+- Environment variables keep the same semantics (`CONSILIUM_API_KEY`, `CONSILIUM_BASE_URL`).
 
 ## Decisions
 

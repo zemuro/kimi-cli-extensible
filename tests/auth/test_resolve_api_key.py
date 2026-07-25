@@ -30,7 +30,7 @@ def _make_config(*, with_oauth: bool = True, api_key: str = "") -> Config:
         api_key=SecretStr(api_key),
         oauth=OAuthRef(storage="file", key="oauth/kimi-code") if with_oauth else None,
     )
-    model = LLMModel(provider="managed:kimi-code", model="test-model", max_context_size=100_000)
+    model = LLMModel(provider="managed:kimi-code", model="test-model", max_context_size=1_000_000)
     return Config(
         default_model="managed:kimi-code/test-model",
         providers={"managed:kimi-code": provider},
@@ -107,7 +107,7 @@ async def test_resolve_api_key_falls_back_after_rejected_refresh_token(tmp_path,
     """After a confirmed refresh 401, keep the file but stop preferring the
     same persisted OAuth token over a configured static API key.
     """
-    monkeypatch.setenv("KIMI_SHARE_DIR", str(tmp_path))
+    monkeypatch.setenv("CONSILIUM_SHARE_DIR", str(tmp_path))
     config = _make_config(with_oauth=True, api_key="fallback-key")
     token = OAuthToken(
         access_token="oauth-access-123",

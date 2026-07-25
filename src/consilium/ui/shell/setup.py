@@ -8,7 +8,7 @@ from prompt_toolkit.shortcuts.choice_input import ChoiceInput
 from pydantic import SecretStr
 
 from consilium import logger
-from consilium.auth import KIMI_CODE_PLATFORM_ID
+from consilium.auth import CONSILIUM_CODE_PLATFORM_ID
 from consilium.auth.platforms import (
     PLATFORMS,
     ModelInfo,
@@ -21,8 +21,8 @@ from consilium.auth.platforms import (
 from consilium.config import (
     LLMModel,
     LLMProvider,
-    MoonshotFetchConfig,
-    MoonshotSearchConfig,
+    WebFetchConfig,
+    WebSearchConfig,
     load_config,
     save_config,
 )
@@ -86,10 +86,10 @@ async def _setup_platform(platform: Platform) -> _SetupResult | None:
     except aiohttp.ClientResponseError as e:
         logger.error("Failed to get models: {error}", error=e)
         console.print(f"[red]Failed to get models: {e.message}[/red]")
-        if e.status == 401 and platform.id != KIMI_CODE_PLATFORM_ID:
+        if e.status == 401 and platform.id != CONSILIUM_CODE_PLATFORM_ID:
             console.print(
-                "[yellow]Hint: If your API key was obtained from Kimi Code, "
-                'please select "Kimi Code" instead.[/yellow]'
+                "[yellow]Hint: If your API key was obtained from Consilium, "
+                'please select "Consilium" instead.[/yellow]'
             )
         return None
     except Exception as e:
@@ -163,13 +163,13 @@ def _apply_setup_result(result: _SetupResult) -> None:
     config.default_thinking = result.thinking
 
     if result.platform.search_url:
-        config.services.moonshot_search = MoonshotSearchConfig(
+        config.services.web_search = WebSearchConfig(
             base_url=result.platform.search_url,
             api_key=result.api_key,
         )
 
     if result.platform.fetch_url:
-        config.services.moonshot_fetch = MoonshotFetchConfig(
+        config.services.web_fetch = WebFetchConfig(
             base_url=result.platform.fetch_url,
             api_key=result.api_key,
         )

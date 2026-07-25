@@ -39,7 +39,7 @@ from consilium.session import Session
 from consilium.soul import LLMNotSet, LLMNotSupported, MaxStepsReached, RunCancelled, run_soul
 from consilium.soul.agent import Runtime
 from consilium.soul.context import Context
-from consilium.soul.kimisoul import KimiSoul
+from consilium.soul.consiliumsoul import KimiSoul
 from consilium.ui.shell.visualize import visualize
 from consilium.wire.types import StatusUpdate
 
