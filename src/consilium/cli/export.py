@@ -57,6 +57,7 @@ def _find_session_by_id(session_id: str, *, work_dir: KaosPath | None = None) ->
         if session is not None:
             return session.dir
 
+    # Fallback: scan legacy global sessions
     from consilium.share import get_share_dir
 
     sessions_root = get_share_dir() / "sessions"

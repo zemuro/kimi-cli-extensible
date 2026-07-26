@@ -113,12 +113,12 @@ def _derive_title_from_wire(session_dir: Path) -> str:
 def _iter_session_dirs(wd: WorkDirMeta) -> list[tuple[Path, Path]]:
     session_dirs: list[tuple[Path, Path]] = []
 
-    # Latest sessions
+    # New workspace-local sessions
     for context_file in wd.sessions_dir.glob("*/context.jsonl"):
         session_dir = context_file.parent
         session_dirs.append((session_dir, context_file))
 
-    # Legacy sessions
+    # Legacy sessions in the old sessions_dir
     for context_file in wd.sessions_dir.glob("*.jsonl"):
         session_dir = context_file.parent / context_file.stem
         converted_context_file = session_dir / "context.jsonl"

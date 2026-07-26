@@ -125,7 +125,8 @@ class DoSession:
     async def start(self) -> None:
         """Initialize Do session: git stash, create journal, archive old journals."""
         session_id = self.soul._runtime.session.id
-        self.journal = ChangeJournal(session_id)
+        work_dir_path = Path(str(self.work_dir))
+        self.journal = ChangeJournal(session_id, work_dir=work_dir_path)
 
         git_state = self.git.start_session(session_id)
         self.journal.record_session_start(
@@ -141,7 +142,7 @@ class DoSession:
         if retention_days > 0:
             from consilium.do.journal import archive_old_journals
             try:
-                archived = archive_old_journals(retention_days)
+                archived = archive_old_journals(retention_days, work_dir=work_dir_path)
                 if archived:
                     logger.info(
                         "Archived {count} old journal(s) to .archive/",

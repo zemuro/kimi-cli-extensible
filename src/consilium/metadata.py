@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 import json
-from hashlib import md5
 from pathlib import Path
 
 from kaos import get_current_kaos
-from kaos.local import local_kaos
 from kaos.path import KaosPath
+from kaos.local import local_kaos
 from pydantic import BaseModel, ConfigDict, Field
 
 from consilium.share import get_share_dir
 from consilium.utils.io import atomic_json_write
+from consilium.utils.path import ensure_safe_path
 from consilium.utils.logging import logger
 
 
@@ -32,10 +32,13 @@ class WorkDirMeta(BaseModel):
 
     @property
     def sessions_dir(self) -> Path:
-        """The directory to store sessions for this work directory."""
-        path_md5 = md5(self.path.encode(encoding="utf-8")).hexdigest()
-        dir_basename = path_md5 if self.kaos == local_kaos.name else f"{self.kaos}_{path_md5}"
-        session_dir = get_share_dir() / "sessions" / dir_basename
+        """The directory to store regular (wire) sessions for this work directory.
+
+        Returns ``{workDir}/.consilium/sessions/regular/``,
+        creating it if necessary.
+        """
+        session_dir = Path(self.path) / ".consilium" / "sessions" / "regular"
+        session_dir = ensure_safe_path(session_dir)
         session_dir.mkdir(parents=True, exist_ok=True)
         return session_dir
 

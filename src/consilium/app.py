@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import dataclasses
+import os
 import sys
 import time
 import warnings
@@ -122,15 +123,28 @@ def _resolve_model_and_provider(
     """Resolve model and provider from config and CLI overrides."""
     model: LLMModel | None = None
     provider: LLMProvider | None = None
-    if not model_name and config.default_model:
+    if not model_name and config.default_model and config.default_model in config.models:
         model = config.models[config.default_model]
         provider = config.providers[model.provider]
+    elif not model_name and config.default_model:
+        # Fallback if default model is not in config.models
+        model_name = config.default_model
+        
     if model_name and model_name in config.models:
         model = config.models[model_name]
         provider = config.providers[model.provider]
+        
     if not model:
-        model = LLMModel(provider="", model="", max_context_size=100_000)
-        provider = LLMProvider(type="kimi", base_url="", api_key=SecretStr(""))
+        provider_type = os.getenv("CONSILIUM_PROVIDER", "kimi")
+        base_url = ""
+        api_key = SecretStr("")
+        for p in config.providers.values():
+            if p.type == provider_type and (p.base_url or p.api_key.get_secret_value()):
+                base_url = p.base_url
+                api_key = p.api_key
+                break
+        model = LLMModel(provider=provider_type, model=model_name or "", max_context_size=100_000)
+        provider = LLMProvider(type=provider_type, base_url=base_url, api_key=api_key)
     assert provider is not None
     assert model is not None
     return model, provider
@@ -184,7 +198,6 @@ async def create_think_soul(
             from uuid import uuid4
             from consilium.think.models import ThinkMessage
             from consilium.think.storage import save_session
-            from consilium.utils.logging import logger
 
             try:
                 with session.context_file.open(encoding="utf-8") as f:
@@ -226,6 +239,19 @@ async def create_think_soul(
             except Exception:
                 logger.exception("Failed to migrate legacy session to Think mode")
 
+    compaction_llm = llm
+    if _config.compaction_model:
+        c_model, c_provider = _resolve_model_and_provider(_config, _config.compaction_model)
+        if c_model and c_provider:
+            c_env_overrides = augment_provider_with_env_vars(c_provider, c_model)
+            compaction_llm = create_llm(
+                c_provider,
+                c_model,
+                thinking=False,
+                session_id=session.id,
+                oauth=oauth,
+            )
+
     # Create a lightweight Runtime for subagent support in Think mode
     from consilium.soul.agent import Runtime
 
@@ -233,6 +259,7 @@ async def create_think_soul(
         _config,
         oauth,
         llm,
+        compaction_llm,
         session,
         yolo=yolo,
         afk=False,
@@ -246,43 +273,49 @@ async def create_think_soul(
     def _register_subagents_from_spec(agent_spec_path: Path, source: str) -> None:
         spec = load_agent_spec(agent_spec_path)
         for subagent_name, subagent_spec in spec.subagents.items():
-            builtin_spec = load_agent_spec(subagent_spec.path)
-            tool_policy = (
-                ToolPolicy(mode="allowlist", tools=tuple(builtin_spec.allowed_tools))
-                if builtin_spec.allowed_tools is not None
-                else ToolPolicy(mode="inherit")
-            )
-            runtime.labor_market.add_builtin_type(
-                AgentTypeDefinition(
-                    name=subagent_name,
-                    description=subagent_spec.description,
-                    agent_file=subagent_spec.path,
-                    when_to_use=builtin_spec.when_to_use,
-                    default_model=builtin_spec.model,
-                    tool_policy=tool_policy,
-                    min_summary_length=(
-                        builtin_spec.min_summary_length
-                        if builtin_spec.min_summary_length is not None
-                        else 200
-                    ),
+            try:
+                builtin_spec = load_agent_spec(subagent_spec.path)
+                tool_policy = (
+                    ToolPolicy(mode="allowlist", tools=tuple(builtin_spec.allowed_tools))
+                    if builtin_spec.allowed_tools is not None
+                    else ToolPolicy(mode="inherit")
                 )
-            )
-            logger.debug(
-                "Registered {source} subagent type: {subagent_name}",
-                source=source,
-                subagent_name=subagent_name,
-            )
+                runtime.labor_market.add_builtin_type(
+                    AgentTypeDefinition(
+                        name=subagent_name,
+                        description=subagent_spec.description,
+                        agent_file=subagent_spec.path,
+                        when_to_use=builtin_spec.when_to_use,
+                        default_model=builtin_spec.model,
+                        tool_policy=tool_policy,
+                        min_summary_length=(
+                            builtin_spec.min_summary_length
+                            if builtin_spec.min_summary_length is not None
+                            else 200
+                        ),
+                    )
+                )
+                logger.debug(
+                    "Registered {source} subagent type: {subagent_name}",
+                    source=source,
+                    subagent_name=subagent_name,
+                )
+            except Exception as e:
+                logger.warning(
+                    "Failed to register {source} subagent type {subagent_name} from {path}: {e}",
+                    source=source,
+                    subagent_name=subagent_name,
+                    path=subagent_spec.path,
+                    e=e,
+                )
 
-    try:
-        builtin_agent_file = Path(__file__).parent / "agents" / "default" / "agent.yaml"
-        _register_subagents_from_spec(builtin_agent_file, "builtin")
-        workspace_agent_file = find_workspace_agent_file(Path(session.work_dir))
-        if workspace_agent_file is not None:
-            _register_subagents_from_spec(workspace_agent_file, "workspace")
-    except Exception as e:
-        from consilium.utils.logging import logger
-
-        logger.warning(f"Failed to load builtin/workspace subagents for Think mode: {e}")
+    # Register built-in subagent types.
+    builtin_agent_file = Path(__file__).parent / "agents" / "default" / "agent.yaml"
+    _register_subagents_from_spec(builtin_agent_file, "builtin")
+    # Register workspace-level overrides if they exist.
+    workspace_agent_file = find_workspace_agent_file(Path(str(session.work_dir)))
+    if workspace_agent_file is not None:
+        _register_subagents_from_spec(workspace_agent_file, "workspace")
 
     # Load custom system prompt from agent file if provided.
     system_prompt: str | None = None
@@ -298,8 +331,6 @@ async def create_think_soul(
                 config=_config,
             )
         except Exception as e:
-            from consilium.utils.logging import logger
-
             logger.warning("Failed to load custom Think agent file {agent_file}: {error}. Falling back to built-in system prompt.", agent_file=agent_file, error=e)
 
     return ThinkSoul(session, llm, _config, think_session, runtime=runtime, system_prompt=system_prompt), env_overrides
@@ -464,6 +495,19 @@ class ConsiliumCLI:
             logger.info("Using LLM model: {model}", model=model)
             logger.info("Thinking mode: {thinking}", thinking=thinking)
 
+        compaction_llm = llm
+        if config.compaction_model:
+            c_model, c_provider = _resolve_model_and_provider(config, config.compaction_model)
+            if c_model and c_provider:
+                c_env_overrides = augment_provider_with_env_vars(c_provider, c_model)
+                compaction_llm = create_llm(
+                    c_provider,
+                    c_model,
+                    thinking=False,
+                    session_id=session.id,
+                    oauth=oauth,
+                )
+
         if startup_progress is not None:
             startup_progress("Scanning workspace...")
 
@@ -471,6 +515,7 @@ class ConsiliumCLI:
             config,
             oauth,
             llm,
+            compaction_llm,
             session,
             yolo,
             afk=afk,
@@ -537,8 +582,9 @@ class ConsiliumCLI:
             from consilium.think.storage import think_path
             import json
             from kosong.message import Message, TextPart
+            from pathlib import Path
 
-            tf = think_path(session.id)
+            tf = think_path(session.id, work_dir=Path(str(session.work_dir)))
             if tf.exists():
                 imported = 0
                 existing_texts = set()
@@ -595,11 +641,12 @@ class ConsiliumCLI:
 
             from consilium.session import Session
             from consilium.think.storage import think_path
+            from pathlib import Path
 
             imported = 0
 
             # Primary path: Think mode JSONL storage
-            think_file = think_path(seed_from_think)
+            think_file = think_path(seed_from_think, work_dir=Path(str(session.work_dir)))
             if think_file.exists():
                 with open(think_file, "r", encoding="utf-8") as f:
                     for line in f:

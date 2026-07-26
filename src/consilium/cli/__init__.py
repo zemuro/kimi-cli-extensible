@@ -1162,16 +1162,18 @@ def kimi(
     def _print_resume_hint(session: Session) -> None:
         """Print a hint for resuming the session after exit."""
         from consilium.think.storage import think_path
+        from pathlib import Path
 
-        has_think_history = think_path(session.id).exists()
+        has_think_history = think_path(session.id, work_dir=Path(str(session.work_dir))).exists()
         if not session.is_empty() or has_think_history:
             _emit_fatal_error(f"\nTo resume this session: kimi -r {session.id}")
 
     async def _post_run(last_session: Session, exit_code: int) -> None:
         from consilium.think.storage import think_path
+        from pathlib import Path
 
         _print_resume_hint(last_session)
-        has_think_history = think_path(last_session.id).exists()
+        has_think_history = think_path(last_session.id, work_dir=Path(str(last_session.work_dir))).exists()
         if last_session.is_empty() and not has_think_history:
             # Always clean up empty sessions regardless of exit code
             await _delete_empty_session(last_session)

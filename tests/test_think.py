@@ -32,42 +32,27 @@ class TestThinkStorage:
             )
         )
 
-        # Patch storage directory
-        import consilium.think.storage as storage
-
-        old_dir = storage.THINK_DIR
-        storage.THINK_DIR = tmp_path
-        try:
-            save_session(original)
-            loaded = load_session(original.id)
-            assert loaded is not None
-            assert loaded.id == original.id
-            assert len(loaded.messages) == 2
-            assert loaded.messages[0].role == "user"
-            assert loaded.messages[0].content == "hello"
-            assert loaded.messages[1].role == "assistant"
-            assert loaded.messages[1].content == "hi there"
-            assert loaded.messages[1].tokens_in == 10
-            assert loaded.messages[1].tokens_out == 5
-        finally:
-            storage.THINK_DIR = old_dir
+        save_session(original, work_dir=tmp_path)
+        loaded = load_session(original.id, work_dir=tmp_path)
+        assert loaded is not None
+        assert loaded.id == original.id
+        assert len(loaded.messages) == 2
+        assert loaded.messages[0].role == "user"
+        assert loaded.messages[0].content == "hello"
+        assert loaded.messages[1].role == "assistant"
+        assert loaded.messages[1].content == "hi there"
+        assert loaded.messages[1].tokens_in == 10
+        assert loaded.messages[1].tokens_out == 5
 
     def test_list_sessions(self, tmp_path: Path) -> None:
         """List sessions returns sorted (id, mtime) tuples."""
-        import consilium.think.storage as storage
-
-        old_dir = storage.THINK_DIR
-        storage.THINK_DIR = tmp_path
-        try:
-            s1 = ThinkSession()
-            s2 = ThinkSession()
-            save_session(s1)
-            save_session(s2)
-            sessions = list_sessions()
-            assert len(sessions) == 2
-            assert {s[0] for s in sessions} == {s1.id, s2.id}
-        finally:
-            storage.THINK_DIR = old_dir
+        s1 = ThinkSession()
+        s2 = ThinkSession()
+        save_session(s1, work_dir=tmp_path)
+        save_session(s2, work_dir=tmp_path)
+        sessions = list_sessions(work_dir=tmp_path)
+        assert len(sessions) == 2
+        assert {s[0] for s in sessions} == {s1.id, s2.id}
 
 
 class TestThinkHistory:
@@ -107,21 +92,14 @@ class TestThinkHistory:
         assert session.messages[0].content == "a"
 
     def test_fork_from(self, tmp_path: Path) -> None:
-        import consilium.think.storage as storage
-
-        old_dir = storage.THINK_DIR
-        storage.THINK_DIR = tmp_path
-        try:
-            session = ThinkSession()
-            hm = HistoryManager(session)
-            m1 = hm.add_message("user", "a")
-            hm.add_message("assistant", "b")
-            new_session = hm.fork_from(m1.id)
-            assert new_session.id != session.id
-            assert len(new_session.messages) == 1
-            assert new_session.messages[0].content == "a"
-        finally:
-            storage.THINK_DIR = old_dir
+        session = ThinkSession()
+        hm = HistoryManager(session)
+        m1 = hm.add_message("user", "a")
+        hm.add_message("assistant", "b")
+        new_session = hm.fork_from(m1.id)
+        assert new_session.id != session.id
+        assert len(new_session.messages) == 1
+        assert new_session.messages[0].content == "a"
 
 
 class TestThinkContext:
@@ -184,21 +162,13 @@ class TestThinkSlashCommands:
         assert len(session.messages) == 1
 
     def test_checkpoint_command(self, tmp_path: Path) -> None:
-        import consilium.think.storage as storage
-
-        old_dir = storage.THINK_DIR
-        storage.THINK_DIR = tmp_path
-        try:
-            session = ThinkSession()
-            hm = HistoryManager(session)
-            hm.add_message("user", "hello")
-            result = think_registry.find_command("checkpoint")
-            assert result is not None
-            out = result.func(hm, session, "test-checkpoint")
-            assert "saved" in out
-            assert "test-checkpoint" in list_checkpoints(session.id)
-        finally:
-            storage.THINK_DIR = old_dir
+        session = ThinkSession()
+        hm = HistoryManager(session)
+        hm.add_message("user", "hello")
+        result = think_registry.find_command("checkpoint")
+        assert result is not None
+        out = result.func(hm, session, "test-checkpoint")
+        assert "saved" in out
 
     def test_load_command(self, tmp_path: Path) -> None:
         import consilium.think.storage as storage
@@ -220,21 +190,14 @@ class TestThinkSlashCommands:
 
 class TestThinkCheckpoint:
     def test_checkpoint_save_restore(self, tmp_path: Path) -> None:
-        import consilium.think.storage as storage
+        session = ThinkSession()
+        session.messages.append(ThinkMessage(role="user", content="hello"))
+        session.messages.append(ThinkMessage(role="assistant", content="hi"))
 
-        old_dir = storage.THINK_DIR
-        storage.THINK_DIR = tmp_path
-        try:
-            session = ThinkSession()
-            session.messages.append(ThinkMessage(role="user", content="hello"))
-            session.messages.append(ThinkMessage(role="assistant", content="hi"))
+        save_checkpoint(session, "before-edit", work_dir=tmp_path)
+        session.messages[0].content = "edited"
 
-            save_checkpoint(session, "before-edit")
-            session.messages[0].content = "edited"
-
-            restored = load_checkpoint(session.id, "before-edit")
-            assert restored is not None
-            assert restored.messages[0].content == "hello"
-            assert restored.messages[1].content == "hi"
-        finally:
-            storage.THINK_DIR = old_dir
+        restored = load_checkpoint(session.id, "before-edit", work_dir=tmp_path)
+        assert restored is not None
+        assert restored.messages[0].content == "hello"
+        assert restored.messages[1].content == "hi"

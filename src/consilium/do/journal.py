@@ -1,10 +1,21 @@
 """Change journal for Do mode — turn-scoped versioning metadata.
 
 Storage:
+
+  Legacy (global, read-only fallback):
     ~/.consilium/do_sessions/{session_id}/
     ├── journal.jsonl      # Append-only metadata entries
     └── diffs/
         └── {turn_index:04d}-{step_index:04d}-{entry_id}.patch  # Unified diff files
+
+  New (workspace-local):
+    {workDir}/.consilium/sessions/do/{session_id}/
+    ├── journal.jsonl
+    └── diffs/
+        └── {turn_index:04d}-{step_index:04d}-{entry_id}.patch
+
+When *work_dir* is passed, ChangeJournal uses the workspace-local path.
+When *work_dir* is None, the legacy global path is used (read-only fallback).
 
 Journal entry format (JSONL):
     {"type": "session_start", "session_id": "...", "timestamp": "..."}
@@ -24,9 +35,48 @@ from typing import Literal
 from uuid import uuid4
 
 from consilium.do.blob_store import store
+from consilium.utils.path import ensure_safe_path
+
+# ── Legacy global constants (deprecated, read-only fallback) ──────────────
 
 JOURNAL_DIR = Path.home() / ".consilium" / "do_sessions"
+"""Deprecated: global do journal directory. Kept for read-only backward compat."""
+
 DO_LOGS_DIR = Path.home() / ".consilium" / "do_logs"
+"""Deprecated: global do log directory. Kept for read-only backward compat."""
+
+# ── Workspace-local path builders ─────────────────────────────────────────
+
+_DO_SUBDIR = "do"
+
+
+def _journal_dir(work_dir: Path | None, session_id: str) -> Path:
+    """Return the journal directory for *session_id* under *work_dir*."""
+    if work_dir is not None:
+        base = work_dir / ".consilium" / "sessions" / _DO_SUBDIR / session_id
+        return ensure_safe_path(base)
+    return JOURNAL_DIR / session_id
+
+
+def _journal_file_path(work_dir: Path | None, session_id: str) -> Path:
+    """Return the journal JSONL file path."""
+    return _journal_dir(work_dir, session_id) / "journal.jsonl"
+
+
+def _diffs_dir_path(work_dir: Path | None, session_id: str) -> Path:
+    """Return the diffs directory path."""
+    return _journal_dir(work_dir, session_id) / "diffs"
+
+
+def _do_logs_dir(work_dir: Path | None) -> Path:
+    """Return the do log directory for *work_dir*."""
+    if work_dir is not None:
+        base = work_dir / ".consilium" / "sessions" / _DO_SUBDIR / "logs"
+        return ensure_safe_path(base)
+    return DO_LOGS_DIR
+
+
+# ── Journal entry models ─────────────────────────────────────────────────
 
 
 @dataclass(slots=True)
@@ -100,6 +150,9 @@ class PhaseCompleteEntry(JournalEntry):
     type: str = "phase_complete"
 
 
+# ── ChangeJournal ─────────────────────────────────────────────────────────
+
+
 class ChangeJournal:
     """Append-only change journal for a Do mode session."""
 
@@ -121,11 +174,12 @@ class ChangeJournal:
         "patch_file": "edit",
     }
 
-    def __init__(self, session_id: str) -> None:
+    def __init__(self, session_id: str, work_dir: Path | None = None) -> None:
         self.session_id = session_id
-        self._journal_dir = JOURNAL_DIR / session_id
-        self._journal_file = self._journal_dir / "journal.jsonl"
-        self._diffs_dir = self._journal_dir / "diffs"
+        self.work_dir = work_dir
+        self._journal_dir = _journal_dir(work_dir, session_id)
+        self._journal_file = _journal_file_path(work_dir, session_id)
+        self._diffs_dir = _diffs_dir_path(work_dir, session_id)
         self._journal_dir.mkdir(parents=True, exist_ok=True)
         self._diffs_dir.mkdir(parents=True, exist_ok=True)
         # Phase 6a: lazy-init persistent log
@@ -136,7 +190,7 @@ class ChangeJournal:
         if self._persistent_log is None:
             from consilium.plan.persistent_log import PersistentLog
 
-            path = DO_LOGS_DIR / f"{self.session_id}.jsonl"
+            path = _do_logs_dir(self.work_dir) / f"{self.session_id}.jsonl"
             self._persistent_log = PersistentLog(path, log_owner="do")
         return self._persistent_log
 
@@ -341,21 +395,30 @@ class ChangeJournal:
 
 # ── Retention / archiving ──
 
-def archive_old_journals(max_age_days: int = 30) -> list[Path]:
+
+def archive_old_journals(max_age_days: int = 30, work_dir: Path | None = None) -> list[Path]:
     """Move journal directories older than *max_age_days* to the archive.
+
+    When *work_dir* is provided, operates on workspace-local journals.
+    Otherwise falls back to the legacy global directory.
 
     Returns a list of archived directory paths.
     """
     if max_age_days <= 0:
         return []
 
-    archive_dir = JOURNAL_DIR / ".archive"
+    if work_dir is not None:
+        base_dir = work_dir / ".consilium" / "sessions" / _DO_SUBDIR
+    else:
+        base_dir = JOURNAL_DIR
+
+    archive_dir = base_dir / ".archive"
     archive_dir.mkdir(parents=True, exist_ok=True)
 
     cutoff = time.time() - (max_age_days * 86400)
     archived: list[Path] = []
 
-    for entry in JOURNAL_DIR.iterdir():
+    for entry in base_dir.iterdir():
         if not entry.is_dir():
             continue
         if entry.name == ".archive":

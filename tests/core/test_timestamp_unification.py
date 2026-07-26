@@ -148,54 +148,44 @@ class TestTokenTracker:
 class TestBackwardCompat:
     def test_think_storage_roundtrip_with_float(self, tmp_path) -> None:
 
-        # Override THINK_DIR for test
-        import consilium.think.storage as storage_mod
         from consilium.think.models import ThinkMessage, ThinkSession
         from consilium.think.storage import load_session, save_session
 
-        orig_dir = storage_mod.THINK_DIR
-        storage_mod.THINK_DIR = tmp_path
-        try:
-            session = ThinkSession()
-            msg = ThinkMessage(content="hello", timestamp=1716912000.0)
-            session.messages.append(msg)
-            save_session(session)
+        session = ThinkSession()
+        msg = ThinkMessage(content="hello", timestamp=1716912000.0)
+        session.messages.append(msg)
+        save_session(session, work_dir=tmp_path)
 
-            loaded = load_session(session.id)
-            assert loaded is not None
-            assert loaded.messages[0].timestamp == 1716912000.0
-        finally:
-            storage_mod.THINK_DIR = orig_dir
+        loaded = load_session(session.id, work_dir=tmp_path)
+        assert loaded is not None
+        assert loaded.messages[0].timestamp == 1716912000.0
 
     def test_think_storage_loads_legacy_iso(self, tmp_path) -> None:
         """Old JSONL with ISO strings should still load."""
         import json
 
-        import consilium.think.storage as storage_mod
         from consilium.think.storage import load_session
 
-        orig_dir = storage_mod.THINK_DIR
-        storage_mod.THINK_DIR = tmp_path
-        try:
-            session_id = "test-legacy"
-            path = tmp_path / f"{session_id}.jsonl"
-            legacy_msg = {
-                "id": "msg_abc",
-                "role": "user",
-                "content": "hello",
-                "timestamp": "2026-05-24T14:00:00+00:00",
-                "deleted": False,
-                "edited_at": None,
-            }
-            path.write_text(json.dumps(legacy_msg) + "\n", encoding="utf-8")
+        session_id = "test-legacy"
+        # Write to the workspace-local path
+        session_dir = tmp_path / ".consilium" / "sessions" / "think"
+        session_dir.mkdir(parents=True, exist_ok=True)
+        path = session_dir / f"{session_id}.jsonl"
+        legacy_msg = {
+            "id": "msg_abc",
+            "role": "user",
+            "content": "hello",
+            "timestamp": "2026-05-24T14:00:00+00:00",
+            "deleted": False,
+            "edited_at": None,
+        }
+        path.write_text(json.dumps(legacy_msg) + "\n", encoding="utf-8")
 
-            loaded = load_session(session_id)
-            assert loaded is not None
-            assert loaded.messages[0].timestamp == pytest.approx(
-                datetime(2026, 5, 24, 14, 0, 0, tzinfo=UTC).timestamp()
-            )
-        finally:
-            storage_mod.THINK_DIR = orig_dir
+        loaded = load_session(session_id, work_dir=tmp_path)
+        assert loaded is not None
+        assert loaded.messages[0].timestamp == pytest.approx(
+            datetime(2026, 5, 24, 14, 0, 0, tzinfo=UTC).timestamp()
+        )
 
     def test_plan_parser_parses_date_to_float(self) -> None:
         from consilium.plan.parser import parse_plan

@@ -1,14 +1,15 @@
 """Vis API for aggregate statistics across all sessions."""
-
 from __future__ import annotations
 
 import time
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter
 
+from consilium.metadata import load_metadata
 from consilium.share import get_share_dir
 from consilium.vis.api.sessions import collect_events, get_work_dir_for_hash
 from consilium.wire.file import WireFileMetadata, parse_wire_file_line
@@ -21,6 +22,111 @@ _cache: dict[str, tuple[dict[str, Any], float]] = {}
 _CACHE_TTL = 60  # seconds
 
 
+def _process_one_session(
+    session_dir: Path,
+    work_dir: str,
+    total_sessions: int,
+    total_turns: int,
+    total_input_tokens: int,
+    total_output_tokens: int,
+    total_duration_sec: float,
+    tool_stats: dict[str, dict[str, int]],
+    daily_stats: dict[str, dict[str, int]],
+    project_stats: dict[str, dict[str, int]],
+) -> tuple[int, int, int, int, float]:
+    """Process a single session directory and update aggregate counters."""
+    wire_path = session_dir / "wire.jsonl"
+    if not wire_path.exists():
+        return total_sessions, total_turns, total_input_tokens, total_output_tokens, total_duration_sec
+
+    total_sessions += 1
+    session_turns = 0
+    session_input_tokens = 0
+    session_output_tokens = 0
+    first_ts = 0.0
+    last_ts = 0.0
+    session_date: str | None = None
+
+    # Track pending tool calls for error attribution
+    pending_tools: dict[str, str] = {}  # tool_call_id -> tool_name
+
+    try:
+        with wire_path.open(encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    parsed = parse_wire_file_line(line)
+                except Exception:
+                    continue
+                if isinstance(parsed, WireFileMetadata):
+                    continue
+
+                ts = parsed.timestamp
+                msg_type = parsed.message.type
+                payload = parsed.message.payload
+
+                if first_ts == 0:
+                    first_ts = ts
+                    try:
+                        dt = datetime.fromtimestamp(ts, tz=UTC)
+                        session_date = dt.strftime("%Y-%m-%d")
+                    except Exception:
+                        pass
+                last_ts = ts
+
+                events_to_process: list[tuple[str, dict[str, Any]]] = []
+                collect_events(msg_type, payload, events_to_process)
+
+                for ev_type, ev_payload in events_to_process:
+                    if ev_type == "TurnBegin":
+                        session_turns += 1
+                    elif ev_type == "ToolCall":
+                        fn: dict[str, Any] | None = ev_payload.get("function")
+                        tool_id: str = ev_payload.get("id", "")
+                        if isinstance(fn, dict):
+                            name: str = fn.get("name", "unknown")
+                            tool_stats[name]["count"] += 1
+                            if tool_id:
+                                pending_tools[tool_id] = name
+                    elif ev_type == "ToolResult":
+                        tool_call_id: str = ev_payload.get("tool_call_id", "")
+                        rv: dict[str, Any] | None = ev_payload.get("return_value")
+                        if isinstance(rv, dict) and rv.get("is_error"):
+                            tool_name = pending_tools.get(tool_call_id)
+                            if tool_name:
+                                tool_stats[tool_name]["error_count"] += 1
+                        pending_tools.pop(tool_call_id, None)
+                    elif ev_type == "StatusUpdate":
+                        tu: dict[str, Any] | None = ev_payload.get("token_usage")
+                        if isinstance(tu, dict):
+                            session_input_tokens += (
+                                int(tu.get("input_other", 0))
+                                + int(tu.get("input_cache_read", 0))
+                                + int(tu.get("input_cache_creation", 0))
+                            )
+                            session_output_tokens += int(tu.get("output", 0))
+    except Exception:
+        return total_sessions, total_turns, total_input_tokens, total_output_tokens, total_duration_sec
+
+    total_turns += session_turns
+    total_input_tokens += session_input_tokens
+    total_output_tokens += session_output_tokens
+
+    duration = last_ts - first_ts if last_ts > first_ts else 0
+    total_duration_sec += duration
+
+    if session_date:
+        daily_stats[session_date]["sessions"] += 1
+        daily_stats[session_date]["turns"] += session_turns
+
+    project_stats[work_dir]["sessions"] += 1
+    project_stats[work_dir]["turns"] += session_turns
+
+    return total_sessions, total_turns, total_input_tokens, total_output_tokens, total_duration_sec
+
+
 @router.get("/statistics")
 def get_statistics() -> dict[str, Any]:
     """Aggregate statistics across all sessions."""
@@ -28,20 +134,6 @@ def get_statistics() -> dict[str, Any]:
     cached = _cache.get("statistics")
     if cached and (now - cached[1]) < _CACHE_TTL:
         return cached[0]
-
-    sessions_root = get_share_dir() / "sessions"
-    if not sessions_root.exists():
-        empty: dict[str, Any] = {
-            "total_sessions": 0,
-            "total_turns": 0,
-            "total_tokens": {"input": 0, "output": 0},
-            "total_duration_sec": 0,
-            "tool_usage": [],
-            "daily_usage": [],
-            "per_project": [],
-        }
-        _cache["statistics"] = (empty, now)
-        return empty
 
     total_sessions = 0
     total_turns = 0
@@ -58,107 +150,36 @@ def get_statistics() -> dict[str, Any]:
     # work_dir -> { sessions, turns }
     project_stats: dict[str, dict[str, int]] = defaultdict(lambda: {"sessions": 0, "turns": 0})
 
-    for work_dir_hash_dir in sessions_root.iterdir():
-        if not work_dir_hash_dir.is_dir():
-            continue
-        work_dir = get_work_dir_for_hash(work_dir_hash_dir.name) or work_dir_hash_dir.name
+    # Legacy global sessions (read-only fallback)
+    sessions_root = get_share_dir() / "sessions"
+    if sessions_root.exists():
+        for work_dir_hash_dir in sessions_root.iterdir():
+            if not work_dir_hash_dir.is_dir():
+                continue
+            work_dir = get_work_dir_for_hash(work_dir_hash_dir.name) or work_dir_hash_dir.name
+            for session_dir in work_dir_hash_dir.iterdir():
+                if not session_dir.is_dir():
+                    continue
+                total_sessions, total_turns, total_input_tokens, total_output_tokens, total_duration_sec = _process_one_session(
+                    session_dir, work_dir, total_sessions, total_turns,
+                    total_input_tokens, total_output_tokens, total_duration_sec,
+                    tool_stats, daily_stats, project_stats,
+                )
 
-        for session_dir in work_dir_hash_dir.iterdir():
+    # New workspace-local sessions
+    for wd in load_metadata().work_dirs:
+        regular_dir = Path(wd.path) / ".consilium" / "sessions" / "regular"
+        if not regular_dir.is_dir():
+            continue
+        work_dir = wd.path
+        for session_dir in regular_dir.iterdir():
             if not session_dir.is_dir():
                 continue
-
-            wire_path = session_dir / "wire.jsonl"
-            if not wire_path.exists():
-                continue
-
-            total_sessions += 1
-            session_turns = 0
-            session_input_tokens = 0
-            session_output_tokens = 0
-            first_ts = 0.0
-            last_ts = 0.0
-            session_date: str | None = None
-
-            # Track pending tool calls for error attribution
-            pending_tools: dict[str, str] = {}  # tool_call_id -> tool_name
-
-            try:
-                with wire_path.open(encoding="utf-8") as f:
-                    for line in f:
-                        line = line.strip()
-                        if not line:
-                            continue
-                        try:
-                            parsed = parse_wire_file_line(line)
-                        except Exception:
-                            continue
-                        if isinstance(parsed, WireFileMetadata):
-                            continue
-
-                        ts = parsed.timestamp
-                        msg_type = parsed.message.type
-                        payload = parsed.message.payload
-
-                        if first_ts == 0:
-                            first_ts = ts
-                            # Determine date from first timestamp
-                            try:
-                                dt = datetime.fromtimestamp(ts, tz=UTC)
-                                session_date = dt.strftime("%Y-%m-%d")
-                            except Exception:
-                                pass
-                        last_ts = ts
-
-                        # Collect (type, payload) pairs, unwrapping SubagentEvent recursively
-                        events_to_process: list[tuple[str, dict[str, Any]]] = []
-                        collect_events(msg_type, payload, events_to_process)
-
-                        for ev_type, ev_payload in events_to_process:
-                            if ev_type == "TurnBegin":
-                                session_turns += 1
-                            elif ev_type == "ToolCall":
-                                fn: dict[str, Any] | None = ev_payload.get("function")
-                                tool_id: str = ev_payload.get("id", "")
-                                if isinstance(fn, dict):
-                                    name: str = fn.get("name", "unknown")
-                                    tool_stats[name]["count"] += 1
-                                    if tool_id:
-                                        pending_tools[tool_id] = name
-                            elif ev_type == "ToolResult":
-                                tool_call_id: str = ev_payload.get("tool_call_id", "")
-                                rv: dict[str, Any] | None = ev_payload.get("return_value")
-                                if isinstance(rv, dict) and rv.get("is_error"):
-                                    tool_name = pending_tools.get(tool_call_id)
-                                    if tool_name:
-                                        tool_stats[tool_name]["error_count"] += 1
-                                pending_tools.pop(tool_call_id, None)
-                            elif ev_type == "StatusUpdate":
-                                tu: dict[str, Any] | None = ev_payload.get("token_usage")
-                                if isinstance(tu, dict):
-                                    session_input_tokens += (
-                                        int(tu.get("input_other", 0))
-                                        + int(tu.get("input_cache_read", 0))
-                                        + int(tu.get("input_cache_creation", 0))
-                                    )
-                                    session_output_tokens += int(tu.get("output", 0))
-            except Exception:
-                continue
-
-            total_turns += session_turns
-            total_input_tokens += session_input_tokens
-            total_output_tokens += session_output_tokens
-
-            duration = last_ts - first_ts if last_ts > first_ts else 0
-            total_duration_sec += duration
-
-            # Aggregate daily
-            if session_date:
-                daily_stats[session_date]["sessions"] += 1
-                daily_stats[session_date]["turns"] += session_turns
-
-            # Aggregate per project
-            project_stats[work_dir]["sessions"] += 1
-            project_stats[work_dir]["turns"] += session_turns
+            total_sessions, total_turns, total_input_tokens, total_output_tokens, total_duration_sec = _process_one_session(
+                session_dir, work_dir, total_sessions, total_turns,
+                total_input_tokens, total_output_tokens, total_duration_sec,
+                tool_stats, daily_stats, project_stats,
+            )
 
     # Build tool_usage: top 20 by count
     tool_usage = sorted(

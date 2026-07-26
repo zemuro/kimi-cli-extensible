@@ -201,6 +201,29 @@ def sanitize_cli_path(raw: str) -> str:
     return raw
 
 
+def ensure_safe_path(path: Path) -> Path:
+    """Mitigate Windows MAX_PATH (260-char) limit.
+
+    On Windows, if the absolute path exceeds 200 characters, prepend the
+    extended-length path prefix ``\\\\?\\`` to bypass the 260-character limit.
+    On non-Windows systems this is a passthrough.
+
+    Uses ``os.path.abspath()`` to resolve to an absolute path before prepending
+    the prefix, so relative paths are also handled correctly.
+    """
+    import os as _os
+    import sys as _sys
+
+    if _sys.platform != "win32":
+        return path
+
+    abs_path = path.absolute()
+    str_path = str(abs_path)
+    if len(str_path) > 200 and not str_path.startswith("\\\\?\\"):
+        return Path("\\\\?\\" + str_path)
+    return abs_path
+
+
 def is_within_directory(path: KaosPath, directory: KaosPath) -> bool:
     """
     Check whether *path* is contained within *directory* using pure path semantics.

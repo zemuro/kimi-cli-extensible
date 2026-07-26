@@ -67,7 +67,7 @@ class Session:
             return False
         
         from consilium.think.storage import think_path
-        if think_path(self.id).exists():
+        if think_path(self.id, work_dir=Path(self.work_dir_meta.path)).exists():
             return False
 
         try:
@@ -115,8 +115,8 @@ class Session:
         if self.context_file.exists():
             self.updated_at = self.context_file.stat().st_mtime
             
-        from pathlib import Path
-        think_file = Path.home() / ".consilium" / "think_sessions" / f"{self.id}.jsonl"
+        from consilium.think.storage import think_path
+        think_file = think_path(self.id, work_dir=Path(self.work_dir_meta.path))
         if think_file.exists():
             think_mtime = think_file.stat().st_mtime
             if think_mtime > self.updated_at:
@@ -222,7 +222,7 @@ class Session:
 
         session_dir = work_dir_meta.sessions_dir / session_id
         if not session_dir.is_dir():
-            imported = cls._try_import_session(session_id, session_dir)
+            imported = Session._try_import_session(session_id, session_dir, work_dir_meta)
             if not imported:
                 logger.debug("Session directory not found: {session_dir}", session_dir=session_dir)
                 return None
@@ -330,13 +330,14 @@ class Session:
 
 
     @classmethod
-    def _try_import_session(cls, session_id: str, dest_dir: Path) -> bool:
+    def _try_import_session(cls, session_id: str, dest_dir: Path, work_dir_meta: WorkDirMeta | None = None) -> bool:
         """Attempt to import a session from other workspaces or think sessions."""
         import shutil
-        from consilium.think.storage import get_think_dir
+        from consilium.think.storage import think_path
         
-        # Check Think sessions
-        think_file = get_think_dir() / f"{session_id}.jsonl"
+        # Check Think sessions (workspace-local first, then global fallback)
+        think_work_dir = Path(work_dir_meta.path) if work_dir_meta else None
+        think_file = think_path(session_id, work_dir=think_work_dir)
         if think_file.exists():
             dest_dir.mkdir(parents=True, exist_ok=True)
             shutil.copy(think_file, dest_dir / "wire.jsonl")

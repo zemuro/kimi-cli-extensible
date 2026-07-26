@@ -14,14 +14,15 @@ SummaryCallback = Callable[[list[ThinkMessage], str | None], Awaitable[str]]
 class HistoryManager:
     """CRUD operations on a ThinkSession's message history."""
 
-    def __init__(self, session: ThinkSession) -> None:
+    def __init__(self, session: ThinkSession, work_dir: Path | None = None) -> None:
         self.session = session
+        self.work_dir = work_dir
 
     def add_message(self, role: str, content: str) -> ThinkMessage:
         """Append a new message to the session."""
         msg = ThinkMessage(role=role, content=content)  # type: ignore[arg-type]
         self.session.messages.append(msg)
-        save_session(self.session)
+        save_session(self.session, work_dir=self.work_dir)
         return msg
 
     def edit_message(self, msg_id: str, new_content: str) -> ThinkMessage:
@@ -29,14 +30,14 @@ class HistoryManager:
         msg = self._get(msg_id)
         msg.content = new_content
         msg.edited_at = time.time()
-        save_session(self.session)
+        save_session(self.session, work_dir=self.work_dir)
         return msg
 
     def delete_message(self, msg_id: str) -> None:
         """Soft-delete a message by id."""
         msg = self._get(msg_id)
         msg.deleted = True
-        save_session(self.session)
+        save_session(self.session, work_dir=self.work_dir)
 
     def get_active_messages(self) -> list[ThinkMessage]:
         """Return non-deleted, non-compacted messages in chronological order."""
@@ -91,7 +92,7 @@ class HistoryManager:
         first_idx = self.session.messages.index(to_summarize[0])
         self.session.messages.insert(first_idx, summary_msg)
 
-        save_session(self.session)
+        save_session(self.session, work_dir=self.work_dir)
 
         new_active = self.get_active_messages()
         new_usage = self._estimate_usage_pct(new_active)
@@ -131,7 +132,7 @@ class HistoryManager:
             if msg.id == msg_id:
                 removed = self.session.messages[i + 1 :]
                 self.session.messages = self.session.messages[: i + 1]
-                save_session(self.session)
+                save_session(self.session, work_dir=self.work_dir)
                 return removed
         raise KeyError(f"Message {msg_id} not found")
 
@@ -154,7 +155,7 @@ class HistoryManager:
                         for m in self.session.messages[: i + 1]
                     ]
                 )
-                save_session(new_session)
+                save_session(new_session, work_dir=self.work_dir)
                 return new_session
         raise KeyError(f"Message {msg_id} not found")
 

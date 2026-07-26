@@ -10,10 +10,8 @@ from consilium.do.journal import ChangeJournal, DiffEntry
 
 
 @pytest.fixture
-def journal(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> ChangeJournal:
-    from consilium.do import journal as journal_mod
-    monkeypatch.setattr(journal_mod, "JOURNAL_DIR", tmp_path / "do_sessions")
-    return ChangeJournal("test-session")
+def journal(tmp_path: Path) -> ChangeJournal:
+    return ChangeJournal("test-session", work_dir=tmp_path)
 
 
 def test_journal_append_and_read(journal: ChangeJournal) -> None:

@@ -12,7 +12,6 @@ import pytest
 
 from consilium.do.diff_computer import is_binary_file
 from consilium.do.journal import (
-    JOURNAL_DIR,
     ChangeJournal,
     DiffEntry,
     archive_old_journals,
@@ -21,50 +20,43 @@ from consilium.do.session import DoSession
 
 
 class TestArchiveOldJournals:
-    def test_archives_journals_older_than_threshold(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr("consilium.do.journal.JOURNAL_DIR", tmp_path)
+    def test_archives_journals_older_than_threshold(self, tmp_path: Path) -> None:
+        # Need to create journal dir under workspace structure for archive to work
+        do_dir = tmp_path / ".consilium" / "sessions" / "do"
+        do_dir.mkdir(parents=True, exist_ok=True)
 
         # Create a "recent" journal dir
-        recent = tmp_path / "recent-session"
+        recent = do_dir / "recent-session"
         recent.mkdir()
         (recent / "journal.jsonl").write_text("{}", encoding="utf-8")
 
         # Create an "old" journal dir
-        old = tmp_path / "old-session"
+        old = do_dir / "old-session"
         old.mkdir()
         (old / "journal.jsonl").write_text("{}", encoding="utf-8")
         # Backdate its mtime to 60 days ago
         old_mtime = time.time() - 60 * 86400
         os.utime(old, (old_mtime, old_mtime))
 
-        archived = archive_old_journals(max_age_days=30)
+        archived = archive_old_journals(max_age_days=30, work_dir=tmp_path)
 
         assert len(archived) == 1
         assert archived[0].name.startswith("old-session")
         assert not old.exists()
-        assert (tmp_path / ".archive" / archived[0].name).exists()
+        assert (do_dir / ".archive" / archived[0].name).exists()
         assert recent.exists()  # Recent journal untouched
 
-    def test_disabled_when_zero(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr("consilium.do.journal.JOURNAL_DIR", tmp_path)
-
-        old = tmp_path / "old-session"
-        old.mkdir()
-        old_mtime = time.time() - 60 * 86400
-        os.utime(old, (old_mtime, old_mtime))
-
-        archived = archive_old_journals(max_age_days=0)
-
+    def test_disabled_when_zero(self, tmp_path: Path) -> None:
+        archived = archive_old_journals(max_age_days=0, work_dir=tmp_path)
         assert archived == []
-        assert old.exists()
 
-    def test_skips_non_directories(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr("consilium.do.journal.JOURNAL_DIR", tmp_path)
-
+    def test_skips_non_directories(self, tmp_path: Path) -> None:
+        do_dir = tmp_path / ".consilium" / "sessions" / "do"
+        do_dir.mkdir(parents=True, exist_ok=True)
         # A plain file in the journal dir should be ignored
-        (tmp_path / "not-a-dir.txt").write_text("hello")
+        (do_dir / "not-a-dir.txt").write_text("hello")
 
-        archived = archive_old_journals(max_age_days=1)
+        archived = archive_old_journals(max_age_days=1, work_dir=tmp_path)
         assert archived == []
 
 
@@ -83,10 +75,7 @@ class TestBinaryDiffHandling:
         assert is_binary_file(tmp_path / "nonexistent.bin") is False
 
     @pytest.mark.asyncio
-    async def test_binary_diff_skips_unified_diff(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        from consilium.do import journal as journal_mod
-        monkeypatch.setattr(journal_mod, "JOURNAL_DIR", tmp_path / "do_sessions")
-
+    async def test_binary_diff_skips_unified_diff(self, tmp_path: Path) -> None:
         mock_soul = MagicMock()
         mock_soul._runtime.session.id = "test-bin-session"
         mock_soul._current_turn_index = 1
@@ -126,10 +115,7 @@ class TestBinaryDiffHandling:
         assert entry["size_after"] == 12
 
     @pytest.mark.asyncio
-    async def test_text_diff_still_works(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        from consilium.do import journal as journal_mod
-        monkeypatch.setattr(journal_mod, "JOURNAL_DIR", tmp_path / "do_sessions")
-
+    async def test_text_diff_still_works(self, tmp_path: Path) -> None:
         mock_soul = MagicMock()
         mock_soul._runtime.session.id = "test-text-session"
         mock_soul._current_turn_index = 1

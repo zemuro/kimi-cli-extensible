@@ -36,10 +36,7 @@ def mock_soul() -> MagicMock:
 
 
 @pytest.fixture
-def do_session(mock_soul: MagicMock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> DoSession:
-    from consilium.do import journal as journal_mod
-    monkeypatch.setattr(journal_mod, "JOURNAL_DIR", tmp_path / "do_sessions")
-
+def do_session(mock_soul: MagicMock, tmp_path: Path) -> DoSession:
     # Create a temp git repo
     import subprocess
     subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
@@ -406,11 +403,9 @@ async def test_ensure_reviewer_reuses_existing(
 
 @pytest.mark.asyncio
 async def test_load_plan_context_single_file(
-    mock_soul: MagicMock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    mock_soul: MagicMock, tmp_path: Path
 ) -> None:
     """_load_plan_context parses a single-file plan and injects it."""
-    from consilium.do import journal as journal_mod
-    monkeypatch.setattr(journal_mod, "JOURNAL_DIR", tmp_path / "do_sessions")
 
     plan_file = tmp_path / "plan.md"
     plan_file.write_text("""# Plan
@@ -442,11 +437,9 @@ Do the first thing.
 
 @pytest.mark.asyncio
 async def test_load_plan_context_directory(
-    mock_soul: MagicMock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    mock_soul: MagicMock, tmp_path: Path
 ) -> None:
     """_load_plan_context parses a directory-based plan and injects target phase."""
-    from consilium.do import journal as journal_mod
-    monkeypatch.setattr(journal_mod, "JOURNAL_DIR", tmp_path / "do_sessions")
 
     plan_dir = tmp_path / "plan"
     plan_dir.mkdir()
@@ -494,11 +487,9 @@ Do the second thing.
 
 @pytest.mark.asyncio
 async def test_load_plan_context_directory_no_phase(
-    mock_soul: MagicMock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    mock_soul: MagicMock, tmp_path: Path
 ) -> None:
     """_load_plan_context loads all phases when no target phase is specified."""
-    from consilium.do import journal as journal_mod
-    monkeypatch.setattr(journal_mod, "JOURNAL_DIR", tmp_path / "do_sessions")
 
     plan_dir = tmp_path / "plan"
     plan_dir.mkdir()
@@ -521,11 +512,9 @@ async def test_load_plan_context_directory_no_phase(
 
 @pytest.mark.asyncio
 async def test_load_plan_context_missing_phase_logs_warning(
-    mock_soul: MagicMock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    mock_soul: MagicMock, tmp_path: Path
 ) -> None:
     """_load_plan_context logs a warning when the requested phase is not found."""
-    from consilium.do import journal as journal_mod
-    monkeypatch.setattr(journal_mod, "JOURNAL_DIR", tmp_path / "do_sessions")
 
     plan_file = tmp_path / "plan.md"
     plan_file.write_text("""## Phase 1: Only

@@ -35,9 +35,7 @@ def mock_soul() -> MagicMock:
 
 
 @pytest.fixture
-def do_session(mock_soul: MagicMock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> DoSession:
-    from consilium.do import journal as journal_mod
-    monkeypatch.setattr(journal_mod, "JOURNAL_DIR", tmp_path / "do_sessions")
+def do_session(mock_soul: MagicMock, tmp_path: Path) -> DoSession:
     return DoSession(mock_soul, work_dir=tmp_path)
 
 

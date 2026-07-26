@@ -52,7 +52,10 @@ def _get_imported_root() -> Path:
 
 
 def _find_session_dir(work_dir_hash: str, session_id: str) -> Path | None:
-    """Find session directory by work_dir_hash and session_id."""
+    """Find session directory by work_dir_hash and session_id.
+
+    Supports both legacy hash-based and new workspace-path-based lookups.
+    """
     if not _SESSION_ID_RE.match(session_id):
         return None
     if work_dir_hash == _IMPORTED_HASH:
@@ -60,6 +63,15 @@ def _find_session_dir(work_dir_hash: str, session_id: str) -> Path | None:
         if session_dir.is_dir():
             return session_dir
         return None
+
+    # Try workspace-local path (work_dir_hash is the work_dir path)
+    wd = Path(work_dir_hash)
+    if wd.is_absolute():
+        session_dir = wd / ".consilium" / "sessions" / "regular" / session_id
+        if session_dir.is_dir():
+            return session_dir
+
+    # Legacy: hash-based lookup
     if not _SESSION_ID_RE.match(work_dir_hash):
         return None
     sessions_root = get_share_dir() / "sessions"
@@ -202,10 +214,35 @@ def _scan_session_dir(
     }
 
 
+def _list_new_style_sessions() -> list[dict[str, Any]]:
+    """Scan workspace-local session directories under each work_dir's .consilium/sessions/."""
+    results: list[dict[str, Any]] = []
+    try:
+        metadata = load_metadata()
+    except Exception:
+        return results
+
+    for wd in metadata.work_dirs:
+        regular_dir = Path(wd.path) / ".consilium" / "sessions" / "regular"
+        if not regular_dir.is_dir():
+            continue
+        for session_dir in regular_dir.iterdir():
+            if not session_dir.is_dir():
+                continue
+            info = _scan_session_dir(session_dir, wd.path, wd.path)
+            if info:
+                results.append(info)
+    return results
+
+
 def _list_sessions_sync() -> list[dict[str, Any]]:
-    """Synchronous session scanning — called from a thread pool."""
+    """Synchronous session scanning — called from a thread pool.
+
+    Scans both legacy global sessions and new workspace-local sessions.
+    """
     results: list[dict[str, Any]] = []
 
+    # Legacy global sessions (read-only)
     sessions_root = get_share_dir() / "sessions"
     if sessions_root.exists():
         for work_dir_hash_dir in sessions_root.iterdir():
@@ -216,6 +253,9 @@ def _list_sessions_sync() -> list[dict[str, Any]]:
                 info = _scan_session_dir(session_dir, work_dir_hash_dir.name, work_dir)
                 if info:
                     results.append(info)
+
+    # New workspace-local sessions
+    results.extend(_list_new_style_sessions())
 
     imported_root = _get_imported_root()
     if imported_root.exists():

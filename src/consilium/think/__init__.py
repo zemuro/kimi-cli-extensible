@@ -132,7 +132,7 @@ class ThinkSoul(Soul):
         self._config = config
         self._think_config = config.think
         self._think_session = think_session
-        self._history = HistoryManager(think_session)
+        self._history = HistoryManager(think_session, work_dir=Path(session.work_dir.unsafe_to_local_path()) if session.work_dir else None)
         self._hook_engine = HookEngine()
         self._system_prompt = system_prompt if system_prompt is not None else _load_system_prompt()
         self._last_usage: TokenUsage | None = None
@@ -561,7 +561,7 @@ class ThinkSoul(Soul):
             return msg
 
         try:
-            result = command.func(self._history, self._think_session, call.args)
+            result = command.func(self._history, self._think_session, call.args, work_dir=self._history.work_dir)
             if isinstance(result, Awaitable):
                 result = await result
             if result:

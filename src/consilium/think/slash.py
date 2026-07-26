@@ -94,27 +94,27 @@ def slash_prune(history: HistoryManager, session: ThinkSession, args: str) -> st
 
 
 @think_registry.command(name="checkpoint", aliases=["cp"])
-def slash_checkpoint(history: HistoryManager, session: ThinkSession, args: str) -> str:
+def slash_checkpoint(history: HistoryManager, session: ThinkSession, args: str, work_dir: Path | None = None) -> str:
     """Save or load a checkpoint: /checkpoint save-name  or  /checkpoint --list"""
     arg = args.strip()
     if arg == "--list" or arg == "-l":
-        names = list_checkpoints(session.id)
+        names = list_checkpoints(session.id, work_dir=work_dir)
         if not names:
             return "No checkpoints."
         return "Checkpoints:\n" + "\n".join(f"  - {n}" for n in names)
     if not arg:
         return "Usage: /checkpoint <name> or /checkpoint --list"
-    save_checkpoint(session, arg)
+    save_checkpoint(session, arg, work_dir=work_dir)
     return f"Checkpoint saved: {arg}"
 
 
 @think_registry.command(name="load")
-def slash_load(history: HistoryManager, session: ThinkSession, args: str) -> str:
+def slash_load(history: HistoryManager, session: ThinkSession, args: str, work_dir: Path | None = None) -> str:
     """Load a checkpoint: /load checkpoint-name"""
     name = args.strip()
     if not name:
         return "Usage: /load <checkpoint_name>"
-    loaded = load_checkpoint(session.id, name)
+    loaded = load_checkpoint(session.id, name, work_dir=work_dir)
     if loaded is None:
         return f"Checkpoint '{name}' not found."
     session.messages = loaded.messages
