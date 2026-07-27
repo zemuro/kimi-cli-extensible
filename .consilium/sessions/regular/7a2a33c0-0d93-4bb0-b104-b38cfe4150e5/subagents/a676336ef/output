@@ -1,0 +1,301 @@
+[stage] runner_started
+[stage] agent_built
+[stage] context_restored
+[stage] context_ready
+[stage] run_soul_start
+[tool] Glob
+[tool_result] error: Directory outside workspace
+[tool] Shell
+[tool_result] success
+[tool] ReadFile
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool_result] success
+Now let me check the shared `Methods` enum and the extension-side handler to fully understand the RPC mapping:
+
+[tool] Shell
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+Now let me check the extension side to see how it handles these RPC calls[tool] Shell
+[tool] Grep
+[tool_result] success
+[tool_result] success
+[tool] ReadFile
+[tool] Grep
+[tool_result] success
+[tool_result] success
+[tool] Grep
+[tool] ReadFile
+[tool_result] success
+[tool_result] success
+Here's a comprehensive report on the `services` directory:
+
+---
+
+## 1. Files in the directory
+
+| File | Purpose |
+|---|---|
+| `index.ts` | Re-exports `bridge`, `Events`, and MCP-related items |
+| `bridge.ts` | The core RPC bridge between webview and VS Code extension |
+| `config.ts` | Constants for image/video/media/picker configuration |
+| `recommended-mcp.ts` | Pre-built MCP server recommendations (Playwright, Context7, GitHub) |
+
+---
+
+## 2. The `bridge` object
+
+Defined in **`bridge.ts`**, line 340: `export const bridge = new Bridge();`
+
+The `Bridge` class:
+- Acquires a VS Code API handle (`acquireVsCodeApi()`) or uses a mock when running outside VS Code.
+- Listens to `window.addEventListener("message", ...)` for responses.
+- Maintains a `pending` map of unresolved RPC calls keyed by `id`.
+
+---
+
+## 3. Methods the bridge exposes
+
+The bridge exposes **~50 methods**, each calling the private `this.call<T>(method, params)` generic function. Every bridge method maps to a string method name defined in `Methods` (from `shared/bridge.ts`). The dispatch happens on the extension side in **`src/bridge-handler.ts`** → `dispatch()` method (line 277):
+
+```ts
+private async dispatch(method: string, params: unknown, webviewId: string): Promise<unknown> {
+    const handler = handlers[method];
+    if (!handler) {
+      throw new Error(`Unknown method: ${method}`);
+    }
+    return handler(params, this.createContext(webviewId));
+  }
+```
+
+The `handlers` object is assembled in `src/handlers/index.ts` from 8 handler modules:
+- **workspaceHandlers**: `checkWorkspace`, `getProjectFiles`, `getEditorContext`, `setPlanMode`, etc.
+- **cliHandlers**: `checkCLI`, `runCLI`, `getModels`, `getQuota`, `getPeerStatus`
+- **configHandlers**: `saveConfig`, `getExtensionConfig`, `openSettings`, `openFolder`, `getInputHistory`, `addInputHistory`, `updateExtensionSettings`, `fetchProviderModels`
+- **mcpHandlers**: `getMCPServers`, `addMCPServer`, `updateMCPServer`, `removeMCPServer`, `authMCP`, `resetAuthMCP`, `testMCP`
+- **sessionHandlers**: `getConsiliumSessions`, `getAllConsiliumSessions`, `getRegisteredWorkDirs`, `setWorkDir`, `browseWorkDir`, `loadConsiliumSessionHistory`, `deleteConsiliumSession`, `forkConsiliumSession`, `writeSessionMetadata`, `restoreTabState`, **`checkProjectSetup`**, **`initializeProject`**, and more
+- **chatHandlers**: `streamChat`, `abortChat`, `resetSession`, `steerChat`, `respondApproval`, `respondQuestion`
+- **fileHandlers**: `pickMedia`, `openFile`, `checkFileExists`, `checkFilesExist`, `openFileDiff`, `saveBaselines`, `trackFiles`, `clearTrackedFiles`, `revertFiles`, `keepChanges`, `getImageDataUri`
+- **authHandlers**: `checkLoginStatus`, `login`, `logout`,
+  `reloadWebview`, `showLogs`, `SetActiveTab`
+
+---
+
+## 4. RPC mechanism (how webview calls an extension handler)
+
+The protocol is a **simple request/response message passing over `postMessage`**:
+
+**Request (webview → extension):**
+```
+{ id: "1_1234567890", method: "checkWorkspace", params: undefined, webviewId: "..." }
+```
+
+The `Bridge.call()` private method:
+1. Generates a unique `id = "${++this.requestId}_${Date.now()}"`.
+2. Stores a `PendingRequest` (resolve, reject, timeout) in the `pending` map.
+3. Posts the message via `this.vscode.postMessage({ id, method, params, webviewId })`.
+4. Returns a `Promise` that resolves/rejects when the response arrives.
+
+**Response (extension → webview):**
+```
+{ id: "1_1234567890", result: { ... } }   // success
+{ id: "1_1234567890", error: "..." }       // failure
+```
+
+The `handleMessage` handler matches `msg.id` against the `pending` map, resolves the promise, and clears the timeout.
+
+**One-way events** (extension → webview) use a separate `event` field: `{ event: "streamEvent", data: ... }`. Webview subscribes via `bridge.on(event, handler)`.
+
+---
+
+## 5. How to add a new bridge method like `checkProjectSetup` or `initializeProject`
+
+These two methods **already exist** — they were recently added. The pattern is clear from the code. Here's the recipe:
+
+### A. Add method name to `shared/bridge.ts`
+```ts
+export const Methods = {
+  // ... existing ...
+  CheckProjectSetup: "checkProjectSetup",
+  InitializeProject: "initializeProject",
+} as const;
+```
+
+### B. Add bridge method in `webview-ui/src/services/bridge.ts`
+```ts
+class Bridge {
+  // ... existing methods ...
+  
+  checkProjectSetup() {
+    return this.call<{ initialized: boolean }>(Methods.CheckProjectSetup);
+  }
+  
+  initializeProject() {
+    return this.call<{ success: boolean; error?: string }>(Methods.InitializeProject);
+  }
+}
+```
+
+### C. Add handler in `src/handlers/<category>.handler.ts`
+```ts
+import * as path from "node:path";
+import * as fs from "node:fs";
+
+[Methods.CheckProjectSetup]: async (_, ctx) => {
+    const workDir = ctx.workDir || ctx.workspaceRoot;
+    if (!workDir) return { initialized: false };
+    const consiliumDir = path.join(workDir, '.consilium');
+    const agentsDir = path.join(consiliumDir, 'agents');
+    const initialized = fs.existsSync(consiliumDir) && fs.existsSync(agentsDir);
+    return { initialized };
+},
+
+[Methods.InitializeProject]: async (_, ctx) => {
+    const workDir = ctx.workDir || ctx.workspaceRoot;
+    if (!workDir) return { success: false, error: 'No workspace' };
+    // ... actual init logic ...
+},
+```
+
+The handler receives `(params, ctx: HandlerContext)` where `ctx` provides `workDir`, `workspaceRoot`, `broadcast`, `fileManager`, `getOrCreateSession`, etc.
+
+**Key insight:** The handler category file is just a `Record<string, Handler>` that gets merged into the global `handlers` map in `src/handlers/index.ts`. No manual registration needed as long as the handler module is imported and spread there.[stage] run_soul_finished
+
+[summary]
+Here's a comprehensive report on the `services` directory:
+
+---
+
+## 1. Files in the directory
+
+| File | Purpose |
+|---|---|
+| `index.ts` | Re-exports `bridge`, `Events`, and MCP-related items |
+| `bridge.ts` | The core RPC bridge between webview and VS Code extension |
+| `config.ts` | Constants for image/video/media/picker configuration |
+| `recommended-mcp.ts` | Pre-built MCP server recommendations (Playwright, Context7, GitHub) |
+
+---
+
+## 2. The `bridge` object
+
+Defined in **`bridge.ts`**, line 340: `export const bridge = new Bridge();`
+
+The `Bridge` class:
+- Acquires a VS Code API handle (`acquireVsCodeApi()`) or uses a mock when running outside VS Code.
+- Listens to `window.addEventListener("message", ...)` for responses.
+- Maintains a `pending` map of unresolved RPC calls keyed by `id`.
+
+---
+
+## 3. Methods the bridge exposes
+
+The bridge exposes **~50 methods**, each calling the private `this.call<T>(method, params)` generic function. Every bridge method maps to a string method name defined in `Methods` (from `shared/bridge.ts`). The dispatch happens on the extension side in **`src/bridge-handler.ts`** → `dispatch()` method (line 277):
+
+```ts
+private async dispatch(method: string, params: unknown, webviewId: string): Promise<unknown> {
+    const handler = handlers[method];
+    if (!handler) {
+      throw new Error(`Unknown method: ${method}`);
+    }
+    return handler(params, this.createContext(webviewId));
+  }
+```
+
+The `handlers` object is assembled in `src/handlers/index.ts` from 8 handler modules:
+- **workspaceHandlers**: `checkWorkspace`, `getProjectFiles`, `getEditorContext`, `setPlanMode`, etc.
+- **cliHandlers**: `checkCLI`, `runCLI`, `getModels`, `getQuota`, `getPeerStatus`
+- **configHandlers**: `saveConfig`, `getExtensionConfig`, `openSettings`, `openFolder`, `getInputHistory`, `addInputHistory`, `updateExtensionSettings`, `fetchProviderModels`
+- **mcpHandlers**: `getMCPServers`, `addMCPServer`, `updateMCPServer`, `removeMCPServer`, `authMCP`, `resetAuthMCP`, `testMCP`
+- **sessionHandlers**: `getConsiliumSessions`, `getAllConsiliumSessions`, `getRegisteredWorkDirs`, `setWorkDir`, `browseWorkDir`, `loadConsiliumSessionHistory`, `deleteConsiliumSession`, `forkConsiliumSession`, `writeSessionMetadata`, `restoreTabState`, **`checkProjectSetup`**, **`initializeProject`**, and more
+- **chatHandlers**: `streamChat`, `abortChat`, `resetSession`, `steerChat`, `respondApproval`, `respondQuestion`
+- **fileHandlers**: `pickMedia`, `openFile`, `checkFileExists`, `checkFilesExist`, `openFileDiff`, `saveBaselines`, `trackFiles`, `clearTrackedFiles`, `revertFiles`, `keepChanges`, `getImageDataUri`
+- **authHandlers**: `checkLoginStatus`, `login`, `logout`,
+  `reloadWebview`, `showLogs`, `SetActiveTab`
+
+---
+
+## 4. RPC mechanism (how webview calls an extension handler)
+
+The protocol is a **simple request/response message passing over `postMessage`**:
+
+**Request (webview → extension):**
+```
+{ id: "1_1234567890", method: "checkWorkspace", params: undefined, webviewId: "..." }
+```
+
+The `Bridge.call()` private method:
+1. Generates a unique `id = "${++this.requestId}_${Date.now()}"`.
+2. Stores a `PendingRequest` (resolve, reject, timeout) in the `pending` map.
+3. Posts the message via `this.vscode.postMessage({ id, method, params, webviewId })`.
+4. Returns a `Promise` that resolves/rejects when the response arrives.
+
+**Response (extension → webview):**
+```
+{ id: "1_1234567890", result: { ... } }   // success
+{ id: "1_1234567890", error: "..." }       // failure
+```
+
+The `handleMessage` handler matches `msg.id` against the `pending` map, resolves the promise, and clears the timeout.
+
+**One-way events** (extension → webview) use a separate `event` field: `{ event: "streamEvent", data: ... }`. Webview subscribes via `bridge.on(event, handler)`.
+
+---
+
+## 5. How to add a new bridge method like `checkProjectSetup` or `initializeProject`
+
+These two methods **already exist** — they were recently added. The pattern is clear from the code. Here's the recipe:
+
+### A. Add method name to `shared/bridge.ts`
+```ts
+export const Methods = {
+  // ... existing ...
+  CheckProjectSetup: "checkProjectSetup",
+  InitializeProject: "initializeProject",
+} as const;
+```
+
+### B. Add bridge method in `webview-ui/src/services/bridge.ts`
+```ts
+class Bridge {
+  // ... existing methods ...
+  
+  checkProjectSetup() {
+    return this.call<{ initialized: boolean }>(Methods.CheckProjectSetup);
+  }
+  
+  initializeProject() {
+    return this.call<{ success: boolean; error?: string }>(Methods.InitializeProject);
+  }
+}
+```
+
+### C. Add handler in `src/handlers/<category>.handler.ts`
+```ts
+import * as path from "node:path";
+import * as fs from "node:fs";
+
+[Methods.CheckProjectSetup]: async (_, ctx) => {
+    const workDir = ctx.workDir || ctx.workspaceRoot;
+    if (!workDir) return { initialized: false };
+    const consiliumDir = path.join(workDir, '.consilium');
+    const agentsDir = path.join(consiliumDir, 'agents');
+    const initialized = fs.existsSync(consiliumDir) && fs.existsSync(agentsDir);
+    return { initialized };
+},
+
+[Methods.InitializeProject]: async (_, ctx) => {
+    const workDir = ctx.workDir || ctx.workspaceRoot;
+    if (!workDir) return { success: false, error: 'No workspace' };
+    // ... actual init logic ...
+},
+```
+
+The handler receives `(params, ctx: HandlerContext)` where `ctx` provides `workDir`, `workspaceRoot`, `broadcast`, `fileManager`, `getOrCreateSession`, etc.
+
+**Key insight:** The handler category file is just a `Record<string, Handler>` that gets merged into the global `handlers` map in `src/handlers/index.ts`. No manual registration needed as long as the handler module is imported and spread there.

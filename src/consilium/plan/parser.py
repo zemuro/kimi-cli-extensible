@@ -101,7 +101,7 @@ def _parse_phase_block(block_text: str, line_offset: int) -> Phase:
     phase_id = f"phase-{phase_num}"
 
     # Parse key-value pairs and subsections
-    status = PhaseStatus.PENDING
+    status = PhaseStatus.PLANNING
     locked = False
     files_involved: list[str] = []
     dependencies: list[str] = []
@@ -159,7 +159,7 @@ def _parse_phase_block(block_text: str, line_offset: int) -> Phase:
                 try:
                     status = PhaseStatus(value.lower())
                 except ValueError:
-                    status = PhaseStatus.PENDING
+                    status = PhaseStatus.PLANNING
             elif key == "locked":
                 locked = value.lower() in ("true", "yes", "1")
             elif key == "files_involved":
@@ -323,11 +323,11 @@ def _parse_yaml_frontmatter(text: str) -> tuple[dict, str]:
 
 def _phase_from_frontmatter(frontmatter: dict, body: str, phase_id: str) -> Phase:
     """Build a Phase model from YAML frontmatter + markdown body."""
-    status_str = str(frontmatter.get("status", "pending")).lower()
+    status_str = str(frontmatter.get("status", "planning")).lower()
     try:
         status = PhaseStatus(status_str)
     except ValueError:
-        status = PhaseStatus.PENDING
+        status = PhaseStatus.PLANNING
 
     # Parse body for subsections if present
     lines = body.splitlines()

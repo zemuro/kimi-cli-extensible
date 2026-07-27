@@ -18,40 +18,40 @@
   "auto_archive_exempt": false,
   "todos": [
     {
-      "title": "Add Methods to shared/bridge.ts",
+      "title": "Update PhaseStatus enum in plan/models.py",
       "status": "done"
     },
     {
-      "title": "Add handlers to session.handler.ts",
+      "title": "Update plan/parser.py references",
       "status": "done"
     },
     {
-      "title": "Add bridge methods in webview-ui",
+      "title": "Update plan/validator.py references",
       "status": "done"
     },
     {
-      "title": "Add projectSetupSkipped to settings store",
+      "title": "Update plan/audit_l1.py references",
       "status": "done"
     },
     {
-      "title": "Update useAppInit.ts with uninitialized status",
+      "title": "Update plan/handover.py references",
       "status": "done"
     },
     {
-      "title": "Create ProjectSetupScreen component",
+      "title": "Update think/plan_commands.py synthesis prompt",
       "status": "done"
     },
     {
-      "title": "Update App.tsx with uninitialized case",
+      "title": "Rewrite prompts/think_system.md Plan Directory Awareness",
       "status": "done"
     },
     {
-      "title": "Build and verify",
+      "title": "Update tests (3 files)",
       "status": "done"
     },
     {
-      "title": "Write implementation report",
-      "status": "in_progress"
+      "title": "Verify no remaining old references",
+      "status": "done"
     }
   ],
   "paired_session_id": null

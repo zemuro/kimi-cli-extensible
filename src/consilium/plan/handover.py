@@ -154,7 +154,7 @@ def read_handover(path: Path) -> Handover:
                 try:
                     status = PhaseStatus(cells[1])
                 except ValueError:
-                    status = PhaseStatus.PENDING
+                    status = PhaseStatus.PLANNING
                 h.completed_phases.append(
                     CompletedPhaseEntry(
                         phase_id=cells[0],

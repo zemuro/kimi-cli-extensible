@@ -1,0 +1,125 @@
+[stage] runner_started
+[stage] agent_built
+[stage] context_restored
+[stage] context_ready
+[stage] run_soul_start
+[tool] ReadFile
+[tool_result] success
+## Report: `settings.store.ts`
+
+### 1. Full Source Code
+
+The file is 241 lines (shown above in full). It uses **Zustand** (`create` from `zustand`) to manage a global UI state store.
+
+---
+
+### 2. State Managed
+
+| Field | Type | Purpose |
+|---|---|---|
+| `currentModel` | `string` | Currently selected model ID |
+| `thinkingEnabled` | `boolean` | Whether thinking mode is toggled on |
+| `extensionConfig` | `ExtensionConfig` | Full extension config (executable path, yolo/autosave/ctrl-enter flags, env vars, API keys/provider/base URL, generation config, think/do models, etc.) |
+| `mcpServers` | `MCPServerConfig[]` | MCP server definitions |
+| `mcpModalOpen` | `boolean` | MCP server modal visibility |
+| `workDirModalOpen` | `boolean` | Work directory modal visibility |
+| `currentWorkDir` | `string \| null` | Currently selected work dir |
+| `workspaceRoot` | `string \| null` | VS Code workspace root path |
+| `models` | `ModelConfig[]` | Available model list |
+| `defaultModel` | `string \| null` | Default model ID from extension |
+| `defaultThinking` | `boolean` | Default thinking preference |
+| `modelsLoaded` | `boolean` | Whether model list has been initialized |
+| `wireSlashCommands` / `slashCommands` | `SlashCommandInfo[]` | Slash commands from agent (same data, two fields) |
+| `isLoggedIn` | `boolean` | Authentication status |
+| `generationConfigOpen` | `boolean` | Generation config modal visibility |
+| `projectSetupSkipped` | `boolean` | Whether project setup was skipped |
+| `autoLoadHistory` | `boolean` | Whether to auto-load conversation history |
+
+---
+
+### 3. How `projectSetupSkipped` Is Stored & Persisted
+
+- **Initialization**: Set to `false` on line 126 — a plain boolean in the Zustand initial state.
+- **No setter**: There is **no** dedicated action like `setProjectSetupSkipped` in the interface or implementation. It is only a static default value — no code ever changes it.
+- **No persistence**: It is **not** included in any `bridge.saveConfig(...)` call (those only persist `model`, `thinking`, and `generation`). It is purely an in-memory flag.
+
+---
+
+### 4. Persistence Mechanism
+
+| Data | Persistence |
+|---|---|
+| **Model selection** / **Thinking enabled** / **Generation config** | Persisted via `bridge.saveConfig(...)` calls (lines 153, 170, 183) to the VS Code extension's **`globalState`** (or similar extension-level storage) |
+| **All other state** (`projectSetupSkipped`, `autoLoadHistory`, `currentWorkDir`, `workspaceRoot`, `mcpServers`, `models`, UI flags, etc.) | **Not persisted at all** — purely in-memory Zustand state. No `zustand/middleware` `persist` is used. These values reset when the webview is reloaded. |
+
+---
+
+### 5. How to Add a New Setting
+
+The pattern is:
+
+1. **Add to `ExtensionConfig`** (if persisted in extension state): Add the field to `DEFAULT_EXTENSION_CONFIG` and the `ExtensionConfig` type in `shared/types`.
+2. **Add to `SettingsState` interface**: Declare the property and a setter action.
+3. **Add default value** in the store initializer.
+4. **Implement the setter** — call `set({ ... })` and optionally `bridge.saveConfig(...)` if the value needs to survive a webview reload.
+5. **If it needs to survive page reloads**, pass it through `bridge.saveConfig()` in the setter action, and have the extension's webview provider load it back into the store on initialization (likely in the existing `initModels` flow or a new init handler).[stage] run_soul_finished
+
+[summary]
+## Report: `settings.store.ts`
+
+### 1. Full Source Code
+
+The file is 241 lines (shown above in full). It uses **Zustand** (`create` from `zustand`) to manage a global UI state store.
+
+---
+
+### 2. State Managed
+
+| Field | Type | Purpose |
+|---|---|---|
+| `currentModel` | `string` | Currently selected model ID |
+| `thinkingEnabled` | `boolean` | Whether thinking mode is toggled on |
+| `extensionConfig` | `ExtensionConfig` | Full extension config (executable path, yolo/autosave/ctrl-enter flags, env vars, API keys/provider/base URL, generation config, think/do models, etc.) |
+| `mcpServers` | `MCPServerConfig[]` | MCP server definitions |
+| `mcpModalOpen` | `boolean` | MCP server modal visibility |
+| `workDirModalOpen` | `boolean` | Work directory modal visibility |
+| `currentWorkDir` | `string \| null` | Currently selected work dir |
+| `workspaceRoot` | `string \| null` | VS Code workspace root path |
+| `models` | `ModelConfig[]` | Available model list |
+| `defaultModel` | `string \| null` | Default model ID from extension |
+| `defaultThinking` | `boolean` | Default thinking preference |
+| `modelsLoaded` | `boolean` | Whether model list has been initialized |
+| `wireSlashCommands` / `slashCommands` | `SlashCommandInfo[]` | Slash commands from agent (same data, two fields) |
+| `isLoggedIn` | `boolean` | Authentication status |
+| `generationConfigOpen` | `boolean` | Generation config modal visibility |
+| `projectSetupSkipped` | `boolean` | Whether project setup was skipped |
+| `autoLoadHistory` | `boolean` | Whether to auto-load conversation history |
+
+---
+
+### 3. How `projectSetupSkipped` Is Stored & Persisted
+
+- **Initialization**: Set to `false` on line 126 — a plain boolean in the Zustand initial state.
+- **No setter**: There is **no** dedicated action like `setProjectSetupSkipped` in the interface or implementation. It is only a static default value — no code ever changes it.
+- **No persistence**: It is **not** included in any `bridge.saveConfig(...)` call (those only persist `model`, `thinking`, and `generation`). It is purely an in-memory flag.
+
+---
+
+### 4. Persistence Mechanism
+
+| Data | Persistence |
+|---|---|
+| **Model selection** / **Thinking enabled** / **Generation config** | Persisted via `bridge.saveConfig(...)` calls (lines 153, 170, 183) to the VS Code extension's **`globalState`** (or similar extension-level storage) |
+| **All other state** (`projectSetupSkipped`, `autoLoadHistory`, `currentWorkDir`, `workspaceRoot`, `mcpServers`, `models`, UI flags, etc.) | **Not persisted at all** — purely in-memory Zustand state. No `zustand/middleware` `persist` is used. These values reset when the webview is reloaded. |
+
+---
+
+### 5. How to Add a New Setting
+
+The pattern is:
+
+1. **Add to `ExtensionConfig`** (if persisted in extension state): Add the field to `DEFAULT_EXTENSION_CONFIG` and the `ExtensionConfig` type in `shared/types`.
+2. **Add to `SettingsState` interface**: Declare the property and a setter action.
+3. **Add default value** in the store initializer.
+4. **Implement the setter** — call `set({ ... })` and optionally `bridge.saveConfig(...)` if the value needs to survive a webview reload.
+5. **If it needs to survive page reloads**, pass it through `bridge.saveConfig()` in the setter action, and have the extension's webview provider load it back into the store on initialization (likely in the existing `initModels` flow or a new init handler).

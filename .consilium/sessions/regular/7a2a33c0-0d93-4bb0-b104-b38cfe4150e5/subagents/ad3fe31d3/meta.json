@@ -1,0 +1,16 @@
+{
+  "agent_id": "ad3fe31d3",
+  "subagent_type": "explore",
+  "status": "idle",
+  "description": "Think explore",
+  "created_at": 1785174867.08227,
+  "updated_at": 1785174895.7768877,
+  "last_task_id": null,
+  "launch_spec": {
+    "agent_id": "ad3fe31d3",
+    "subagent_type": "explore",
+    "model_override": null,
+    "effective_model": null,
+    "created_at": 1785174867.08227
+  }
+}

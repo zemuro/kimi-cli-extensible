@@ -1,0 +1,41 @@
+<git-context>
+Working directory: c:\Users\zemuro\Antigravity\kimi_cli_mod
+Remote: https://github.com/zemuro/consilium.git
+Project: zemuro/consilium
+Branch: main
+Dirty files (14):
+  M .consilium/sessions/regular/.peer-status.json
+   M .consilium/sessions/regular/a3a538b1-a684-4d85-8ce7-2c16cd1af955/context.jsonl
+   M .consilium/sessions/regular/a3a538b1-a684-4d85-8ce7-2c16cd1af955/state.json
+   M .consilium/sessions/regular/a3a538b1-a684-4d85-8ce7-2c16cd1af955/subagents/a4afdc230/context.jsonl
+   M .consilium/sessions/regular/a3a538b1-a684-4d85-8ce7-2c16cd1af955/subagents/a4afdc230/meta.json
+   M .consilium/sessions/regular/a3a538b1-a684-4d85-8ce7-2c16cd1af955/subagents/a4afdc230/output
+   M .consilium/sessions/regular/a3a538b1-a684-4d85-8ce7-2c16cd1af955/subagents/a4afdc230/wire.jsonl
+   M .consilium/sessions/regular/a3a538b1-a684-4d85-8ce7-2c16cd1af955/wire.jsonl
+   M .consilium/sessions/think/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5.jsonl
+   M .consilium/sessions/think/logs/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5.jsonl
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/a3484acd5/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/a6b0181ac/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/aa9e4894e/
+  ?? kimi_cli_mod.code-workspace
+Recent commits:
+  4639e25c docs(plan): add implementation report for phase 07 — Project Setup Screen
+  052660a7 docs(plan): add implementation report for mode-specific input draft
+  4db45846 docs(plan): add implementation report for Phase 09 SDK paths fix
+</git-context>
+
+Explore the extension codebase at C:\Users\zemuro\Antigravity\kimi_extension_mod to understand how slash commands work. I need to find:
+
+1. Where slash commands are defined (e.g., `/compact`, `/init`, `/help` etc.)
+2. How they are registered and dispatched
+3. Whether `/init` exists as a command
+4. The full list of available slash commands
+
+Search for:
+- "slash" in filenames and code
+- "slash_command" or "slashCommand" or "slash-command"
+- "compact" handler
+- "/init" in the codebase
+- Any command registry or map
+
+Look in src/ and webview-ui/src/ directories. Read the relevant files fully.

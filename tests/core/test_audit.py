@@ -26,7 +26,7 @@ Create token validation.
 - No regressions
 
 ## Phase 2: Middleware
-**status:** approved
+**status:** ready
 **locked:** false
 **files_involved:** src/middleware/auth.py
 **dependencies:** [phase-1]
@@ -35,7 +35,7 @@ Create token validation.
 Update middleware.
 
 ## Phase 3: Rotation
-**status:** pending
+**status:** planning
 **locked:** false
 **files_involved:** src/auth/refresh.py
 **dependencies:** [phase-1, phase-2]
@@ -70,7 +70,7 @@ class TestL1Audit:
     def test_missing_file_hard_fail(self, plan, work_dir: Path) -> None:
         phase = plan.get_phase("phase-3")
         # Make it non-pending so file check runs
-        phase.status = PhaseStatus.APPROVED
+        phase.status = PhaseStatus.READY
         # src/auth/refresh.py does not exist
         result = audit_l1(plan, phase, work_dir)
         assert result.hard_fail is True
@@ -78,17 +78,17 @@ class TestL1Audit:
 
     def test_pending_skips_file_check(self, plan, work_dir: Path) -> None:
         phase = plan.get_phase("phase-3")
-        # Pending phase should not hard-fail on missing files
-        # But it will still fail on dependency status since phase-2 is approved
+        # planning phase should not hard-fail on missing files
+        # But it will still fail on dependency status since phase-2 is ready
         result = audit_l1(plan, phase, work_dir)
-        # hard_fail should be False because pending skips file existence
-        # But dependency check will still flag phase-2 is approved (not implemented)
-        # Actually phase-2 is approved, which is acceptable for dependencies
+        # hard_fail should be False because planning skips file existence
+        # But dependency check will still flag phase-2 is ready (not implemented)
+        # Actually phase-2 is ready, which is acceptable for dependencies
         assert result.hard_fail is False
 
     def test_dependency_not_satisfied(self, plan, work_dir: Path) -> None:
-        # Change phase-1 to pending so phase-2's dependency is unsatisfied
-        plan.phases[0].status = PhaseStatus.PENDING
+        # Change phase-1 to planning so phase-2's dependency is unsatisfied
+        plan.phases[0].status = PhaseStatus.PLANNING
         phase = plan.get_phase("phase-2")
         result = audit_l1(plan, phase, work_dir)
         assert result.hard_fail is True

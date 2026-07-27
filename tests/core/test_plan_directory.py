@@ -18,7 +18,7 @@ class TestParseYamlFrontmatter:
     def test_parses_valid_frontmatter(self) -> None:
         text = """---
 title: "Phase 1"
-status: approved
+status: ready
 locked: true
 ---
 # Body
@@ -104,7 +104,7 @@ status: not_a_real_status
 Body
 """
         pd = parse_plan_directory(text, phase_id="phase-03", index_path=Path("index.md"))
-        assert pd.phases[0].status == PhaseStatus.PENDING
+        assert pd.phases[0].status == PhaseStatus.PLANNING
 
 
 class TestParsePlanDirectoryFromPath:
@@ -133,7 +133,7 @@ Do the first thing.
         # Create phase-02.md
         (plan_dir / "phase-02.md").write_text("""---
 title: "Second Phase"
-status: pending
+status: planning
 files_involved:
   - src/second.py
 dependencies:

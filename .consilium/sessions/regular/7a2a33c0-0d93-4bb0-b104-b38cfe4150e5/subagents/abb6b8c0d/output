@@ -1,0 +1,531 @@
+[stage] runner_started
+[stage] agent_built
+[stage] context_restored
+[stage] context_ready
+[stage] run_soul_start
+[tool] Glob
+[tool] Glob
+[tool_result] success
+[tool] Shell
+[tool_result] success
+[tool_result] success
+[tool] Glob
+[tool] Glob
+[tool_result] success
+[tool_result] success
+Now let me read all the YAML agent spec files:
+
+[tool] ReadFile
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool_result] success
+Now let me read the system prompt template and the role/when-to-use files:
+
+[tool] ReadFile
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool_result] success
+Now let me also check the `plan.yaml` from `default/` which I saw earlier, and get file sizes:
+
+[tool] Shell
+[tool] Grep
+[tool_result] success
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+Now let me check how the system prompt sections are assembled, since `system.md` only contains a comment marker:
+
+[tool] Grep
+[tool] Glob
+[tool_result] success
+[tool_result] success
+Here is the complete report.
+
+---
+
+## 1. All Agent Files and Sizes
+
+All files reside under `src/consilium/agents/`. There are **3 directories** and **17 files**.
+
+### `agents/default/` (base agent + 5 subagent specs + prompts)
+
+| File | Size | Type |
+|------|------|------|
+| `default/agent.yaml` | 1,532 B | Base agent spec |
+| `default/coder.yaml` | 779 B | Subagent extension |
+| `default/explore.yaml` | 783 B | Subagent extension |
+| `default/plan.yaml` | 777 B | Subagent extension |
+| `default/plan_editor.yaml` | 789 B | Subagent extension |
+| `default/plan_reviewer.yaml` | 1,764 B | Subagent spec (inline prompts) |
+| `default/system.md` | 33 B | Assembly marker only |
+| `default/coder_role.md` | 369 B | Role prompt fragment |
+| `default/explore_role.md` | 1,529 B | Role prompt fragment |
+| `default/plan_role.md` | 898 B | Role prompt fragment |
+| `default/plan_editor_role.md` | 13,648 B | Role prompt fragment (large) |
+| `default/coder_when_to_use.md` | 199 B | Usage guidance |
+| `default/explore_when_to_use.md` | 674 B | Usage guidance |
+| `default/plan_when_to_use.md` | 171 B | Usage guidance |
+| `default/plan_editor_when_to_use.md` | 174 B | Usage guidance |
+
+### `agents/okabe/` (alternative personality)
+
+| File | Size | Type |
+|------|------|------|
+| `okabe/agent.yaml` | 801 B | Self-contained agent spec |
+
+### `agents/` root (overrides)
+
+| File | Size | Type |
+|------|------|------|
+| `plan_editor.yaml` | 1,845 B | Root-level override spec |
+
+---
+
+## 2. Detailed Spec Breakdown for Each YAML File
+
+### 2a. `default/agent.yaml` — Base Agent (default agent)
+
+- **Agent name/type:** `""` (empty string — the base/default)
+- **System prompt:** `./system.md` → contains only `<!-- assembled-from-sections -->`, which triggers `assemble_system_prompt()` to dynamically load the 8 section files from `src/consilium/prompts/system/`
+- **System prompt args:** `ROLE_ADDITIONAL: ""` (empty by default)
+- **Tools (full list):**
+  - `consilium.tools.agent:Agent` — subagent spawning
+  - `consilium.tools.ask_user:AskUserQuestion`
+  - `consilium.tools.todo:SetTodoList`
+  - `consilium.tools.shell:Shell`
+  - `consilium.tools.background:TaskList`, `TaskOutput`, `TaskStop`
+  - `consilium.tools.file:ReadFile`, `ReadMediaFile`, `Glob`, `Grep`, `WriteFile`, `StrReplaceFile`
+  - `consilium.tools.web:SearchWeb`, `FetchURL`
+  - `consilium.tools.plan:ExitPlanMode`
+  - `consilium.tools.plan.enter:EnterPlanMode`
+  - *(commented out: `dmail:SendDMail`, `think:Think`)*
+- **Subagent types registered:**
+  - `coder` → `./coder.yaml`
+  - `explore` → `./explore.yaml`
+  - `plan` → `./plan.yaml`
+  - `plan_editor` → `./plan_editor.yaml`
+  - `plan_reviewer` → `./plan_reviewer.yaml`
+- **Special:** This is the root spec that all others extend. It has `extend: null`, `name: ""`, `allowed_tools: inherit` (resolved to `None` = no restriction). Subagents here define the full hierarchy.
+
+---
+
+### 2b. `default/coder.yaml` — Coder Subagent
+
+- **Agent name/type:** *Inherited* (from base)
+- **Extends:** `./agent.yaml`
+- **System prompt path:** *Inherited* → `system.md` → assembled sections
+- **System prompt args files:** `ROLE_ADDITIONAL` loaded from `./coder_role.md` (1-line: "You are now running as a subagent...")
+- **`when_to_use_file`:** `./coder_when_to_use.md` → "Use this agent for non-trivial software engineering work..."
+- **Tools:** Inherits base tools, filtered by:
+  - `allowed_tools`: shell, readfile, readmediafile, glob, grep, writefile, strreplacefile, searchweb, fetchurl
+  - `exclude_tools`: Agent, AskUserQuestion, SetTodoList, ExitPlanMode, EnterPlanMode
+  - **Result:** File tools + Shell + Web — no subagent spawning, no plan mode, no questions to user
+- **Subagents:** **Empty** (overrides to `{}` — does NOT inherit base subagents)
+- **Special:** Uses `exclude_tools` to subtract from inherited base tools, plus `allowed_tools` as a whitelist.
+
+---
+
+### 2c. `default/explore.yaml` — Explore Subagent
+
+- **Agent name/type:** *Inherited*
+- **Extends:** `./agent.yaml`
+- **System prompt:** *Inherited* → assembled sections
+- **System prompt args files:** `ROLE_ADDITIONAL` from `./explore_role.md` (22 lines — full role description, read-only specialist)
+- **`when_to_use_file`:** `./explore_when_to_use.md` (674 B — detailed usage guidance with thoroughness levels)
+- **Tools:**
+  - `allowed_tools`: shell, readfile, readmediafile, glob, grep, searchweb, fetchurl
+  - `exclude_tools`: Agent, AskUser, Todo, ExitPlanMode, EnterPlanMode, **WriteFile, StrReplaceFile**
+  - **Result:** Read-only tools + Shell (for git log/diff/ls) — no write capability
+- **Subagents:** **Empty**
+- **Special:** Double-locked read-only — both `allowed_tools` excludes write tools AND `exclude_tools` explicitly removes them.
+
+---
+
+### 2d. `default/plan.yaml` — Plan Subagent
+
+- **Agent name/type:** *Inherited*
+- **Extends:** `./agent.yaml`
+- **System prompt:** *Inherited* → assembled sections
+- **System prompt args files:** `ROLE_ADDITIONAL` from `./plan_role.md` (6 lines — "Before designing your implementation plan, consider whether you fully understand...")
+- **`when_to_use_file`:** `./plan_when_to_use.md` → "Use this agent when the parent agent needs a step-by-step implementation plan..."
+- **Tools:**
+  - `allowed_tools`: readfile, readmediafile, glob, grep, searchweb, fetchurl *(no Shell, no WriteFile)*
+  - `exclude_tools`: Agent, AskUser, Todo, ExitPlanMode, EnterPlanMode, **Shell, WriteFile, StrReplaceFile**
+  - **Result:** Read-only + Web — purely analytical
+- **Subagents:** **Empty**
+- **Special:** This is the *analytical planning* agent — it reads and analyzes but cannot write files or execute shell commands.
+
+---
+
+### 2e. `default/plan_editor.yaml` — Plan Editor Subagent
+
+- **Agent name/type:** *Inherited*
+- **Extends:** `./agent.yaml`
+- **System prompt:** *Inherited* → assembled sections
+- **System prompt args files:** `ROLE_ADDITIONAL` from `./plan_editor_role.md` (391 lines — extremely detailed with templates, workflows, action system, index coordination, status lifecycle)
+- **System prompt args:** `ACTION`, `DOCUMENT_TYPE`, `TARGET_PATH` are empty by default (filled dynamically by caller)
+- **`when_to_use_file`:** `./plan_editor_when_to_use.md` → "Use this agent when the parent agent needs to create or edit planning documents..."
+- **Tools:**
+  - `allowed_tools`: shell, readfile, glob, grep, writefile, strreplacefile *(no web, no readmediafile)*
+  - `exclude_tools`: Agent, AskUser, Todo, ExitPlanMode, EnterPlanMode
+  - **Result:** Shell + read/write file tools — can create/edit plan documents
+- **Subagents:** **Empty**
+- **Special:** Has access to `ACTION`, `DOCUMENT_TYPE`, `TARGET_PATH` as system prompt args (dynamic variables). The role prompt is the largest of all agent prompts (13.6 KB) because it contains templates for 4 document types.
+
+---
+
+### 2f. `default/plan_reviewer.yaml` — Plan Reviewer Subagent
+
+- **Agent name/type:** `"plan-reviewer"` (explicitly named — unique among the default subagents)
+- **Extends:** `./agent.yaml`
+- **System prompt:** *Inherited* → assembled sections
+- **System prompt args:** `ROLE_ADDITIONAL` defined **inline** (not via file) — contains the full review instructions
+- **`when_to_use`:** Defined **inline** (not via file) — "Use this agent when a parent agent needs to validate a plan before implementation."
+- **Tools:**
+  - `allowed_tools`: shell, readfile, glob, grep, searchweb, fetchurl
+  - `exclude_tools`: WriteFile, StrReplaceFile, Agent, AskUser, Todo, ExitPlanMode, EnterPlanMode
+  - **Result:** Read-only + Shell + Web
+- **Subagents:** **Explicitly empty** with comment: "Override inherited subagents so this spec does not register itself recursively."
+- **Special:** The only spec with an explicit `name`. Also the only one that defines `ROLE_ADDITIONAL` and `when_to_use` as inline YAML strings instead of loading from separate `_role.md` / `_when_to_use.md` files.
+
+---
+
+### 2g. `okabe/agent.yaml` — Okabe Personality (standalone alternative)
+
+- **Agent name/type:** *Inherited* (from `default` agent)
+- **Extends:** `default` (special string — resolved to `DEFAULT_AGENT_FILE` = `default/agent.yaml`)
+- **System prompt:** *Inherited* → assembled sections *(no local `system.md`)*
+- **System prompt args:** Not specified → inherited empty
+- **`when_to_use`:** Not specified
+- **`model`:** Not specified
+- **Tools:** Overrides the base tool list with a `tools:` field (not `allowed_tools` + `exclude_tools`). The list is the same 16 tools as the base agent + **includes `dmail:SendDMail`** (which is commented out in the base). This means it uses a different tool composition model — it *replaces* the inherited tool list rather than filtering it.
+- **Subagents:** *Inherited* (inherits all 5 from `default/agent.yaml`)
+- **Special:** Uses `extend: default` (a named shorthand). Uses the `tools:` field as a wholesale replacement rather than `allowed_tools`/`exclude_tools` filtering. Has `dmail` uncommented.
+
+---
+
+### 2h. `plan_editor.yaml` — Root-Level Plan Editor Override
+
+- **Agent name/type:** *Inherited*
+- **Extends:** `./agent.yaml` (default dir)
+- **System prompt:** *Inherited* → assembled sections
+- **System prompt args:** `ROLE_ADDITIONAL` defined **inline** (not via file) — similar content to `default/plan_editor_role.md` but condensed
+- **`when_to_use`:** Defined **inline**
+- **Tools:**
+  - `allowed_tools`: shell, readfile, glob, grep, writefile, strreplacefile
+  - `exclude_tools`: Agent, AskUser, Todo, ExitPlanMode, EnterPlanMode
+  - **Result:** Same as `default/plan_editor.yaml`
+- **Subagents:** **Empty**
+- **Special:** This is a root-level override spec in `agents/plan_editor.yaml`. It duplicates the logic of `default/plan_editor.yaml` but uses inline prompts. Likely exists for when the default directory is not used.
+
+---
+
+## 3. YAML Spec Schema — Fields That Define an Agent
+
+Based on `AgentSpec` (Pydantic model in `src/consilium/agentspec.py`) and the actual YAML files:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| **`version`** | `str` (top-level) | Yes (`default: "1"`) | Spec version — only `"1"` is supported |
+| **`agent.extend`** | `str` \| `null` | No | Path to another agent YAML to extend (relative to this file's directory). Special value `"default"` resolves to `agents/default/agent.yaml`. If absent, the spec is a root/base. |
+| **`agent.name`** | `str` | Yes (unless inherited) | Display/identifier name for the agent |
+| **`agent.system_prompt_path`** | `str` (path) | Yes (unless inherited) | Path to system prompt `.md` file. Currently all point to `system.md` which triggers assembled-prompt mode. |
+| **`agent.system_prompt_args`** | `dict[str, str]` | No (default: `{}`) | Static string arguments substituted into the system prompt via `${PLACEHOLDER}` syntax. Merged with parent during inheritance. |
+| **`agent.system_prompt_args_files`** | `dict[str, str]` (paths) | No (default: `{}`) | Like `system_prompt_args` but values are file paths whose contents are read at load time. File wins over inline if both specify the same key. |
+| **`agent.model`** | `str` \| `null` | No | Default model alias. Overrides parent. |
+| **`agent.when_to_use`** | `str` \| `null` | No | Inline usage guidance text. Overrides parent. |
+| **`agent.when_to_use_file`** | `str` (path) \| `null` | No | File path to load `when_to_use` from. File wins over inline. |
+| **`agent.tools`** | `list[str]` \| `null` | Yes (unless inherited) | **Full replacement** of the tool list from the parent. Each string is a Python import path like `"module:ClassName"`. |
+| **`agent.allowed_tools`** | `list[str]` \| `null` | No | **Whitelist** filter applied on top of inherited tools. If set, only tools in this list are kept. Resolved to `None` (no filter) if inherited but not explicitly set. |
+| **`agent.exclude_tools`** | `list[str]` \| `null` | No | **Blacklist** — tools to remove from the inherited+whitelisted set. Resolved to `[]` if inherited but not explicitly set. |
+| **`agent.subagents`** | `dict[str, SubagentSpec]` | No (default: `{}`) | Map of subagent type name → `{path: <yaml path>, description: <text>}`. Overrides parent entirely (not merged). Set empty to prevent recursive registration. |
+| **`agent.min_summary_length`** | `int` \| `null` | No | Minimum summary length in characters. `0` disables continuation prompting. |
+
+### Tool Resolution Logic (from `_load_agent_spec`)
+
+When extending, tools are resolved in this order:
+
+1. **Start** with parent's `tools` list (or base if no parent)
+2. If child specifies `tools` (not Inherit) → **replace** parent's tool list entirely
+3. If child specifies `allowed_tools` (not Inherit) → **intersect** current tool list with `allowed_tools`
+4. If child specifies `exclude_tools` (not Inherit) → **subtract** `exclude_tools` from current tool list
+
+```python
+# Simplified logic:
+base_agent_spec.tools = agent_spec.tools           # replace (if not inherit)
+if allowed: base_agent_spec.tools = intersect(...)  # whitelist
+if excluded: base_agent_spec.tools = minus(...)     # blacklist
+```
+
+### Subagent Registration Schema (`SubagentSpec`)
+
+Each entry in `subagents` is an object with:
+- **`path`**: Path to the subagent's YAML file (resolved relative to parent YAML's directory)
+- **`description`**: Text description used when the parent agent decides which subagent to call
+
+### System Prompt Assembly
+
+The `system.md` files contain only `<!-- assembled-from-sections -->`. When the loader (`_load_system_prompt` in `soul/agent.py`) sees this marker, it calls `assemble_system_prompt()` from `prompts/system/__init__.py`, which reads all 8 `.md` files from `src/consilium/prompts/system/`:
+- `identity.md`, `coding_guidelines.md`, `prompt_and_tool_use.md`, `research_guidelines.md`, `working_environment.md`, `project_info.md`, `skills.md`, `ultimate_reminders.md`
+
+The `ROLE_ADDITIONAL` system_prompt_arg is then injected into the assembled prompt (typically at the end of the identity section or appended). This is the mechanism that customizes the generic assembled prompt per subagent type.[stage] run_soul_finished
+
+[summary]
+Here is the complete report.
+
+---
+
+## 1. All Agent Files and Sizes
+
+All files reside under `src/consilium/agents/`. There are **3 directories** and **17 files**.
+
+### `agents/default/` (base agent + 5 subagent specs + prompts)
+
+| File | Size | Type |
+|------|------|------|
+| `default/agent.yaml` | 1,532 B | Base agent spec |
+| `default/coder.yaml` | 779 B | Subagent extension |
+| `default/explore.yaml` | 783 B | Subagent extension |
+| `default/plan.yaml` | 777 B | Subagent extension |
+| `default/plan_editor.yaml` | 789 B | Subagent extension |
+| `default/plan_reviewer.yaml` | 1,764 B | Subagent spec (inline prompts) |
+| `default/system.md` | 33 B | Assembly marker only |
+| `default/coder_role.md` | 369 B | Role prompt fragment |
+| `default/explore_role.md` | 1,529 B | Role prompt fragment |
+| `default/plan_role.md` | 898 B | Role prompt fragment |
+| `default/plan_editor_role.md` | 13,648 B | Role prompt fragment (large) |
+| `default/coder_when_to_use.md` | 199 B | Usage guidance |
+| `default/explore_when_to_use.md` | 674 B | Usage guidance |
+| `default/plan_when_to_use.md` | 171 B | Usage guidance |
+| `default/plan_editor_when_to_use.md` | 174 B | Usage guidance |
+
+### `agents/okabe/` (alternative personality)
+
+| File | Size | Type |
+|------|------|------|
+| `okabe/agent.yaml` | 801 B | Self-contained agent spec |
+
+### `agents/` root (overrides)
+
+| File | Size | Type |
+|------|------|------|
+| `plan_editor.yaml` | 1,845 B | Root-level override spec |
+
+---
+
+## 2. Detailed Spec Breakdown for Each YAML File
+
+### 2a. `default/agent.yaml` — Base Agent (default agent)
+
+- **Agent name/type:** `""` (empty string — the base/default)
+- **System prompt:** `./system.md` → contains only `<!-- assembled-from-sections -->`, which triggers `assemble_system_prompt()` to dynamically load the 8 section files from `src/consilium/prompts/system/`
+- **System prompt args:** `ROLE_ADDITIONAL: ""` (empty by default)
+- **Tools (full list):**
+  - `consilium.tools.agent:Agent` — subagent spawning
+  - `consilium.tools.ask_user:AskUserQuestion`
+  - `consilium.tools.todo:SetTodoList`
+  - `consilium.tools.shell:Shell`
+  - `consilium.tools.background:TaskList`, `TaskOutput`, `TaskStop`
+  - `consilium.tools.file:ReadFile`, `ReadMediaFile`, `Glob`, `Grep`, `WriteFile`, `StrReplaceFile`
+  - `consilium.tools.web:SearchWeb`, `FetchURL`
+  - `consilium.tools.plan:ExitPlanMode`
+  - `consilium.tools.plan.enter:EnterPlanMode`
+  - *(commented out: `dmail:SendDMail`, `think:Think`)*
+- **Subagent types registered:**
+  - `coder` → `./coder.yaml`
+  - `explore` → `./explore.yaml`
+  - `plan` → `./plan.yaml`
+  - `plan_editor` → `./plan_editor.yaml`
+  - `plan_reviewer` → `./plan_reviewer.yaml`
+- **Special:** This is the root spec that all others extend. It has `extend: null`, `name: ""`, `allowed_tools: inherit` (resolved to `None` = no restriction). Subagents here define the full hierarchy.
+
+---
+
+### 2b. `default/coder.yaml` — Coder Subagent
+
+- **Agent name/type:** *Inherited* (from base)
+- **Extends:** `./agent.yaml`
+- **System prompt path:** *Inherited* → `system.md` → assembled sections
+- **System prompt args files:** `ROLE_ADDITIONAL` loaded from `./coder_role.md` (1-line: "You are now running as a subagent...")
+- **`when_to_use_file`:** `./coder_when_to_use.md` → "Use this agent for non-trivial software engineering work..."
+- **Tools:** Inherits base tools, filtered by:
+  - `allowed_tools`: shell, readfile, readmediafile, glob, grep, writefile, strreplacefile, searchweb, fetchurl
+  - `exclude_tools`: Agent, AskUserQuestion, SetTodoList, ExitPlanMode, EnterPlanMode
+  - **Result:** File tools + Shell + Web — no subagent spawning, no plan mode, no questions to user
+- **Subagents:** **Empty** (overrides to `{}` — does NOT inherit base subagents)
+- **Special:** Uses `exclude_tools` to subtract from inherited base tools, plus `allowed_tools` as a whitelist.
+
+---
+
+### 2c. `default/explore.yaml` — Explore Subagent
+
+- **Agent name/type:** *Inherited*
+- **Extends:** `./agent.yaml`
+- **System prompt:** *Inherited* → assembled sections
+- **System prompt args files:** `ROLE_ADDITIONAL` from `./explore_role.md` (22 lines — full role description, read-only specialist)
+- **`when_to_use_file`:** `./explore_when_to_use.md` (674 B — detailed usage guidance with thoroughness levels)
+- **Tools:**
+  - `allowed_tools`: shell, readfile, readmediafile, glob, grep, searchweb, fetchurl
+  - `exclude_tools`: Agent, AskUser, Todo, ExitPlanMode, EnterPlanMode, **WriteFile, StrReplaceFile**
+  - **Result:** Read-only tools + Shell (for git log/diff/ls) — no write capability
+- **Subagents:** **Empty**
+- **Special:** Double-locked read-only — both `allowed_tools` excludes write tools AND `exclude_tools` explicitly removes them.
+
+---
+
+### 2d. `default/plan.yaml` — Plan Subagent
+
+- **Agent name/type:** *Inherited*
+- **Extends:** `./agent.yaml`
+- **System prompt:** *Inherited* → assembled sections
+- **System prompt args files:** `ROLE_ADDITIONAL` from `./plan_role.md` (6 lines — "Before designing your implementation plan, consider whether you fully understand...")
+- **`when_to_use_file`:** `./plan_when_to_use.md` → "Use this agent when the parent agent needs a step-by-step implementation plan..."
+- **Tools:**
+  - `allowed_tools`: readfile, readmediafile, glob, grep, searchweb, fetchurl *(no Shell, no WriteFile)*
+  - `exclude_tools`: Agent, AskUser, Todo, ExitPlanMode, EnterPlanMode, **Shell, WriteFile, StrReplaceFile**
+  - **Result:** Read-only + Web — purely analytical
+- **Subagents:** **Empty**
+- **Special:** This is the *analytical planning* agent — it reads and analyzes but cannot write files or execute shell commands.
+
+---
+
+### 2e. `default/plan_editor.yaml` — Plan Editor Subagent
+
+- **Agent name/type:** *Inherited*
+- **Extends:** `./agent.yaml`
+- **System prompt:** *Inherited* → assembled sections
+- **System prompt args files:** `ROLE_ADDITIONAL` from `./plan_editor_role.md` (391 lines — extremely detailed with templates, workflows, action system, index coordination, status lifecycle)
+- **System prompt args:** `ACTION`, `DOCUMENT_TYPE`, `TARGET_PATH` are empty by default (filled dynamically by caller)
+- **`when_to_use_file`:** `./plan_editor_when_to_use.md` → "Use this agent when the parent agent needs to create or edit planning documents..."
+- **Tools:**
+  - `allowed_tools`: shell, readfile, glob, grep, writefile, strreplacefile *(no web, no readmediafile)*
+  - `exclude_tools`: Agent, AskUser, Todo, ExitPlanMode, EnterPlanMode
+  - **Result:** Shell + read/write file tools — can create/edit plan documents
+- **Subagents:** **Empty**
+- **Special:** Has access to `ACTION`, `DOCUMENT_TYPE`, `TARGET_PATH` as system prompt args (dynamic variables). The role prompt is the largest of all agent prompts (13.6 KB) because it contains templates for 4 document types.
+
+---
+
+### 2f. `default/plan_reviewer.yaml` — Plan Reviewer Subagent
+
+- **Agent name/type:** `"plan-reviewer"` (explicitly named — unique among the default subagents)
+- **Extends:** `./agent.yaml`
+- **System prompt:** *Inherited* → assembled sections
+- **System prompt args:** `ROLE_ADDITIONAL` defined **inline** (not via file) — contains the full review instructions
+- **`when_to_use`:** Defined **inline** (not via file) — "Use this agent when a parent agent needs to validate a plan before implementation."
+- **Tools:**
+  - `allowed_tools`: shell, readfile, glob, grep, searchweb, fetchurl
+  - `exclude_tools`: WriteFile, StrReplaceFile, Agent, AskUser, Todo, ExitPlanMode, EnterPlanMode
+  - **Result:** Read-only + Shell + Web
+- **Subagents:** **Explicitly empty** with comment: "Override inherited subagents so this spec does not register itself recursively."
+- **Special:** The only spec with an explicit `name`. Also the only one that defines `ROLE_ADDITIONAL` and `when_to_use` as inline YAML strings instead of loading from separate `_role.md` / `_when_to_use.md` files.
+
+---
+
+### 2g. `okabe/agent.yaml` — Okabe Personality (standalone alternative)
+
+- **Agent name/type:** *Inherited* (from `default` agent)
+- **Extends:** `default` (special string — resolved to `DEFAULT_AGENT_FILE` = `default/agent.yaml`)
+- **System prompt:** *Inherited* → assembled sections *(no local `system.md`)*
+- **System prompt args:** Not specified → inherited empty
+- **`when_to_use`:** Not specified
+- **`model`:** Not specified
+- **Tools:** Overrides the base tool list with a `tools:` field (not `allowed_tools` + `exclude_tools`). The list is the same 16 tools as the base agent + **includes `dmail:SendDMail`** (which is commented out in the base). This means it uses a different tool composition model — it *replaces* the inherited tool list rather than filtering it.
+- **Subagents:** *Inherited* (inherits all 5 from `default/agent.yaml`)
+- **Special:** Uses `extend: default` (a named shorthand). Uses the `tools:` field as a wholesale replacement rather than `allowed_tools`/`exclude_tools` filtering. Has `dmail` uncommented.
+
+---
+
+### 2h. `plan_editor.yaml` — Root-Level Plan Editor Override
+
+- **Agent name/type:** *Inherited*
+- **Extends:** `./agent.yaml` (default dir)
+- **System prompt:** *Inherited* → assembled sections
+- **System prompt args:** `ROLE_ADDITIONAL` defined **inline** (not via file) — similar content to `default/plan_editor_role.md` but condensed
+- **`when_to_use`:** Defined **inline**
+- **Tools:**
+  - `allowed_tools`: shell, readfile, glob, grep, writefile, strreplacefile
+  - `exclude_tools`: Agent, AskUser, Todo, ExitPlanMode, EnterPlanMode
+  - **Result:** Same as `default/plan_editor.yaml`
+- **Subagents:** **Empty**
+- **Special:** This is a root-level override spec in `agents/plan_editor.yaml`. It duplicates the logic of `default/plan_editor.yaml` but uses inline prompts. Likely exists for when the default directory is not used.
+
+---
+
+## 3. YAML Spec Schema — Fields That Define an Agent
+
+Based on `AgentSpec` (Pydantic model in `src/consilium/agentspec.py`) and the actual YAML files:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| **`version`** | `str` (top-level) | Yes (`default: "1"`) | Spec version — only `"1"` is supported |
+| **`agent.extend`** | `str` \| `null` | No | Path to another agent YAML to extend (relative to this file's directory). Special value `"default"` resolves to `agents/default/agent.yaml`. If absent, the spec is a root/base. |
+| **`agent.name`** | `str` | Yes (unless inherited) | Display/identifier name for the agent |
+| **`agent.system_prompt_path`** | `str` (path) | Yes (unless inherited) | Path to system prompt `.md` file. Currently all point to `system.md` which triggers assembled-prompt mode. |
+| **`agent.system_prompt_args`** | `dict[str, str]` | No (default: `{}`) | Static string arguments substituted into the system prompt via `${PLACEHOLDER}` syntax. Merged with parent during inheritance. |
+| **`agent.system_prompt_args_files`** | `dict[str, str]` (paths) | No (default: `{}`) | Like `system_prompt_args` but values are file paths whose contents are read at load time. File wins over inline if both specify the same key. |
+| **`agent.model`** | `str` \| `null` | No | Default model alias. Overrides parent. |
+| **`agent.when_to_use`** | `str` \| `null` | No | Inline usage guidance text. Overrides parent. |
+| **`agent.when_to_use_file`** | `str` (path) \| `null` | No | File path to load `when_to_use` from. File wins over inline. |
+| **`agent.tools`** | `list[str]` \| `null` | Yes (unless inherited) | **Full replacement** of the tool list from the parent. Each string is a Python import path like `"module:ClassName"`. |
+| **`agent.allowed_tools`** | `list[str]` \| `null` | No | **Whitelist** filter applied on top of inherited tools. If set, only tools in this list are kept. Resolved to `None` (no filter) if inherited but not explicitly set. |
+| **`agent.exclude_tools`** | `list[str]` \| `null` | No | **Blacklist** — tools to remove from the inherited+whitelisted set. Resolved to `[]` if inherited but not explicitly set. |
+| **`agent.subagents`** | `dict[str, SubagentSpec]` | No (default: `{}`) | Map of subagent type name → `{path: <yaml path>, description: <text>}`. Overrides parent entirely (not merged). Set empty to prevent recursive registration. |
+| **`agent.min_summary_length`** | `int` \| `null` | No | Minimum summary length in characters. `0` disables continuation prompting. |
+
+### Tool Resolution Logic (from `_load_agent_spec`)
+
+When extending, tools are resolved in this order:
+
+1. **Start** with parent's `tools` list (or base if no parent)
+2. If child specifies `tools` (not Inherit) → **replace** parent's tool list entirely
+3. If child specifies `allowed_tools` (not Inherit) → **intersect** current tool list with `allowed_tools`
+4. If child specifies `exclude_tools` (not Inherit) → **subtract** `exclude_tools` from current tool list
+
+```python
+# Simplified logic:
+base_agent_spec.tools = agent_spec.tools           # replace (if not inherit)
+if allowed: base_agent_spec.tools = intersect(...)  # whitelist
+if excluded: base_agent_spec.tools = minus(...)     # blacklist
+```
+
+### Subagent Registration Schema (`SubagentSpec`)
+
+Each entry in `subagents` is an object with:
+- **`path`**: Path to the subagent's YAML file (resolved relative to parent YAML's directory)
+- **`description`**: Text description used when the parent agent decides which subagent to call
+
+### System Prompt Assembly
+
+The `system.md` files contain only `<!-- assembled-from-sections -->`. When the loader (`_load_system_prompt` in `soul/agent.py`) sees this marker, it calls `assemble_system_prompt()` from `prompts/system/__init__.py`, which reads all 8 `.md` files from `src/consilium/prompts/system/`:
+- `identity.md`, `coding_guidelines.md`, `prompt_and_tool_use.md`, `research_guidelines.md`, `working_environment.md`, `project_info.md`, `skills.md`, `ultimate_reminders.md`
+
+The `ROLE_ADDITIONAL` system_prompt_arg is then injected into the assembled prompt (typically at the end of the identity section or appended). This is the mechanism that customizes the generic assembled prompt per subagent type.

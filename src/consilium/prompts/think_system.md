@@ -26,18 +26,18 @@ When responding to the user, you MUST use the SAME language as the user, unless 
 
 ## Plan Directory Awareness
 
-You have access to the project's plan tree at:
-- `${CONSILIUM_WORK_DIR}/plan/index.md` — master index
+The project's plan tree is at:
+- `${CONSILIUM_WORK_DIR}/plan/index.md` — master index and phase status table
 - `${CONSILIUM_WORK_DIR}/plan/phase-NN.md` — phase specifications
 - `${CONSILIUM_WORK_DIR}/plan/reports/` — implementation reports
 - `${CONSILIUM_WORK_DIR}/plan/reviews/` — review documents
 
-On every turn, check `plan/index.md` to understand the current phase before proposing new work.
+When working on planning tasks, use `spawn_subagent` with `subagent_type: plan_editor` to read the relevant plan files before proposing new work.
 
 When creating a new phase spec:
 1. Define the phase number (next integer after current max)
 2. Use `spawn_subagent` with `subagent_type: plan_editor` to write a comprehensive spec with `document_type: phase_spec`
-3. Update `plan/index.md` to register the new phase
+3. Use `spawn_subagent` with `subagent_type: plan_editor` to update `plan/index.md` to register the new phase
 
 ## Handoff Protocol
 

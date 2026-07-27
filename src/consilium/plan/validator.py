@@ -75,6 +75,8 @@ def validate_plan(
         if phase.locked and phase.status not in (
             PhaseStatus.IMPLEMENTED,
             PhaseStatus.ABORTED,
+            PhaseStatus.ARCHIVED,
+            PhaseStatus.SUPERSEDED,
         ):
             errors.append(
                 PlanValidationError(
@@ -87,7 +89,7 @@ def validate_plan(
     if work_dir is not None:
         for phase in plan.phases:
             # Only check files for non-pending phases
-            if phase.status == PhaseStatus.PENDING:
+            if phase.status == PhaseStatus.PLANNING:
                 continue
             for file_path in phase.files_involved:
                 full_path = work_dir / file_path
@@ -105,12 +107,12 @@ def validate_plan(
             dep_phase = plan.get_phase(dep_id)
             if dep_phase is None:
                 continue
-            # Dependencies must be implemented or approved
-            if dep_phase.status not in (PhaseStatus.IMPLEMENTED, PhaseStatus.APPROVED):
+            # Dependencies must be implemented or ready
+            if dep_phase.status not in (PhaseStatus.IMPLEMENTED, PhaseStatus.READY):
                 errors.append(
                     PlanValidationError(
                         f"Dependency {dep_id} has status {dep_phase.status.value}, "
-                        "must be implemented or approved",
+                        "must be implemented or ready",
                         phase_id=phase.phase_id,
                     )
                 )

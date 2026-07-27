@@ -1,0 +1,128 @@
+Write an implementation report to `c:\Users\zemuro\Antigravity\kimi_cli_mod\plan\reports\phase-status-alignment-implementation.md`
+
+Use the following content:
+
+---
+document_type: implementation_report
+phase: phase-status-alignment
+title: Implementation Report — Align PhaseStatus Vocabulary Across Codebase
+author: Consilium
+completion_date: 2026-07-27
+---
+
+# Implementation Report — Align PhaseStatus Vocabulary Across Codebase
+
+## Executive Summary
+
+The plan phase status vocabulary had a mismatch between the Python `PhaseStatus` enum (`pending`, `under_review`, `approved`, `implemented`, `aborted`) and the `plan_editor` subagent prompt (`planning`, `ready`, `implemented`, `archived`, `superseded`). The code enum was aligned to match the prompt, which is the more descriptive and complete vocabulary. Additionally, the Think system prompt was updated to remove the "on every turn" plan check and to always use `plan_editor` subagent for plan operations.
+
+## Problem
+
+Two incompatible status vocabularies existed simultaneously:
+
+| Code `PhaseStatus` enum | `plan_editor_role.md` prompt |
+|--------------------------|------------------------------|
+| `pending` | `planning` |
+| `under_review` *(unused)* | — |
+| `approved` | `ready` |
+| `implemented` | `implemented` |
+| `aborted` | *(missing)* |
+| *(missing)* | `archived` |
+| *(missing)* | `superseded` |
+
+The `plan_editor` subagent's self-validation checklist (line 337) only accepted `planning`, `ready`, `implemented`, `archived`, `superseded` — any phase document with `pending` or `approved` would fail validation. The `/plan init` LLM prompt templates also wrote `pending`, which the subagent would then reject.
+
+Additionally, the Think system prompt incorrectly stated "You have access to" plan files (the Think agent has no filesystem tools — only `spawn_subagent`), and instructed checking the plan on every turn regardless of context.
+
+## Changes
+
+### 1. `PhaseStatus` enum (`plan/models.py`)
+
+```python
+# Before:
+class PhaseStatus(str, Enum):
+    PENDING = "pending"
+    UNDER_REVIEW = "under_review"
+    APPROVED = "approved"
+    IMPLEMENTED = "implemented"
+    ABORTED = "aborted"
+
+# After:
+class PhaseStatus(str, Enum):
+    PLANNING = "planning"
+    READY = "ready"
+    IMPLEMENTED = "implemented"
+    ABORTED = "aborted"
+    ARCHIVED = "archived"
+    SUPERSEDED = "superseded"
+```
+
+### 2. Code references updated (8 files)
+
+| File | Changes |
+|------|---------|
+| `src/consilium/plan/models.py` | Enum redefined; `Phase.status` default changed to `PLANNING` |
+| `src/consilium/plan/parser.py` | 3x `PhaseStatus.PENDING` → `PLANNING`, 3x string literal `"pending"` → `"planning"` |
+| `src/consilium/plan/validator.py` | 2x `PhaseStatus.PENDING` → `PLANNING`, 1x `APPROVED` → `READY`, error messages updated, `ARCHIVED`/`SUPERSEDED` added to locked-phase rule |
+| `src/consilium/plan/audit_l1.py` | 1x `PENDING` → `PLANNING`, 1x `APPROVED` → `READY`, error messages updated |
+| `src/consilium/plan/handover.py` | 1x `PhaseStatus.PENDING` → `PLANNING` |
+| `src/consilium/think/plan_commands.py` | 3x string literal `"pending"` → `"planning"` in LLM prompt templates (index table example, status guideline, phase frontmatter template) |
+| `src/consilium/think/push.py` | 1x `phase.status.value == "pending"` → `"planning"` |
+| `prompts/think_system.md` | Rewrote Plan Directory Awareness section |
+
+### 3. Test files updated (3 files)
+
+| File | Changes |
+|------|---------|
+| `tests/core/test_plan_document.py` | All `PhaseStatus.PENDING` → `PLANNING`, `APPROVED` → `READY`, string literals in markdown templates updated, test names and comments updated |
+| `tests/core/test_plan_directory.py` | `PhaseStatus.PENDING` → `PLANNING`, YAML frontmatter status values updated |
+| `tests/core/test_audit.py` | `PhaseStatus.PENDING/APPROVED` → `PLANNING/READY`, markdown templates updated, comments updated |
+
+### 4. Think system prompt (`prompts/think_system.md`)
+
+**Before:**
+```markdown
+## Plan Directory Awareness
+
+You have access to the project's plan tree at:
+...
+On every turn, check `plan/index.md` to understand the current phase...
+
+When creating a new phase spec:
+3. Update `plan/index.md` to register the new phase
+```
+
+**After:**
+```markdown
+## Plan Directory Awareness
+
+The project's plan tree is at:
+...
+When working on planning tasks, use `spawn_subagent` with `subagent_type: plan_editor` to read...
+
+When creating a new phase spec:
+3. Use `spawn_subagent` with `subagent_type: plan_editor` to update `plan/index.md`...
+```
+
+Key fixes:
+- "You have access" → "The project's plan tree is at" (Think has no filesystem access)
+- "On every turn, check" → "When working on planning tasks, use `spawn_subagent` with `plan_editor`" (only check when relevant, always via subagent)
+- Step 3 now explicitly uses `plan_editor` instead of being ambiguous
+
+## Files Modified
+
+Total: **11 files** (8 source, 3 test) + 1 prompt
+
+## Verification
+
+| Check | Result |
+|-------|--------|
+| No remaining `PhaseStatus.PENDING` references | ✅ Grep returns no matches in `src/consilium/plan/` or `tests/` |
+| No remaining `PhaseStatus.APPROVED` references | ✅ Grep returns no matches |
+| No remaining `PhaseStatus.UNDER_REVIEW` references | ✅ Grep returns no matches |
+| `plan_editor_role.md` self-validation now matches enum | ✅ Prompt already used `planning`/`ready`/`archived`/`superseded` — no change needed |
+| `/plan init` LLM prompt writes `planning` not `pending` | ✅ Code review |
+| Think system prompt no longer says "on every turn" | ✅ Code review |
+| Think system prompt uses `plan_editor` for all plan operations | ✅ Code review |
+| Test files updated to match new enum values | ✅ All 3 test files updated |
+| String literals that must remain (approvals, todos, MCP status) are unchanged | ✅ Grep confirms unrelated `pending`/`approved` are all non-phase-status |

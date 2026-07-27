@@ -6,7 +6,7 @@ from typing import Any
 
 from consilium.think.history import HistoryManager
 from consilium.think.models import ThinkSession
-from consilium.think.plan_commands import slash_plan
+from consilium.think.plan_commands import slash_plan, slash_plan_init
 from consilium.think.push import push_plan_to_do
 from consilium.think.storage import list_checkpoints, load_checkpoint, save_checkpoint
 from consilium.utils.editor import edit_text_in_editor
@@ -139,6 +139,12 @@ def slash_fork(history: HistoryManager, session: ThinkSession, args: str) -> str
 async def slash_plan_cmd(history: HistoryManager, session: ThinkSession, args: str) -> str:
     """Project plan management: /plan <subcommand>"""
     return await slash_plan(history, session, args)
+
+
+@think_registry.command(name="init")
+async def slash_init_cmd(history: HistoryManager, session: ThinkSession, args: str) -> str:
+    """Initialize a project plan from conversation history: /init [--force]"""
+    return await slash_plan_init(history, session, args)
 
 
 @think_registry.command(name="push-to-do", aliases=["push"])

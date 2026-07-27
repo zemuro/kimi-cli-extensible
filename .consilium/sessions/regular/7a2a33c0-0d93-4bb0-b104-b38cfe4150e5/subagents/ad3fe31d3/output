@@ -1,0 +1,201 @@
+[stage] runner_started
+[stage] agent_built
+[stage] context_restored
+[stage] context_ready
+[stage] run_soul_start
+[tool] ReadFile
+[tool_result] success
+Here's the full report on `App.tsx`:
+
+---
+
+## 1. Full Source Code
+
+The complete source code (180 lines) was read above. It's the root component of the Antigravity VS Code extension's webview UI.
+
+---
+
+## 2. Screen Routing: Status-Based Conditional Rendering
+
+The routing is entirely **status-based** — the `App` component calls `useAppInit()` to get a `status` value, then renders different screens based on a cascade of `if` conditions. There is no traditional router (no React Router or URL-based routing). The decision tree is:
+
+```
+Enter App()
+  ├── shouldShowSetup ──► SetupScreen          (API key missing / forced)
+  ├── modelsCount === 0 && "no-models" ──► ConfigErrorScreen(type="no-models")
+  ├── "cli-error" | "no-workspace" ──► ConfigErrorScreen(type=status)
+  ├── "uninitialized" ──► ProjectSetupScreen(onSetupComplete=refresh)
+  └── default ──► MainContent (chat UI)
+```
+
+Priority is strictly top-to-bottom: the **first** matching condition wins.
+
+---
+
+## 3. How `ProjectSetupScreen` Is Currently Integrated
+
+`ProjectSetupScreen` is rendered when `status === "uninitialized"` (line 162-169). It receives a single prop:
+
+```tsx
+<ProjectSetupScreen onSetupComplete={refresh} />
+```
+
+- **When is it shown?** Only when `status === "uninitialized"` AND none of the higher-priority conditions matched (not `shouldShowSetup`, not `no-models`, not `cli-error`, not `no-workspace`).
+- **What does `onSetupComplete` do?** It's wired to `refresh()` (from `useAppInit`). After `ProjectSetupScreen` finishes setup, calling `onSetupComplete` triggers `refresh()`, which presumably re-initializes the app state, causing the status to transition to `"ready"` (or another non-`"uninitialized"` value), and the UI re-renders to show `MainContent`.
+
+---
+
+## 4. Rendering Flow for Each Status Value
+
+| Status Value | Component Rendered | Props | Notes |
+|---|---|---|---|
+| `"loading"` | **Falls through** to `"ready"` path | — | `loading` with `shouldShowSetup=true` would show SetupScreen; otherwise falls to `MainContent` |
+| `"ready"` | `MainContent` | `onAuthAction={() => setForceShowSetup(true)}` | Default chat interface |
+| `"cli-error"` | `ConfigErrorScreen` | `type="cli-error"`, `cliResult`, `errorMessage` | CLI binary not found or crashed |
+| `"no-workspace"` | `ConfigErrorScreen` | `type="no-workspace"`, `cliResult`, `errorMessage` | No workspace folder open |
+| `"no-models"` | `ConfigErrorScreen` | `type="no-models"`, `cliResult`, `errorMessage`, `onRefresh`, `onOpenSetup` | No valid models configured; has extra buttons |
+| `"uninitialized"` | `ProjectSetupScreen` | `onSetupComplete={refresh}` | Project (e.g. git workspace) not initialized |
+
+**Important edge case handling for SetupScreen:**
+```tsx
+const shouldShowSetup = !hasApiKey || forceShowSetup;
+if (shouldShowSetup && status !== "loading" && status !== "cli-error" && status !== "no-workspace") {
+    // renders SetupScreen
+}
+```
+The SetupScreen is intentionally **blocked** when the CLI is in a loading/error/no-workspace state — those are considered more critical to resolve first.
+
+**Loading state behavior:** If `status === "loading"` but `shouldShowSetup` is false, it falls through all checks and renders `MainContent`. There's no explicit loading spinner screen.
+
+---
+
+## 5. How `refresh()` Works After Setup Completes
+
+`refresh()` comes from `useAppInit()`:
+
+```tsx
+const { status, errorMessage, cliResult, modelsCount, refresh } = useAppInit();
+```
+
+The flow after `ProjectSetupScreen` calls `onSetupComplete()`:
+
+1. `handleSetupSuccess` fires (line 120-123):
+   ```tsx
+   const handleSetupSuccess = useCallback(() => {
+     setForceShowSetup(false);
+     refresh();
+   }, [refresh]);
+   ```
+   - `setForceShowSetup(false)` ensures the setup screen won't re-appear via the `forceShowSetup` flag.
+   - `refresh()` re-initializes the app state (presumably re-running the initialization logic inside `useAppInit`, which re-checks the CLI version, workspace status, model configuration, etc.).
+
+2. After `refresh()` completes, `status` updates to a new value (likely `"ready"`).
+3. The cascade re-evaluates from top, and since `status !== "uninitialized"` anymore, the app renders `MainContent` (the chat interface).
+
+**Note:** `refresh()` is also passed as `onRefresh` to `ConfigErrorScreen` in the `no-models` case, and as `onSetupComplete` to `ProjectSetupScreen`. It serves as the universal "re-check initialization state" callback.
+
+---
+
+### Summary
+
+- `App.tsx` uses a **status-based screen router** via cascading `if` blocks with no traditional routing library.
+- `ProjectSetupScreen` is the **4th priority screen**, shown only when `status === "uninitialized"` and all higher-priority conditions (missing API key, missing models, CLI errors) are resolved.
+- `refresh()` (from `useAppInit`) is the **universal re-init function** that re-checks the entire system state, allowing the UI to transition from any error/setup screen back to the main chat UI.[stage] run_soul_finished
+
+[summary]
+Here's the full report on `App.tsx`:
+
+---
+
+## 1. Full Source Code
+
+The complete source code (180 lines) was read above. It's the root component of the Antigravity VS Code extension's webview UI.
+
+---
+
+## 2. Screen Routing: Status-Based Conditional Rendering
+
+The routing is entirely **status-based** — the `App` component calls `useAppInit()` to get a `status` value, then renders different screens based on a cascade of `if` conditions. There is no traditional router (no React Router or URL-based routing). The decision tree is:
+
+```
+Enter App()
+  ├── shouldShowSetup ──► SetupScreen          (API key missing / forced)
+  ├── modelsCount === 0 && "no-models" ──► ConfigErrorScreen(type="no-models")
+  ├── "cli-error" | "no-workspace" ──► ConfigErrorScreen(type=status)
+  ├── "uninitialized" ──► ProjectSetupScreen(onSetupComplete=refresh)
+  └── default ──► MainContent (chat UI)
+```
+
+Priority is strictly top-to-bottom: the **first** matching condition wins.
+
+---
+
+## 3. How `ProjectSetupScreen` Is Currently Integrated
+
+`ProjectSetupScreen` is rendered when `status === "uninitialized"` (line 162-169). It receives a single prop:
+
+```tsx
+<ProjectSetupScreen onSetupComplete={refresh} />
+```
+
+- **When is it shown?** Only when `status === "uninitialized"` AND none of the higher-priority conditions matched (not `shouldShowSetup`, not `no-models`, not `cli-error`, not `no-workspace`).
+- **What does `onSetupComplete` do?** It's wired to `refresh()` (from `useAppInit`). After `ProjectSetupScreen` finishes setup, calling `onSetupComplete` triggers `refresh()`, which presumably re-initializes the app state, causing the status to transition to `"ready"` (or another non-`"uninitialized"` value), and the UI re-renders to show `MainContent`.
+
+---
+
+## 4. Rendering Flow for Each Status Value
+
+| Status Value | Component Rendered | Props | Notes |
+|---|---|---|---|
+| `"loading"` | **Falls through** to `"ready"` path | — | `loading` with `shouldShowSetup=true` would show SetupScreen; otherwise falls to `MainContent` |
+| `"ready"` | `MainContent` | `onAuthAction={() => setForceShowSetup(true)}` | Default chat interface |
+| `"cli-error"` | `ConfigErrorScreen` | `type="cli-error"`, `cliResult`, `errorMessage` | CLI binary not found or crashed |
+| `"no-workspace"` | `ConfigErrorScreen` | `type="no-workspace"`, `cliResult`, `errorMessage` | No workspace folder open |
+| `"no-models"` | `ConfigErrorScreen` | `type="no-models"`, `cliResult`, `errorMessage`, `onRefresh`, `onOpenSetup` | No valid models configured; has extra buttons |
+| `"uninitialized"` | `ProjectSetupScreen` | `onSetupComplete={refresh}` | Project (e.g. git workspace) not initialized |
+
+**Important edge case handling for SetupScreen:**
+```tsx
+const shouldShowSetup = !hasApiKey || forceShowSetup;
+if (shouldShowSetup && status !== "loading" && status !== "cli-error" && status !== "no-workspace") {
+    // renders SetupScreen
+}
+```
+The SetupScreen is intentionally **blocked** when the CLI is in a loading/error/no-workspace state — those are considered more critical to resolve first.
+
+**Loading state behavior:** If `status === "loading"` but `shouldShowSetup` is false, it falls through all checks and renders `MainContent`. There's no explicit loading spinner screen.
+
+---
+
+## 5. How `refresh()` Works After Setup Completes
+
+`refresh()` comes from `useAppInit()`:
+
+```tsx
+const { status, errorMessage, cliResult, modelsCount, refresh } = useAppInit();
+```
+
+The flow after `ProjectSetupScreen` calls `onSetupComplete()`:
+
+1. `handleSetupSuccess` fires (line 120-123):
+   ```tsx
+   const handleSetupSuccess = useCallback(() => {
+     setForceShowSetup(false);
+     refresh();
+   }, [refresh]);
+   ```
+   - `setForceShowSetup(false)` ensures the setup screen won't re-appear via the `forceShowSetup` flag.
+   - `refresh()` re-initializes the app state (presumably re-running the initialization logic inside `useAppInit`, which re-checks the CLI version, workspace status, model configuration, etc.).
+
+2. After `refresh()` completes, `status` updates to a new value (likely `"ready"`).
+3. The cascade re-evaluates from top, and since `status !== "uninitialized"` anymore, the app renders `MainContent` (the chat interface).
+
+**Note:** `refresh()` is also passed as `onRefresh` to `ConfigErrorScreen` in the `no-models` case, and as `onSetupComplete` to `ProjectSetupScreen`. It serves as the universal "re-check initialization state" callback.
+
+---
+
+### Summary
+
+- `App.tsx` uses a **status-based screen router** via cascading `if` blocks with no traditional routing library.
+- `ProjectSetupScreen` is the **4th priority screen**, shown only when `status === "uninitialized"` and all higher-priority conditions (missing API key, missing models, CLI errors) are resolved.
+- `refresh()` (from `useAppInit`) is the **universal re-init function** that re-checks the entire system state, allowing the UI to transition from any error/setup screen back to the main chat UI.

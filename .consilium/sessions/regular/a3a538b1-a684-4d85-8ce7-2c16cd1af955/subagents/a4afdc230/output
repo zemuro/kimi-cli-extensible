@@ -8,3 +8,38 @@
 [tool] WriteFile
 [tool_result] success
 Now let me commit the new report to git as required[tool] Shell
+[tool_result] success
+Let me commit only the plan-related files[tool] Shell
+[tool_result] success
+Implementation report written and committed. Here's a summary of what was done:
+
+**Created:** `c:\Users\zemuro\Antigravity\kimi_cli_mod\plan\reports\phase-07-project-setup-screen-implementation.md`
+
+**Committed** with message: `docs(plan): add implementation report for phase 07 — Project Setup Screen`
+
+The report covers:
+- **Executive Summary** — the `"uninitialized"` status and `ProjectSetupScreen` component
+- **Problem** — why users needed explicit workspace initialization feedback
+- **Implementation Details** — all 7 files modified across `shared/bridge.ts`, `session.handler.ts`, `bridge.ts`, `settings.store.ts`, `useAppInit.ts`, `ProjectSetupScreen.tsx`, and `App.tsx`
+- **Status Flow** — the routing order in `App.tsx`
+- **Corrections from Spec** — 5 deltas (file path mismatch, missing Methods enum entries, bridge service methods, settings store, and `requireWorkDir()` vs safer alternative)
+- **Files Modified** — table with all 7 files and their changes
+- **Verification** — TypeScript check, webview build, VSCE package, and 10 code review checks
+- **Edge Cases** — 5 scenarios with their handling[stage] run_soul_finished
+
+[summary]
+Implementation report written and committed. Here's a summary of what was done:
+
+**Created:** `c:\Users\zemuro\Antigravity\kimi_cli_mod\plan\reports\phase-07-project-setup-screen-implementation.md`
+
+**Committed** with message: `docs(plan): add implementation report for phase 07 — Project Setup Screen`
+
+The report covers:
+- **Executive Summary** — the `"uninitialized"` status and `ProjectSetupScreen` component
+- **Problem** — why users needed explicit workspace initialization feedback
+- **Implementation Details** — all 7 files modified across `shared/bridge.ts`, `session.handler.ts`, `bridge.ts`, `settings.store.ts`, `useAppInit.ts`, `ProjectSetupScreen.tsx`, and `App.tsx`
+- **Status Flow** — the routing order in `App.tsx`
+- **Corrections from Spec** — 5 deltas (file path mismatch, missing Methods enum entries, bridge service methods, settings store, and `requireWorkDir()` vs safer alternative)
+- **Files Modified** — table with all 7 files and their changes
+- **Verification** — TypeScript check, webview build, VSCE package, and 10 code review checks
+- **Edge Cases** — 5 scenarios with their handling

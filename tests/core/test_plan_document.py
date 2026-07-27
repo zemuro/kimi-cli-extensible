@@ -42,7 +42,7 @@ Move JWT validation logic from verify.py into a dedicated TokenValidator class.
 ---
 
 ## Phase 2: Update Middleware
-**status:** approved
+**status:** ready
 **locked:** false
 **files_involved:** src/middleware/auth.py
 **dependencies:** [phase-1]
@@ -57,7 +57,7 @@ Replace session-cookie checks with TokenValidator calls.
 ---
 
 ## Phase 3: Add Refresh Token Rotation
-**status:** pending
+**status:** planning
 **locked:** false
 **files_involved:** src/auth/refresh.py
 **dependencies:** [phase-1, phase-2]
@@ -79,14 +79,14 @@ def plan_with_cycle() -> str:
 # Plan: Broken
 
 ## Phase 1: A
-**status:** pending
+**status:** planning
 **dependencies:** [phase-2]
 
 ### Description
 Depends on B.
 
 ## Phase 2: B
-**status:** pending
+**status:** planning
 **dependencies:** [phase-1]
 
 ### Description
@@ -132,7 +132,7 @@ class TestParsePlan:
         p2 = plan.phases[1]
         assert p2.phase_id == "phase-2"
         assert p2.title == "Update Middleware"
-        assert p2.status == PhaseStatus.APPROVED
+        assert p2.status == PhaseStatus.READY
         assert p2.locked is False
         assert p2.dependencies == ["phase-1"]
         assert p2.completion_criteria == [
@@ -144,7 +144,7 @@ class TestParsePlan:
         plan = parse_plan(sample_plan_text)
         p3 = plan.phases[2]
         assert p3.phase_id == "phase-3"
-        assert p3.status == PhaseStatus.PENDING
+        assert p3.status == PhaseStatus.PLANNING
         assert p3.dependencies == ["phase-1", "phase-2"]
         assert p3.known == ["Need to support secure cookie flags"]
         assert p3.unknown == ["Migration strategy for existing sessions"]
@@ -190,7 +190,7 @@ class TestValidatePlan:
     def test_missing_dependency_detected(self) -> None:
         text = """\
 ## Phase 1: A
-**status:** pending
+**status:** planning
 **dependencies:** [phase-99]
 """
         plan = parse_plan(text)
@@ -210,7 +210,7 @@ class TestValidatePlan:
     def test_locked_must_be_implemented_or_aborted(self) -> None:
         text = """\
 ## Phase 1: A
-**status:** pending
+**status:** planning
 **locked:** true
 """
         plan = parse_plan(text)
@@ -220,31 +220,31 @@ class TestValidatePlan:
     def test_dependency_status_check(self) -> None:
         text = """\
 ## Phase 1: A
-**status:** pending
+**status:** planning
 
 ## Phase 2: B
-**status:** approved
+**status:** ready
 **dependencies:** [phase-1]
 """
         plan = parse_plan(text)
         errors = validate_plan(plan)
-        # phase-1 is pending, but phase-2 depends on it and is approved
-        assert any("must be implemented or approved" in str(e) for e in errors)
+        # phase-1 is planning, but phase-2 depends on it and is ready
+        assert any("must be implemented or ready" in str(e) for e in errors)
 
     def test_file_existence_check(self, tmp_path: Path) -> None:
         text = """\
 ## Phase 1: A
-**status:** approved
+**status:** ready
 **files_involved:** missing_file.py
 """
         plan = parse_plan(text)
         errors = validate_plan(plan, work_dir=tmp_path)
         assert any("does not exist" in str(e) for e in errors)
 
-    def test_file_existence_skipped_for_pending(self, tmp_path: Path) -> None:
+    def test_file_existence_skipped_for_planning(self, tmp_path: Path) -> None:
         text = """\
 ## Phase 1: A
-**status:** pending
+**status:** planning
 **files_involved:** missing_file.py
 """
         plan = parse_plan(text)

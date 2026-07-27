@@ -53,7 +53,7 @@ def _format_index_prompt(summary: str) -> str:
         "## Phase Status Table\n"
         "| Phase | Title | Status | Locked |\n"
         "|-------|-------|--------|--------|\n"
-        "| phase-01 | ... | pending | ❌ |\n"
+        "| phase-01 | ... | planning | ❌ |\n"
         "...\n\n"
         "## Dependency Graph\n"
         "```\n"
@@ -65,7 +65,7 @@ def _format_index_prompt(summary: str) -> str:
         f"- Use at most {MAX_PHASES_PER_INIT} phases. "
         f"If more are needed, add a '## Deferred Phases' section.\n"
         '- Every phase must have a unique phase_id matching pattern "phase-NN"\n'
-        '- Status is always "pending" for new plans\n'
+        '- Status is always "planning" for new plans\n'
         "- Dependencies must reference existing phase_ids in this plan\n"
     )
 
@@ -81,7 +81,7 @@ def _format_phase_prompt(summary: str, index_content: str, phase_id: str) -> str
         "---\n"
         f"phase_id: {phase_id}\n"
         "title: ...\n"
-        "status: pending\n"
+        "status: planning\n"
         "dependencies:\n"
         "  - ...\n"
         "---\n\n"

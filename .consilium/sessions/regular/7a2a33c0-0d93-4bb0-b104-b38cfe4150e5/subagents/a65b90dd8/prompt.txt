@@ -1,0 +1,113 @@
+Create a questionnaire document at `C:\Users\zemuro\Antigravity\kimi_extension_mod\plan\reports\project-setup-wizard-questionnaire.md` with the following content. Use `document_type: report`.
+
+The questionnaire is for the user to answer design questions about a Project Setup Wizard for the Consilium VS Code extension. Format it as a Markdown document with clear sections and answer blanks.
+
+Here is the exact content to write:
+
+```markdown
+# Project Setup Wizard — Design Questionnaire
+
+Fill in your answers below each question. This will guide the implementation phase planning.
+
+---
+
+## Section 1: Scope
+
+### Q1: Wizard Complexity
+
+Do you want a full multi-step wizard (preset → description → custom agents → summary) or incremental improvements (e.g., just improve the current Do `/init` first)?
+
+- **Full multi-step wizard** — Build the complete flow with all steps
+- **Incremental** — Improve one piece at a time, starting with Do `/init`
+- **Hybrid** — Build the wizard UI but keep initial implementation simple, add steps over time
+
+**Your answer:**
+
+> ...
+
+---
+
+## Section 2: Custom Agent Definition
+
+### Q2: Agent Definition UX
+
+How should users define custom workspace-specific subagents?
+
+- **Form fields** — Name, Description, Tools (checkboxes), Role Prompt (textarea) — in the webview UI
+- **YAML editor** — A code editor pane where users write `.consilium/agents/{name}.yaml` directly
+- **Both** — Form for basic config, with an "Edit YAML" toggle for advanced users
+
+**Your answer:**
+
+> ...
+
+### Q3: Built-in Agent Overrides
+
+Should users be able to override the 9 built-in agents (explore, coder, plan, plan_editor, etc.) from the wizard?
+
+- **Yes** — Allow overriding role prompts and tools for any built-in agent
+- **No** — Only allow defining new custom agents, keep built-ins fixed
+- **Advanced only** — Allow overrides but hide behind an "Advanced" toggle
+
+**Your answer:**
+
+> ...
+
+---
+
+## Section 3: Presets
+
+### Q4: Preset Source
+
+Where should preset templates (Python Library, Web App, CLI Tool, etc.) come from?
+
+- **Built-in YAML files** — Shipped with the CLI at `src/consilium/presets/`
+- **Remote registry** — Fetched from a GitHub repo or URL on first use
+- **Both** — Built-in defaults with optional remote updates
+
+**Your answer:**
+
+> ...
+
+### Q5: Preset Discovery
+
+How should users discover and select presets?
+
+- **Grid of cards** — Visual cards with icon, title, description (currently designed in Step 1)
+- **Dropdown list** — Simple select dropdown with preset names
+- **Auto-detect** — Scan `pyproject.toml`, `package.json`, `Cargo.toml` etc. and auto-suggest a preset
+
+**Your answer:**
+
+> ...
+
+---
+
+## Section 4: Integration
+
+### Q6: Think `/init` Integration
+
+Should the Think mode `/init` (plan generation) be integrated into the wizard, or remain a separate step the user runs later from the Think tab?
+
+- **Integrated** — After project setup, offer to run `/init` in a Think session to generate a plan
+- **Separate** — Leave `/init` as a manual step; just show a hint after setup
+- **Optional integration** — Add a "Generate a project plan?" checkbox at the end of the wizard
+
+**Your answer:**
+
+> ...
+
+### Q7: Git Initialization
+
+Should the wizard offer to initialize a git repo and create a `.gitignore`?
+
+- **Yes** — Add a "Initialize git repo?" step with `.gitignore` generation
+- **No** — Keep it out of scope; let the user do it manually
+- **Optional** — Add as a checkbox in the summary step
+
+**Your answer:**
+
+> ...
+```
+
+Write this file using `edit_file`.

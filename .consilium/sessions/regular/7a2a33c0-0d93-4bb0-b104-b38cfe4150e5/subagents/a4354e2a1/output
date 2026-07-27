@@ -1,0 +1,95 @@
+[stage] runner_started
+[stage] agent_built
+[stage] context_restored
+[stage] context_ready
+[stage] run_soul_start
+[tool] ReadFile
+[tool_result] success
+## Report: `ProjectSetupScreen.tsx`
+
+### 1. Full Source Code
+
+The file is 73 lines. Source shown above in full.
+
+### 2. How It Works (Buttons, Flow, Calls)
+
+This is a full-screen "onboarding" component shown when a VS Code workspace hasn't been initialized for Consilium yet.
+
+**Flow:**
+1. The component receives an `onSetupComplete` callback prop.
+2. It displays the Consilium logo, a "Project Setup" heading, and an explanatory message.
+3. **Two buttons** are shown:
+   - **"Initialize Project"** (primary `Button`) — calls `bridge.initializeProject()`, with a loading/spinner state (`initializing`). On success it shows a toast and fires `onSetupComplete()`. On failure it shows an error toast.
+   - **"Skip"** (ghost `Button`) — sets `projectSetupSkipped: true` in the settings store (`useSettingsStore`) and calls `onSetupComplete()`, bypassing initialization.
+4. After either action completes, the parent is expected to hide this screen (likely showing the main UI or a workspace picker).
+
+### 3. Imports / Patterns Used
+
+| Import | Source | Usage |
+|---|---|---|
+| `useState` | `react` | Tracks `initializing` boolean for loading state |
+| `IconLoader2`, `IconFolderOpen` | `@tabler/icons-react` | SVG icon components (spinner, folder) |
+| `Button` | `@/components/ui/button` | shadcn/ui styled button component |
+| `ConsiliumLogo` | `./ConsiliumLogo` | Local logo SVG component |
+| `bridge` | `@/services` | Extension bridge service for VS Code ↔ webview messaging |
+| `useSettingsStore` | `@/stores` | Zustand store for persistent settings (sets `projectSetupSkipped`) |
+| `toast` | `@/components/ui/sonner` | Sonner toast notification system |
+
+**Patterns:**
+- **Functional component** with typed `Props` interface.
+- **Async/await** for the bridge call with try/catch/finally for error handling.
+- **Zustand** direct state mutation via `useSettingsStore.setState`.
+- **Tailwind CSS** utility classes for layout and styling.
+
+### 4. Bridge Handlers Called
+
+| Handler | Direction | What It Does |
+|---|---|---|
+| **`bridge.initializeProject()`** | webview → extension | Requests the extension to initialize the current workspace for Consilium (create `.consilium/` directory structure, config, etc.). Returns `{ success: boolean, error?: string }`. |
+
+Only one bridge handler is called: `initializeProject`. No other bridge methods are invoked by this component.[stage] run_soul_finished
+
+[summary]
+## Report: `ProjectSetupScreen.tsx`
+
+### 1. Full Source Code
+
+The file is 73 lines. Source shown above in full.
+
+### 2. How It Works (Buttons, Flow, Calls)
+
+This is a full-screen "onboarding" component shown when a VS Code workspace hasn't been initialized for Consilium yet.
+
+**Flow:**
+1. The component receives an `onSetupComplete` callback prop.
+2. It displays the Consilium logo, a "Project Setup" heading, and an explanatory message.
+3. **Two buttons** are shown:
+   - **"Initialize Project"** (primary `Button`) — calls `bridge.initializeProject()`, with a loading/spinner state (`initializing`). On success it shows a toast and fires `onSetupComplete()`. On failure it shows an error toast.
+   - **"Skip"** (ghost `Button`) — sets `projectSetupSkipped: true` in the settings store (`useSettingsStore`) and calls `onSetupComplete()`, bypassing initialization.
+4. After either action completes, the parent is expected to hide this screen (likely showing the main UI or a workspace picker).
+
+### 3. Imports / Patterns Used
+
+| Import | Source | Usage |
+|---|---|---|
+| `useState` | `react` | Tracks `initializing` boolean for loading state |
+| `IconLoader2`, `IconFolderOpen` | `@tabler/icons-react` | SVG icon components (spinner, folder) |
+| `Button` | `@/components/ui/button` | shadcn/ui styled button component |
+| `ConsiliumLogo` | `./ConsiliumLogo` | Local logo SVG component |
+| `bridge` | `@/services` | Extension bridge service for VS Code ↔ webview messaging |
+| `useSettingsStore` | `@/stores` | Zustand store for persistent settings (sets `projectSetupSkipped`) |
+| `toast` | `@/components/ui/sonner` | Sonner toast notification system |
+
+**Patterns:**
+- **Functional component** with typed `Props` interface.
+- **Async/await** for the bridge call with try/catch/finally for error handling.
+- **Zustand** direct state mutation via `useSettingsStore.setState`.
+- **Tailwind CSS** utility classes for layout and styling.
+
+### 4. Bridge Handlers Called
+
+| Handler | Direction | What It Does |
+|---|---|---|
+| **`bridge.initializeProject()`** | webview → extension | Requests the extension to initialize the current workspace for Consilium (create `.consilium/` directory structure, config, etc.). Returns `{ success: boolean, error?: string }`. |
+
+Only one bridge handler is called: `initializeProject`. No other bridge methods are invoked by this component.

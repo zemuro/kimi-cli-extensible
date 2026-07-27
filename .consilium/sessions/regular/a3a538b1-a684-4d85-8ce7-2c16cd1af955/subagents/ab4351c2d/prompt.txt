@@ -1,0 +1,112 @@
+Write an implementation report to `c:\Users\zemuro\Antigravity\kimi_cli_mod\plan\reports\session-auto-load-fix-implementation.md`
+
+Use the following content:
+
+---
+document_type: implementation_report
+phase: session-auto-load-fix
+title: Implementation Report — Fix Auto-Load Fallback and Add Opt-Out Setting
+author: Consilium
+completion_date: 2026-07-27
+---
+
+# Implementation Report — Fix Auto-Load Fallback and Add Opt-Out Setting
+
+## Executive Summary
+
+The auto-load fallback (which picks the most recent Think and Do sessions on first workspace open) had two issues:
+
+1. **Only triggered when both tabs were missing**: The guard `!restored.thinkSessionId && !restored.doSessionId` skipped the fallback if even one tab had a persisted session ID. This meant that if `restoreTabState()` returned `{ doSessionId: "abc" }`, the Think tab would never get auto-loaded.
+
+2. **No opt-out**: Users couldn't disable auto-load behavior if they preferred to start with a clean slate.
+
+Both issues are now fixed.
+
+## Problem
+
+### Issue 1: Missing Think session on extension reload
+
+The `initTabs()` function had this guard:
+
+```typescript
+if (!restored.thinkSessionId && !restored.doSessionId) {
+  // fallback to most recent sessions
+}
+```
+
+On extension reload, `restoreTabState()` returns whatever was persisted in VS Code's `workspaceState`. If the user last had only a Do session active, the restored state would be `{ doSessionId: "abc" }` — the guard evaluated to `false` (because `doSessionId` was set), so the Think fallback was skipped entirely. The Think tab remained blank even though recent Think sessions existed.
+
+### Issue 2: No way to disable auto-load
+
+The auto-load behavior was hardcoded. Users who prefer to start fresh (or use the History dropdown manually) had no way to opt out.
+
+## Fix
+
+### Fix 1: Independent fallback per tab
+
+Changed the logic to fill each missing tab independently:
+
+```typescript
+const needFallback = (!restored.thinkSessionId || !restored.doSessionId) && useSettingsStore.getState().autoLoadHistory;
+if (needFallback) {
+  if (!restored.thinkSessionId) {
+    const recentThink = allSessions.find(s => s.isThinking);
+    restored.thinkSessionId = recentThink?.id;
+  }
+  if (!restored.doSessionId) {
+    const recentNonThink = allSessions.find(s => !s.isThinking);
+    restored.doSessionId = recentNonThink?.id;
+  }
+  if (!restored.activeTab) {
+    restored.activeTab = restored.doSessionId ? 'do' : restored.thinkSessionId ? 'think' : undefined;
+  }
+}
+```
+
+Now:
+- If only Do is persisted → Think fallback still runs → most recent Think session is loaded
+- If only Think is persisted → Do fallback still runs → most recent Do session is loaded
+- If neither is persisted → both fallbacks run
+
+### Fix 2: `autoLoadHistory` setting
+
+Added `autoLoadHistory: boolean` (default `true`) to the Zustand settings store:
+
+```typescript
+interface SettingsState {
+  // ... existing fields
+  autoLoadHistory: boolean;
+}
+```
+
+Initialized to `true` for backward compatibility. Users can set it to `false` to disable auto-load entirely (only explicitly persisted sessions from `restoreTabState()` will be loaded).
+
+## Files Changed
+
+| File | Change |
+|------|--------|
+| `c:\Users\zemuro\Antigravity\kimi_extension_mod\webview-ui\src\stores\chat.store.ts` | Fixed fallback logic to fill each missing tab independently; gated behind `autoLoadHistory` setting |
+| `c:\Users\zemuro\Antigravity\kimi_extension_mod\webview-ui\src\stores\settings.store.ts` | Added `autoLoadHistory: boolean` to `SettingsState` interface and store initial state |
+
+## Behavior Matrix
+
+| Scenario | Before | After |
+|----------|--------|-------|
+| No persisted state, `autoLoadHistory=true` | Both tabs auto-loaded ✅ | Both tabs auto-loaded ✅ (same) |
+| Only Do persisted, `autoLoadHistory=true` | Think tab blank ❌ | Think tab auto-loaded ✅ |
+| Only Think persisted, `autoLoadHistory=true` | Do tab blank ❌ | Do tab auto-loaded ✅ |
+| Both persisted, `autoLoadHistory=true` | Both loaded from persisted state ✅ | Both loaded from persisted state ✅ (same) |
+| `autoLoadHistory=false` | N/A (no setting) | No auto-load at all — only persisted sessions load ✅ |
+
+## Verification
+
+| Check | Result |
+|-------|--------|
+| TypeScript type check (`npx tsc --noEmit`) | ✅ Passed clean |
+| Webview build (`npm run build`) | ✅ Built successfully |
+| Full extension package (`npx @vscode/vsce package`) | ✅ Packaged successfully |
+| Fallback triggers when only Think is missing | ✅ `!restored.thinkSessionId || !restored.doSessionId` with independent checks |
+| Fallback triggers when only Do is missing | ✅ Same guard |
+| Fallback skipped when `autoLoadHistory=false` | ✅ Gated behind `useSettingsStore.getState().autoLoadHistory` |
+| Default `autoLoadHistory=true` | ✅ Backward compatible |
+| `autoLoadHistory` in SettingsState | ✅ Code review |

@@ -10,11 +10,12 @@ from pydantic import BaseModel, Field
 
 
 class PhaseStatus(str, Enum):
-    PENDING = "pending"
-    UNDER_REVIEW = "under_review"
-    APPROVED = "approved"
+    PLANNING = "planning"
+    READY = "ready"
     IMPLEMENTED = "implemented"
     ABORTED = "aborted"
+    ARCHIVED = "archived"
+    SUPERSEDED = "superseded"
 
 
 class Phase(BaseModel):
@@ -22,7 +23,7 @@ class Phase(BaseModel):
 
     phase_id: str
     title: str
-    status: PhaseStatus = PhaseStatus.PENDING
+    status: PhaseStatus = PhaseStatus.PLANNING
     locked: bool = False
     files_involved: list[str] = Field(default_factory=list)
     dependencies: list[str] = Field(default_factory=list)

@@ -1,0 +1,136 @@
+---
+document_type: implementation_report
+phase: 07-project-setup-screen
+title: Implementation Report — Project Setup Screen
+author: Consilium
+completion_date: 2026-07-27
+---
+
+# Implementation Report — Phase 07: Project Setup Screen
+
+## Executive Summary
+
+Added a new `"uninitialized"` status to the extension's initialization flow and a `ProjectSetupScreen` component that lets users scaffold the `.consilium/` workspace directory structure before starting their first session. When a user opens a workspace without `.consilium/`, they now see a setup prompt with "Initialize Project" and "Skip" options instead of silently getting a lazy-created directory on first session.
+
+## Problem
+
+When a user opened a new folder/workspace that didn't have a `.consilium/` directory, the extension showed either `ConfigErrorScreen` or `WelcomeScreen`, but there was no explicit step to scaffold the workspace. The `.consilium/` directory only got created lazily when the first session started, meaning new users had no feedback that their project needed initialization.
+
+## Implementation Details
+
+### `shared/bridge.ts` — Methods enum
+
+Added `CheckProjectSetup` and `InitializeProject` methods for the new handlers.
+
+### `src/handlers/session.handler.ts` — Two new handlers
+
+**`checkProjectSetup`**: Checks if `{workDir}/.consilium/` exists with `sessions/` and `agents/` subdirectories. Returns `{ initialized: boolean }`.
+
+**`initializeProject`**: Scaffolds the `.consilium/` directory structure:
+- `.consilium/sessions/think/`
+- `.consilium/sessions/do/`
+- `.consilium/sessions/regular/`
+- `.consilium/agents/`
+
+Returns `{ success: true }` or `{ success: false, error: "..." }`.
+
+### `webview-ui/src/services/bridge.ts` — Bridge methods
+
+Added `checkProjectSetup()` and `initializeProject()` methods calling through the RPC bridge.
+
+### `webview-ui/src/stores/settings.store.ts` — Skip flag
+
+Added `projectSetupSkipped: boolean` to the settings store (default `false`). When the user clicks "Skip", this flag is set to `true` and persists for the session.
+
+### `webview-ui/src/hooks/useAppInit.ts` — New status
+
+- Added `"uninitialized"` to the `AppStatus` type union
+- After the CLI check, login check, and models check all pass, added a project setup check:
+  1. Calls `bridge.checkProjectSetup()`
+  2. If `!initialized && !projectSetupSkipped`, sets status to `"uninitialized"` and returns
+  3. Otherwise proceeds to `"ready"`
+
+### `webview-ui/src/components/ProjectSetupScreen.tsx` — New component
+
+Modeled after `ConfigErrorScreen.tsx`:
+- Shows Consilium logo, "Project Setup" heading, and description text
+- "Initialize Project" button — calls `bridge.initializeProject()` and shows success/error toast
+- "Skip" button — sets `projectSetupSkipped = true` in settings store and dismisses
+- Loading state with spinner during initialization
+
+### `webview-ui/src/App.tsx` — Status routing
+
+Added `"uninitialized"` case before `"ready"`:
+```tsx
+if (status === "uninitialized") {
+  return (
+    <div className="flex flex-col h-screen text-foreground overflow-hidden">
+      <Header />
+      <ProjectSetupScreen onSetupComplete={refresh} />
+      <Toaster position="top-center" />
+    </div>
+  );
+}
+```
+
+## Status Flow
+
+```
+App.tsx flow (implemented):
+  no-api-key → SetupScreen
+  uninitialized → ProjectSetupScreen (NEW)
+  no-models → ConfigErrorScreen
+  cli-error → ConfigErrorScreen
+  no-workspace → ConfigErrorScreen
+  ready → WelcomeScreen / ChatArea
+```
+
+## Corrections from Spec
+
+| # | Spec Said | Actual |
+|---|-----------|--------|
+| 1 | File `src/handlers/session.ts` | Actual file is `src/handlers/session.handler.ts` |
+| 2 | No mention of `shared/bridge.ts` Methods enum | Added `CheckProjectSetup` and `InitializeProject` |
+| 3 | No mention of bridge service methods | Added `checkProjectSetup()` and `initializeProject()` in `bridge.ts` |
+| 4 | No mention of settings store | Added `projectSetupSkipped` to `settings.store.ts` |
+| 5 | `context.requireWorkDir()` | Used `ctx.workDir || ctx.workspaceRoot` instead (safer) |
+
+## Files Modified
+
+| File | Change |
+|------|--------|
+| `c:\Users\zemuro\Antigravity\kimi_extension_mod\shared\bridge.ts` | Added `CheckProjectSetup` and `InitializeProject` to Methods enum |
+| `c:\Users\zemuro\Antigravity\kimi_extension_mod\src\handlers\session.handler.ts` | Added `checkProjectSetup` and `initializeProject` handlers |
+| `c:\Users\zemuro\Antigravity\kimi_extension_mod\webview-ui\src\services\bridge.ts` | Added `checkProjectSetup()` and `initializeProject()` methods |
+| `c:\Users\zemuro\Antigravity\kimi_extension_mod\webview-ui\src\stores\settings.store.ts` | Added `projectSetupSkipped: boolean` |
+| `c:\Users\zemuro\Antigravity\kimi_extension_mod\webview-ui\src\hooks\useAppInit.ts` | Added `"uninitialized"` status and project setup check |
+| `c:\Users\zemuro\Antigravity\kimi_extension_mod\webview-ui\src\components\ProjectSetupScreen.tsx` | New component (Initialize / Skip) |
+| `c:\Users\zemuro\Antigravity\kimi_extension_mod\webview-ui\src\App.tsx` | Added `"uninitialized"` status case |
+
+## Verification
+
+| Check | Result |
+|-------|--------|
+| TypeScript check (`npx tsc --noEmit`) | ✅ Passed clean (webview + extension) |
+| Webview build (`npm run build`) | ✅ Built successfully |
+| Full extension package (`npx @vscode/vsce package`) | ✅ Packaged successfully (167 files, 3.03 MB) |
+| `CheckProjectSetup` in Methods enum | ✅ Code review |
+| `InitializeProject` in Methods enum | ✅ Code review |
+| `checkProjectSetup` handler registered | ✅ Code review |
+| `initializeProject` handler registered | ✅ Code review |
+| Bridge methods defined | ✅ Code review |
+| `projectSetupSkipped` in settings store | ✅ Code review |
+| `"uninitialized"` in AppStatus type | ✅ Code review |
+| Project setup check in init flow | ✅ Code review |
+| `ProjectSetupScreen` component created | ✅ Code review |
+| `App.tsx` routes `"uninitialized"` to `ProjectSetupScreen` | ✅ Code review |
+
+## Edge Cases
+
+| Case | Handling |
+|------|----------|
+| Existing project with `.consilium/` | `checkProjectSetup` returns `initialized: true`, status stays `"ready"` |
+| User skips setup | `projectSetupSkipped = true` in Zustand store, prevents re-showing on refresh |
+| Initialization fails | Handler returns `{ success: false, error }`, toast shows error |
+| `.consilium/` exists but empty/missing subdirs | `initialized: false` — scaffold creates missing dirs |
+| User re-opens skipped workspace | Skip flag is in-memory only — would re-show on page reload. Could be upgraded to persistent storage in a follow-up |

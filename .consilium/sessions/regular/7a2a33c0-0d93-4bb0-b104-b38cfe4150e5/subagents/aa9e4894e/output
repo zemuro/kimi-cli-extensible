@@ -1,0 +1,445 @@
+[stage] runner_started
+[stage] agent_built
+[stage] context_restored
+[stage] context_ready
+[stage] run_soul_start
+I'll start by exploring the directory structure and searching for slash command related patterns in parallel.
+
+[tool] Glob
+[tool] Grep
+[tool_result] error: Unsafe pattern
+[tool] Grep
+[tool_result] success
+[tool] Grep
+[tool_result] success
+[tool] Grep
+[tool_result] success
+[tool] Grep
+[tool_result] success
+[tool] Glob
+[tool_result] success
+[tool] Glob
+[tool_result] error: Directory outside workspace
+[tool_result] error: Directory outside workspace
+I see — the searches were targeting the wrong project. Let me re-run searches with absolute paths to the extension mod.
+
+[tool] Grep
+[tool] Grep
+[tool_result] success
+[tool] Grep
+[tool_result] success
+[tool] Grep
+[tool_result] success
+[tool] Grep
+[tool_result] success
+[tool_result] success
+Now let me read the key files in parallel:
+
+[tool] ReadFile
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool_result] success
+Now let me check how the extension dispatches slash commands to the CLI, and look at the CLI side for the actual slash command definitions:
+
+[tool] Grep
+[tool] Grep
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool_result] success
+Now let me look at the CLI side where slash commands are actually defined, and the bridge layer that sends them[tool] Grep
+[tool] Glob
+[tool_result] success
+[tool] Glob
+[tool_result] error: Directory outside workspace
+[tool] Glob
+[tool_result] error: Directory outside workspace
+[tool_result] error: Directory outside workspace
+[tool] ReadFile
+[tool] ReadFile
+[tool_result] success
+[tool_result] success
+Now let me look at the extension side (main VS Code extension) where `streamChat` is handled and slash commands are dispatched:
+
+[tool] Grep
+[tool] Glob
+[tool_result] success
+[tool_result] error: Directory outside workspace
+[tool] ReadFile
+[tool] Grep
+[tool_result] success
+[tool_result] success
+Now let me look at the CLI side where slash commands are defined, and the extension's session handler for project initialization:
+
+[tool] ReadFile
+[tool] Grep
+[tool_result] success
+[tool_result] success
+Excellent — now let me look at the CLI side where slash commands are actually defined:
+
+[tool] ReadFile
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool_result] success
+Let me also look at how the wire server sends slash_commands in the initialize result, and the `ConsiliumSoul` to see how slash commands are resolved:
+
+[tool] Grep
+[tool] Grep
+[tool_result] success
+[tool] Grep
+[tool_result] success
+[tool_result] success
+Let me also check how the shell merges its own slash commands with soul-level commands:
+
+[tool] Grep
+[tool] Grep
+[tool_result] success
+[tool_result] success
+Let me also check the think mode slash commands and the `init` prompt:
+
+[tool] ReadFile
+[tool] Grep
+[tool_result] success
+[tool_result] success
+Now let me look at the `init.md` prompt and how the extension handles project[tool] ReadFile
+[tool] Grep
+[tool_result] success
+[tool_result] success
+Here is a comprehensive summary of how slash commands work across the **Consilium CLI** (Python) and the **VS Code extension** (TypeScript).
+
+---
+
+## 1. CLI Side: Where Slash Commands Are Defined (Python)
+
+### Core registry class
+**`src/consilium/utils/slashcmd.py`** — Defines `SlashCommand` dataclass and `SlashCommandRegistry`. The registry maps command names and aliases to functions. Key methods:
+- `command()` — decorator to register a command (with optional `name` and `aliases`)
+- `find_command(name)` — look up by name or alias
+- `list_commands()` — return all unique primary commands
+
+### Three separate registries
+
+| Registry | File | Purpose |
+|---|---|---|
+| `soul_slash_registry` | `src/consilium/soul/slash.py` | Commands executed by `ConsiliumSoul.run()` |
+| `shell_slash_registry` | `src/consilium/ui/shell/slash.py` | Commands executed by `Shell` UI (may trigger reloads, open windows, etc.) |
+| `shell_mode_registry` | `src/consilium/ui/shell/slash.py` | Subset of shell commands available in **shell mode** (non-agent) |
+| `think_registry` | `src/consilium/think/slash.py` | Commands for Think mode sessions |
+
+### Soul-level commands (`soul/slash.py`) — **these are sent to the CLI agent**
+
+| Command | Aliases | Description |
+|---|---|---|
+| `/init` | — | Analyze the codebase and generate `AGENTS.md` |
+| `/compact` | — | Compact context (optionally with focus instruction) |
+| `/clear` | `reset` | Clear the context |
+| `/yolo` | — | Toggle YOLO mode (auto-approve all actions) |
+| `/afk` | — | Toggle AFK mode (auto-dismiss questions, auto-approve) |
+| `/plan` | — | Toggle plan mode; subcommands: `on`, `off`, `view`, `clear` |
+| `/add-dir` | — | Add a directory to the workspace |
+| `/export` | — | Export current session context to markdown |
+| `/import` | — | Import context from a file or session ID |
+| `/commit` | — | Create intermediate git commit (Do mode) |
+| `/abort` | — | Abort session and revert to initial git state (Do mode) |
+| `/status` | — | Show git status (Do mode) |
+| `/complete` | — | Mark current phase complete (Do mode) |
+| `/inject` | — | Inject a message into context (Do mode) |
+| `/skill:<name>` | — | Run a skill (dynamically registered) |
+| `/flow:<name>` | — | Run a prompt flow (dynamically registered) |
+
+### Shell-level commands (`ui/shell/slash.py`) — **handled by the Shell UI, not sent to CLI**
+
+| Command | Aliases | Description |
+|---|---|---|
+| `/help` | `h`, `?` | Show help information |
+| `/exit` | `quit` | Exit the application |
+| `/btw` | — | Ask a side question (modal) |
+| `/version` | — | Show version info |
+| `/model` | — | Switch LLM model or thinking mode |
+| `/editor` | — | Set default external editor |
+| `/changelog` | `release-notes` | Show release notes |
+| `/feedback` | — | Submit feedback |
+| `/clear` | `reset` | Clear context and reload |
+| `/new` | — | Start a new session |
+| `/title` | `rename` | Set or show session title |
+| `/sessions` | `resume` | List and switch sessions |
+| `/task` | — | Browse/manage background tasks |
+| `/theme` | — | Switch terminal color theme |
+| `/web` | — | Open Web UI |
+| `/vis` | — | Open Tracing Visualizer |
+| `/mcp` | — | Show MCP servers/tools |
+| `/hooks` | — | List configured hooks |
+| `/undo` | — | Fork at a previous turn |
+| `/fork` | — | Fork the current session |
+| `/token-usage` | — | Show token usage summary |
+| `/approve` | — | Approve pending plan review (Do mode) |
+| `/reject` | — | Reject pending plan review (Do mode) |
+| `/review` | — | Trigger plan review (Do mode) |
+
+### Think mode commands (`think/slash.py`)
+
+| Command | Aliases | Description |
+|---|---|---|
+| `/history` | `h` | Show message history with IDs |
+| `/edit` | `e` | Edit a message by ID |
+| `/delete` | `d` | Soft-delete a message |
+| `/regenerate` | `r` | Remove last assistant message |
+| `/prune` | `p` | Remove messages after an ID |
+| `/checkpoint` | `cp` | Save/load checkpoints |
+| `/load` | — | Load a checkpoint |
+| `/fork` | — | Fork session from a message |
+| `/plan` | — | Project plan management |
+| `/push-to-do` | `push` | Dispatch plan to Do mode |
+| `/explore` | — | Spawn explore subagent |
+| `/plan-edit` | `pe` | Spawn plan_editor subagent |
+| `/investigate` | `inv` | Spawn parallel investigations |
+| `/split-plan` | — | Split monolithic plan into directory |
+| `/compact` | — | Compact context in Think mode |
+| `/inbox` | `i` | Check reverse bridge inbox |
+
+---
+
+## 2. How They Are Registered and Dispatched
+
+### Registration flow
+1. Each Python file creates a `SlashCommandRegistry` instance
+2. Functions are decorated with `@registry.command` or `@registry.command(aliases=[...])`
+3. The decorator extracts the function name as the command name (or uses `name=` kwarg), and `__doc__` as the description
+4. Aliases are registered alongside the primary name
+
+### Soul-level dispatch (in `ConsiliumSoul.run()` at `consiliumsoul.py:705-713`)
+```
+1. User input arrives as text
+2. `parse_slash_command_call(text)` parses it: regex `^/([a-zA-Z0-9_-]+(:[a-zA-Z0-9_-]+)*)`
+3. If parsed, look up in `_slash_command_map` (built from soul_slash_registry + skills + flows)
+4. If found, call `command.func(self, args)` directly (no LLM involved)
+5. If not found, treat as normal user input and send to LLM
+```
+
+### Shell-level dispatch (in `Shell._run_slash_command()` at `shell/__init__.py:776`)
+```
+1. User input is parsed via `parse_slash_command_call()`
+2. `_find_available_slash_command(name)` checks both soul and shell registries
+3. If found in shell_slash_registry → `_run_slash_command()` executes it directly
+4. If found only in soul_slash_registry → `run_soul_command()` sends raw text to `ConsiliumSoul.run()`
+5. If not found → "Unknown slash command" error
+```
+
+### Wire protocol (for IDE/extension clients)
+In `wire/server.py:461-551`, during `initialize`:
+1. `self._soul.available_slash_commands` lists all soul-level commands
+2. These are serialized as `SlashCommandInfo` objects: `{name, description, aliases}`
+3. Sent in the `initialize` result: `{ protocol_version, server, slash_commands, ... }`
+4. The client (SDK's `Session`) stores them and exposes them as `session.slashCommands`
+
+---
+
+## 3. Does `/init` Exist?
+
+**Yes.** `/init` is a **soul-level** slash command defined in `src/consilium/soul/slash.py:38-53`:
+
+```python
+@registry.command
+async def init(soul: ConsiliumSoul, args: str):
+    """Analyze the codebase and generate an `AGENTS.md` file"""
+```
+
+It creates a temporary `ConsiliumSoul`, runs it with the `init.md` prompt (which asks the LLM to explore the project and write `AGENTS.md`), then injects a completion message into the main context.
+
+**However**, there is also a separate **extension-level** `InitializeProject` handler in `session.handler.ts:499-514` that just creates `.consilium/` directory structure (sessions, agents folders). This is **not** the same as the CLI `/init` command — it's the "project setup" that happens before the CLI can even run.
+
+---
+
+## 4. How the Extension Bridges Slash Commands to the CLI
+
+### Flow:
+1. **Extension startup**: `CLIManager.verify()` → `verifyWire()` → calls `ProtocolClient.start()` → gets `InitializeResult` with `slash_commands`
+2. **Webview init**: `useAppInit.ts` → `setWireSlashCommands(cliResult.slashCommands)` → stored in `settings.store` as `wireSlashCommands` (copied to `slashCommands`)
+3. **Slash menu UI**: `useSlashMenu.ts` reads `slashCommands` from settings store, provides fuzzy matching and keyboard navigation
+4. **User types a message**: `chat.store.sendMessage()` → `bridge.streamChat()` → extension's `chat.handler.streamChat()` → `session.prompt(content)` → CLI processes it, parses slash command in `ConsiliumSoul.run()`
+5. **Suggested actions** (`SuggestedActions.tsx`): Pre-built action buttons that send `/explore`, `/plan-edit`, `/investigate` commands
+
+### Key point: The extension does NOT interpret slash commands itself
+The extension treats all user input (including slash commands) as opaque text that gets sent to the CLI via `session.prompt(content)`. The CLI's `ConsiliumSoul` is what actually parses and handles `/compact`, `/init`, etc.
+
+The only exception is the extension-level `InitializeProject` handler which creates `.consilium/` directory structure — this is called via `bridge.initializeProject()` and is separate from the CLI's `/init` command.[stage] run_soul_finished
+
+[summary]
+Here is a comprehensive summary of how slash commands work across the **Consilium CLI** (Python) and the **VS Code extension** (TypeScript).
+
+---
+
+## 1. CLI Side: Where Slash Commands Are Defined (Python)
+
+### Core registry class
+**`src/consilium/utils/slashcmd.py`** — Defines `SlashCommand` dataclass and `SlashCommandRegistry`. The registry maps command names and aliases to functions. Key methods:
+- `command()` — decorator to register a command (with optional `name` and `aliases`)
+- `find_command(name)` — look up by name or alias
+- `list_commands()` — return all unique primary commands
+
+### Three separate registries
+
+| Registry | File | Purpose |
+|---|---|---|
+| `soul_slash_registry` | `src/consilium/soul/slash.py` | Commands executed by `ConsiliumSoul.run()` |
+| `shell_slash_registry` | `src/consilium/ui/shell/slash.py` | Commands executed by `Shell` UI (may trigger reloads, open windows, etc.) |
+| `shell_mode_registry` | `src/consilium/ui/shell/slash.py` | Subset of shell commands available in **shell mode** (non-agent) |
+| `think_registry` | `src/consilium/think/slash.py` | Commands for Think mode sessions |
+
+### Soul-level commands (`soul/slash.py`) — **these are sent to the CLI agent**
+
+| Command | Aliases | Description |
+|---|---|---|
+| `/init` | — | Analyze the codebase and generate `AGENTS.md` |
+| `/compact` | — | Compact context (optionally with focus instruction) |
+| `/clear` | `reset` | Clear the context |
+| `/yolo` | — | Toggle YOLO mode (auto-approve all actions) |
+| `/afk` | — | Toggle AFK mode (auto-dismiss questions, auto-approve) |
+| `/plan` | — | Toggle plan mode; subcommands: `on`, `off`, `view`, `clear` |
+| `/add-dir` | — | Add a directory to the workspace |
+| `/export` | — | Export current session context to markdown |
+| `/import` | — | Import context from a file or session ID |
+| `/commit` | — | Create intermediate git commit (Do mode) |
+| `/abort` | — | Abort session and revert to initial git state (Do mode) |
+| `/status` | — | Show git status (Do mode) |
+| `/complete` | — | Mark current phase complete (Do mode) |
+| `/inject` | — | Inject a message into context (Do mode) |
+| `/skill:<name>` | — | Run a skill (dynamically registered) |
+| `/flow:<name>` | — | Run a prompt flow (dynamically registered) |
+
+### Shell-level commands (`ui/shell/slash.py`) — **handled by the Shell UI, not sent to CLI**
+
+| Command | Aliases | Description |
+|---|---|---|
+| `/help` | `h`, `?` | Show help information |
+| `/exit` | `quit` | Exit the application |
+| `/btw` | — | Ask a side question (modal) |
+| `/version` | — | Show version info |
+| `/model` | — | Switch LLM model or thinking mode |
+| `/editor` | — | Set default external editor |
+| `/changelog` | `release-notes` | Show release notes |
+| `/feedback` | — | Submit feedback |
+| `/clear` | `reset` | Clear context and reload |
+| `/new` | — | Start a new session |
+| `/title` | `rename` | Set or show session title |
+| `/sessions` | `resume` | List and switch sessions |
+| `/task` | — | Browse/manage background tasks |
+| `/theme` | — | Switch terminal color theme |
+| `/web` | — | Open Web UI |
+| `/vis` | — | Open Tracing Visualizer |
+| `/mcp` | — | Show MCP servers/tools |
+| `/hooks` | — | List configured hooks |
+| `/undo` | — | Fork at a previous turn |
+| `/fork` | — | Fork the current session |
+| `/token-usage` | — | Show token usage summary |
+| `/approve` | — | Approve pending plan review (Do mode) |
+| `/reject` | — | Reject pending plan review (Do mode) |
+| `/review` | — | Trigger plan review (Do mode) |
+
+### Think mode commands (`think/slash.py`)
+
+| Command | Aliases | Description |
+|---|---|---|
+| `/history` | `h` | Show message history with IDs |
+| `/edit` | `e` | Edit a message by ID |
+| `/delete` | `d` | Soft-delete a message |
+| `/regenerate` | `r` | Remove last assistant message |
+| `/prune` | `p` | Remove messages after an ID |
+| `/checkpoint` | `cp` | Save/load checkpoints |
+| `/load` | — | Load a checkpoint |
+| `/fork` | — | Fork session from a message |
+| `/plan` | — | Project plan management |
+| `/push-to-do` | `push` | Dispatch plan to Do mode |
+| `/explore` | — | Spawn explore subagent |
+| `/plan-edit` | `pe` | Spawn plan_editor subagent |
+| `/investigate` | `inv` | Spawn parallel investigations |
+| `/split-plan` | — | Split monolithic plan into directory |
+| `/compact` | — | Compact context in Think mode |
+| `/inbox` | `i` | Check reverse bridge inbox |
+
+---
+
+## 2. How They Are Registered and Dispatched
+
+### Registration flow
+1. Each Python file creates a `SlashCommandRegistry` instance
+2. Functions are decorated with `@registry.command` or `@registry.command(aliases=[...])`
+3. The decorator extracts the function name as the command name (or uses `name=` kwarg), and `__doc__` as the description
+4. Aliases are registered alongside the primary name
+
+### Soul-level dispatch (in `ConsiliumSoul.run()` at `consiliumsoul.py:705-713`)
+```
+1. User input arrives as text
+2. `parse_slash_command_call(text)` parses it: regex `^/([a-zA-Z0-9_-]+(:[a-zA-Z0-9_-]+)*)`
+3. If parsed, look up in `_slash_command_map` (built from soul_slash_registry + skills + flows)
+4. If found, call `command.func(self, args)` directly (no LLM involved)
+5. If not found, treat as normal user input and send to LLM
+```
+
+### Shell-level dispatch (in `Shell._run_slash_command()` at `shell/__init__.py:776`)
+```
+1. User input is parsed via `parse_slash_command_call()`
+2. `_find_available_slash_command(name)` checks both soul and shell registries
+3. If found in shell_slash_registry → `_run_slash_command()` executes it directly
+4. If found only in soul_slash_registry → `run_soul_command()` sends raw text to `ConsiliumSoul.run()`
+5. If not found → "Unknown slash command" error
+```
+
+### Wire protocol (for IDE/extension clients)
+In `wire/server.py:461-551`, during `initialize`:
+1. `self._soul.available_slash_commands` lists all soul-level commands
+2. These are serialized as `SlashCommandInfo` objects: `{name, description, aliases}`
+3. Sent in the `initialize` result: `{ protocol_version, server, slash_commands, ... }`
+4. The client (SDK's `Session`) stores them and exposes them as `session.slashCommands`
+
+---
+
+## 3. Does `/init` Exist?
+
+**Yes.** `/init` is a **soul-level** slash command defined in `src/consilium/soul/slash.py:38-53`:
+
+```python
+@registry.command
+async def init(soul: ConsiliumSoul, args: str):
+    """Analyze the codebase and generate an `AGENTS.md` file"""
+```
+
+It creates a temporary `ConsiliumSoul`, runs it with the `init.md` prompt (which asks the LLM to explore the project and write `AGENTS.md`), then injects a completion message into the main context.
+
+**However**, there is also a separate **extension-level** `InitializeProject` handler in `session.handler.ts:499-514` that just creates `.consilium/` directory structure (sessions, agents folders). This is **not** the same as the CLI `/init` command — it's the "project setup" that happens before the CLI can even run.
+
+---
+
+## 4. How the Extension Bridges Slash Commands to the CLI
+
+### Flow:
+1. **Extension startup**: `CLIManager.verify()` → `verifyWire()` → calls `ProtocolClient.start()` → gets `InitializeResult` with `slash_commands`
+2. **Webview init**: `useAppInit.ts` → `setWireSlashCommands(cliResult.slashCommands)` → stored in `settings.store` as `wireSlashCommands` (copied to `slashCommands`)
+3. **Slash menu UI**: `useSlashMenu.ts` reads `slashCommands` from settings store, provides fuzzy matching and keyboard navigation
+4. **User types a message**: `chat.store.sendMessage()` → `bridge.streamChat()` → extension's `chat.handler.streamChat()` → `session.prompt(content)` → CLI processes it, parses slash command in `ConsiliumSoul.run()`
+5. **Suggested actions** (`SuggestedActions.tsx`): Pre-built action buttons that send `/explore`, `/plan-edit`, `/investigate` commands
+
+### Key point: The extension does NOT interpret slash commands itself
+The extension treats all user input (including slash commands) as opaque text that gets sent to the CLI via `session.prompt(content)`. The CLI's `ConsiliumSoul` is what actually parses and handles `/compact`, `/init`, etc.
+
+The only exception is the extension-level `InitializeProject` handler which creates `.consilium/` directory structure — this is called via `bridge.initializeProject()` and is separate from the CLI's `/init` command.

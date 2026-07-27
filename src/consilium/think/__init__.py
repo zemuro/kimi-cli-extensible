@@ -561,7 +561,12 @@ class ThinkSoul(Soul):
             return msg
 
         try:
-            result = command.func(self._history, self._think_session, call.args, work_dir=self._history.work_dir)
+            import inspect
+            sig = inspect.signature(command.func)
+            kwargs = {}
+            if 'work_dir' in sig.parameters:
+                kwargs['work_dir'] = self._history.work_dir
+            result = command.func(self._history, self._think_session, call.args, **kwargs)
             if isinstance(result, Awaitable):
                 result = await result
             if result:

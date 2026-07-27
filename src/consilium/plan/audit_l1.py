@@ -92,7 +92,7 @@ def audit_l1(
     hard_fail = False
 
     # 1. File existence check
-    if target_phase.status != PhaseStatus.PENDING:
+    if target_phase.status != PhaseStatus.PLANNING:
         for file_path in target_phase.files_involved:
             full_path = work_dir / file_path
             if not full_path.exists():
@@ -118,13 +118,13 @@ def audit_l1(
             messages.append(flag.message)
             hard_fail = True
             continue
-        if dep_phase.status not in (PhaseStatus.IMPLEMENTED, PhaseStatus.APPROVED):
+        if dep_phase.status not in (PhaseStatus.IMPLEMENTED, PhaseStatus.READY):
             flag = L1Flag(
                 check="dependency_status",
                 severity=L1Severity.ERROR,
                 message=(
                     f"Dependency {dep_id} has status {dep_phase.status.value}, "
-                    "must be implemented or approved"
+                    "must be implemented or ready"
                 ),
             )
             flags.append(flag)

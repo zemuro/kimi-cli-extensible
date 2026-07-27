@@ -70,7 +70,7 @@ def _infer_next_phase(plan_file: Path) -> str:
     try:
         plan_dir = parse_plan_directory_from_path(plan_file)
         for phase in plan_dir.phases:
-            if phase.status.value == "pending":
+            if phase.status.value == "planning":
                 return phase.phase_id
         # Fallback: return first phase if none pending
         if plan_dir.phases:
