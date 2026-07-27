@@ -1,0 +1,81 @@
+[stage] runner_started
+[stage] agent_built
+[stage] context_restored
+[stage] context_ready
+[stage] run_soul_start
+Let me first read the existing phase-06 to understand the format, and check the current plan index.
+
+[tool] ReadFile
+[tool] ReadFile
+[tool_result] success
+[tool_result] success
+Let me first check if the target directory exists or if the user intended the existing project directory.[tool] Shell
+[tool_result] success
+Now I see the user has two projects. The target `kimi_extension_mod` exists and contains an extension project. Let me check its existing plan directory and phase-06 format[tool] Shell
+[tool_result] success
+Let me read the existing phase-06 in the extension project, and the index.md to understand the format used there.
+
+[tool] ReadFile
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] error: File not found
+[tool_result] success
+Now I have a clear picture. The extension project's `phase-06` uses a simpler Markdown format (no frontmatter, concise sections). Let me also check if there's an index.md file in the extension project's plan directory to update.
+
+[tool] Shell
+[tool_result] success
+Now I have a clear picture. The extension project's `phase-06` uses a concise yet detailed Markdown format with Problem → Solution → Changes → Edge Cases → Effort sections. Let me write the new phase-07 spec following that format, incorporating all the content the user provided[tool] WriteFile
+[tool_result] success
+The file has been created. Let me verify it was written correctly:
+
+[tool] ReadFile
+[tool_result] success
+The file looks correct. Now let me check if there's an index file in the extension project that needs updating. The earlier `ls` showed no `index.md` in the `plan/` directory, but let me check the archive:[tool] ReadFile
+[tool_result] success
+The archive `index.md` is a separate, older plan index for the legacy 26-phase plan. The active `plan/` directory (phases 01-06) doesn't have its own index file, so no index update is needed.
+
+The phase spec has been created successfully at:
+
+**`C:\Users\zemuro\Antigravity\kimi_extension_mod\plan\phase-07-project-setup-screen.md`**
+
+It follows the same format as `phase-06-do-session-scanning.md` with these sections:
+
+- **Problem** — 4 pain points around missing workspace initialization
+- **Solution** — New `"uninitialized"` status + `ProjectSetupScreen` component
+- **Status ordering diagram** — Shows where the new screen fits in the app flow
+- **6 Changes** — Each with file path (absolute), code snippets, and description:
+  1. `checkProjectSetup` handler in `session.ts`
+  2. `initializeProject` handler in `session.ts`
+  3. Registration in `handlers/index.ts`
+  4. `"uninitialized"` status in `useAppInit.ts`
+  5. New `ProjectSetupScreen.tsx` component
+  6. `"uninitialized"` case in `App.tsx`
+- **Edge Cases table** — 6 cases with handling
+- **Effort** — ~2-3 hours
+
+All file references use absolute paths.[stage] run_soul_finished
+
+[summary]
+The archive `index.md` is a separate, older plan index for the legacy 26-phase plan. The active `plan/` directory (phases 01-06) doesn't have its own index file, so no index update is needed.
+
+The phase spec has been created successfully at:
+
+**`C:\Users\zemuro\Antigravity\kimi_extension_mod\plan\phase-07-project-setup-screen.md`**
+
+It follows the same format as `phase-06-do-session-scanning.md` with these sections:
+
+- **Problem** — 4 pain points around missing workspace initialization
+- **Solution** — New `"uninitialized"` status + `ProjectSetupScreen` component
+- **Status ordering diagram** — Shows where the new screen fits in the app flow
+- **6 Changes** — Each with file path (absolute), code snippets, and description:
+  1. `checkProjectSetup` handler in `session.ts`
+  2. `initializeProject` handler in `session.ts`
+  3. Registration in `handlers/index.ts`
+  4. `"uninitialized"` status in `useAppInit.ts`
+  5. New `ProjectSetupScreen.tsx` component
+  6. `"uninitialized"` case in `App.tsx`
+- **Edge Cases table** — 6 cases with handling
+- **Effort** — ~2-3 hours
+
+All file references use absolute paths.

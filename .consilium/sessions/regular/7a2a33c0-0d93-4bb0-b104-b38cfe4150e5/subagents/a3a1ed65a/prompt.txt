@@ -1,0 +1,138 @@
+Create a new implementation plan document at `C:\Users\zemuro\Antigravity\kimi_extension_mod\plan\archive\reports\mode-specific-input-draft-implementation.md`
+
+Write a comprehensive, detailed implementation plan using the following analysis:
+
+---
+
+## Problem
+
+The VS Code extension's chat input field (`InputArea.tsx`) uses **local React state** (`useState("")`) for the textarea value. When the user switches between Think and Do tabs (via `Header.tsx`), the locally-typed draft text is **lost**. The store's `pendingInput` field is per-tab, but it stores the *last sent message* for retry/recovery, not the current draft.
+
+Additionally, there is currently **no stored `inputDraft`** in either `TabState` or `ChatState` in the Zustand store.
+
+---
+
+## Architecture Solution
+
+### 1. Add `inputDraft: string` to `TabState` and `ChatState` (flat mirror)
+
+**File:** `webview-ui/src/stores/chat.store.ts`
+
+- Add `inputDraft: string` to the `TabState` interface (after `titleSource?: TitleSource`)
+- Add `inputDraft: string` to the `ChatState` interface (after `title?: string` / `titleSource?: TitleSource`)
+- Update `createEmptyTabState()` to initialize `inputDraft: ""`
+- Add `inputDraft` to `syncFlatStateFromTab()` — copy `draft[tab].inputDraft` to `draft.inputDraft`
+- Add `inputDraft` to `syncTabStateFromFlat()` — copy `draft.inputDraft` to `draft[tab].inputDraft`
+- Add a new action `setInputDraft(text: string)` to `ChatState` interface and implementation
+
+### 2. Make InputArea use the store's `inputDraft` as source of truth
+
+**File:** `webview-ui/src/components/inputarea/InputArea.tsx`
+
+**Remove:**
+- `const [text, setText] = useState("");` — no longer needed
+
+**Add:**
+```ts
+const inputDraft = useChatStore(s => s.inputDraft);
+const setInputDraft = useChatStore(s => s.setInputDraft);
+```
+
+**Update textarea:**
+```tsx
+<textarea
+  value={inputDraft}
+  onChange={handleChange}
+  ...
+/>
+```
+
+**Update `handleChange`:**
+```ts
+const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  setInputDraft(e.target.value);
+  setCursorPos(e.target.selectionStart);
+  resetHistoryIndex();
+  setTimeout(adjustHeight, 0);
+};
+```
+
+**Update `clearInput`:**
+```ts
+const clearInput = useMemoizedFn(() => {
+  setInputDraft("");
+  setCursorPos(0);
+  setTimeout(adjustHeight, 0);
+});
+```
+
+**Update `handleSend`:**
+```ts
+const handleSend = useMemoizedFn(() => {
+  if (isProcessing || (!inputDraft.trim() && draftMedia.length === 0)) return;
+  addToHistory(inputDraft);
+  sendMessage(inputDraft);
+  clearInput();
+});
+```
+
+**Update `pendingInput` restore effect:**
+```ts
+useEffect(() => {
+  if (!pendingInput || isStreaming) return;
+  if (inputDraft.trim()) return;  // don't overwrite current draft
+  const textContent = Content.getText(pendingInput.content);
+  if (textContent) {
+    setInputDraft(textContent);
+    setTimeout(() => {
+      textareaRef.current?.focus();
+      adjustHeight();
+    }, 0);
+  }
+}, [pendingInput, isStreaming, inputDraft]);
+```
+
+**Update `handleKeyDown`** — any references to `text` should use `inputDraft`:
+- `text.startsWith("/")` → `inputDraft.startsWith("/")`
+- `text` in `handleHistoryKey` → `inputDraft` (the `useInputHistory` hook receives `text` as a parameter, so pass `inputDraft` instead)
+
+### 3. How tab switching works automatically
+
+When `setActiveTab('do')` is called in `chat.store.ts`:
+1. `syncTabStateFromFlat(draft, 'think')` — saves current `inputDraft` → `draft.think.inputDraft`
+2. `syncFlatStateFromTab(draft, 'do')` — loads `draft.do.inputDraft` → `draft.inputDraft`
+3. React re-renders `InputArea` with the new `inputDraft` value
+
+No additional code needed for tab switching — the existing sync mechanism handles it.
+
+---
+
+## Files to modify
+
+| File | Changes |
+|------|---------|
+| `webview-ui/src/stores/chat.store.ts` | Add `inputDraft` to `TabState`, `ChatState`, `createEmptyTabState`, `syncFlatStateFromTab`, `syncTabStateFromFlat`; add `setInputDraft` action |
+| `webview-ui/src/components/inputarea/InputArea.tsx` | Replace local `useState("")` with store's `inputDraft`; update all handlers |
+
+---
+
+## Edge cases
+
+1. **Empty tab switch:** If user switches to a tab that has never had text typed, `inputDraft` is `""` — textarea shows empty, correct.
+2. **Pending input restore during active typing:** The `if (inputDraft.trim()) return;` check prevents overwriting the user's current draft.
+3. **Rapid typing while tab switching:** Zustand's synchronous `set()` ensures no race conditions.
+4. **Queue system:** The queue stores `QueuedItem` with `content` — not affected.
+5. **Draft media:** `draftMedia` is already in the flat state (not per-tab) — this is a separate concern.
+6. **Performance:** `useChatStore(s => s.inputDraft)` subscribes only to the `inputDraft` field, not the entire store. Updates on every keystroke are fine.
+
+---
+
+## Implementation order
+
+1. `chat.store.ts` — add types, sync functions, action
+2. `InputArea.tsx` — replace `text` with `inputDraft`
+3. Test: type in Think, switch to Do, type in Do, switch back to Think — text should be preserved
+
+---
+
+Write the plan in a clear, structured format with code snippets where appropriate.

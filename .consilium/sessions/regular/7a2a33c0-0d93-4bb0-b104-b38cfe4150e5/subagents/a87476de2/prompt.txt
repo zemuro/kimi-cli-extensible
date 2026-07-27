@@ -1,0 +1,62 @@
+<git-context>
+Working directory: c:\Users\zemuro\Antigravity\kimi_cli_mod
+Remote: https://github.com/zemuro/consilium.git
+Project: zemuro/consilium
+Branch: main
+Dirty files (24):
+  M .consilium/sessions/regular/.peer-status.json
+   M .consilium/sessions/regular/a3a538b1-a684-4d85-8ce7-2c16cd1af955/context.jsonl
+   M .consilium/sessions/regular/a3a538b1-a684-4d85-8ce7-2c16cd1af955/state.json
+   M .consilium/sessions/regular/a3a538b1-a684-4d85-8ce7-2c16cd1af955/wire.jsonl
+   M .consilium/sessions/think/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5.jsonl
+   M .consilium/sessions/think/logs/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5.jsonl
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/a21bef296/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/a282fea98/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/a2ed0e24b/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/a379ce013/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/a3a1ed65a/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/a58588e0a/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/a5a7e9973/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/a5b85bdf0/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/a62961465/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/a87476de2/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/a959c909b/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/aa983a4e9/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/ac24f3412/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/acd66ef07/
+  ... and 4 more
+Recent commits:
+  052660a7 docs(plan): add implementation report for mode-specific input draft
+  4db45846 docs(plan): add implementation report for Phase 09 SDK paths fix
+  77c03cce feat(prompts): update variables and compaction settings
+</git-context>
+
+Explore the extension at `C:\Users\zemuro\Antigravity\kimi_extension_mod` to understand what happens when a workspace has NO `.consilium/` directory yet (fresh project).
+
+Focus on:
+
+1. **CLI check on startup:** Look at `src/handlers/checkCLI` or similar — how does the extension verify the CLI is installed? Does it check for `.consilium/`?
+
+2. **Workspace initialization:** Is there any code that creates `.consilium/` directory structure? Look for `mkdir`, `fs.mkdir`, `.consilium` in:
+   - `src/bridge/`
+   - `src/handlers/`
+   - `src/panels/`
+
+3. **The `.consilium/` directory structure:** What should exist in a fresh project's `.consilium/` folder?
+   - Config files? (consilium.yaml, config.yaml)
+   - Agent files? (agents/think.yaml, agents/do.yaml)
+   - Sessions directory?
+   - Any other scaffolding?
+
+4. **First-time user experience:** When a user opens VS Code for the first time with no Consilium setup:
+   - Does the extension show any onboarding/welcome?
+   - Any "setup" or "install CLI" prompts?
+   - Look at `src/extension.ts` or activation events
+
+5. **The `checkCLI` handler** — what exactly does it check? Does it report version, installation status, workspace readiness?
+
+6. **Any "init" or "setup" commands** — look for commands like `consilium.init`, `consilium.setup`, `extension.initProject`, etc.
+
+7. **The webview's initial state** — when the webview loads with no workspace or no CLI, what does it show? Look at the webview source (React/TSX) for empty state / welcome components.
+
+Please read the actual files and provide detailed code snippets.

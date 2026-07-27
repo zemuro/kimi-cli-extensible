@@ -1,0 +1,537 @@
+[stage] runner_started
+[stage] agent_built
+[stage] context_restored
+[stage] context_ready
+[stage] run_soul_start
+Let me start by reading the file and searching for the relevant patterns[tool] ReadFile
+[tool] Grep
+[tool_result] error: File not found
+[tool] Grep
+[tool_result] error: Failed to grep
+[tool] Grep
+[tool_result] error: Failed to grep
+[tool_result] error: Failed to grep
+The path `kimi_extension_mod` doesn't exist in this project. Let me check if it's a sibling directory or if there's a different path.
+
+[tool] Shell
+[tool_result] success
+[tool] Shell
+[tool_result] success
+[tool] Glob
+[tool] Glob
+[tool_result] error: Unsafe pattern
+[tool_result] error: Unsafe pattern
+The file is in the sibling directory `kimi_extension_mod`. Let me explore it properly[tool] Shell
+[tool] Shell
+[tool_result] error: Failed with exit code: 1
+[tool_result] error: Failed with exit code: 1
+[tool] Shell
+[tool_result] error: Failed with exit code: 2
+
+
+[tool] Shell
+[tool_result] error: Failed with exit code: 2
+[tool] Shell
+[tool_result] success
+[tool] Shell
+[tool] Glob
+[tool_result] success
+[tool] Glob
+[tool_result] error: Directory outside workspace
+[tool_result] error: Unsafe pattern
+The file is in a sibling directory outside the workspace. Let me use Shell to read it directly.
+
+[tool] Shell
+[tool_result] success
+Found it at `webview-ui/src/stores/chat.store.ts`. Let me read it now[tool] ReadFile
+[tool_result] success
+Now let me search for `handleInputRestore` across the components directory:
+
+[tool] Shell
+[tool_result] success
+[tool] ReadFile
+[tool] ReadFile
+[tool_result] success
+[tool_result] success
+Let me get more context around the error/abort handlers and the full event-handlers file[tool] ReadFile
+[tool] ReadFile
+[tool_result] success
+[tool_result] success
+Now let me search for any `handleInputRestore` references more broadly, and also get the full `stream_aborted` handler and the `rollbackInput` usage[tool] Grep
+[tool] Grep
+[tool_result] success
+[tool] Grep
+[tool_result] success
+[tool_result] success
+Now I have all the data. Let me also check the `stream_aborted` handler:
+
+[tool] Grep
+[tool_result] success
+Now let me find the `handlePreflightError` function and the `preflight` handler for completeness[tool] Grep
+[tool_result] success
+Here's a comprehensive analysis of the `sendMessage` flow and all related `pendingInput` / `handleInputRestore` logic:
+
+---
+
+## 1. `sendMessage` — Full Definition
+
+**File:** `C:\Users\zemuro\Antigravity\kimi_extension_mod\webview-ui\src\stores\chat.store.ts`, lines 332–364
+
+```typescript
+sendMessage: (text) => {
+    const { draftMedia, isStreaming } = get();
+    const { currentModel } = useSettingsStore.getState();
+
+    const readyMedia = draftMedia.filter((m) => m.dataUri).map((m) => m.dataUri!);
+    const content = readyMedia.length > 0 ? Content.build(text, readyMedia) : text;
+
+    if (Content.isEmpty(content)) {
+      return;
+    }
+
+    // If streaming, enqueue instead of sending
+    if (isStreaming) {
+      get().enqueue(content, currentModel);
+      set({ draftMedia: [] });
+      return;
+    }
+
+    // Clear draft and set streaming state on active tab
+    set(
+      produce((draft: ChatState) => {
+        clearAllInlineErrors(draft[draft.activeTab]);
+        draft.draftMedia = [];
+        draft[draft.activeTab].isStreaming = true;
+        draft[draft.activeTab].pendingInput = { content, model: currentModel };  // <-- sets pendingInput
+        syncFlatStateFromTab(draft, draft.activeTab);                            // <-- syncs to flat state
+        draft.handshakeReceived = false;
+      }),
+    );
+    useApprovalStore.getState().clearRequests();
+
+    doSend(get(), content, currentModel);
+  },
+```
+
+---
+
+## 2. Does `sendMessage` call `syncFlatStateFromTab` or `syncTabStateFromFlat`?
+
+**Yes, it calls `syncFlatStateFromTab`** — at line 357:
+
+```typescript
+// Line 357 inside the produce():
+syncFlatStateFromTab(draft, draft.activeTab);
+```
+
+This copies `draft[draft.activeTab].pendingInput` (and all other mirrored fields) into the flat state. The function definition (lines 87–101):
+
+```typescript
+/** Copy all mirrored fields from active tab → flat state (for component reads). */
+function syncFlatStateFromTab(draft: ChatState, tab: 'think' | 'do') {
+  draft.sessionId = draft[tab].sessionId;
+  draft.messages = draft[tab].messages;
+  draft.isStreaming = draft[tab].isStreaming;
+  draft.isCompacting = draft[tab].isCompacting;
+  draft.lastStatus = draft[tab].lastStatus;
+  draft.tokenUsage = draft[tab].tokenUsage;
+  draft.activeTokenUsage = draft[tab].activeTokenUsage;
+  draft.pendingInput = draft[tab].pendingInput;       // <-- line 95
+  draft.planMode = draft[tab].planMode;
+  draft.pendingQuestion = draft[tab].pendingQuestion;
+  draft.title = draft[tab].title;
+  draft.titleSource = draft[tab].titleSource;
+  draft.inputDraft = draft[tab].inputDraft;
+}
+```
+
+It does **not** call `syncTabStateFromFlat` (which goes the other direction: flat → tab).
+
+---
+
+## 3. `pendingInput` / `handleInputRestore` Logic Inside `sendMessage`
+
+There is **no explicit `handleInputRestore` function** anywhere in the codebase. The grep for `handleInputRestore`, `handleInputRecover`, and `restoreInput` returned **zero matches**.
+
+However, the **equivalent logic** is achieved in two places:
+
+### 3a. Inside `sendMessage` itself (line 356)
+
+`sendMessage` **sets** `pendingInput` to a non-null value **before** the stream starts:
+
+```typescript
+draft[draft.activeTab].pendingInput = { content, model: currentModel };
+```
+
+This is the record of what was sent, used for retry recovery.
+
+### 3b. The "restore" effect in `InputArea`
+
+**File:** `C:\Users\zemuro\Antigravity\kimi_extension_mod\webview-ui\src\components\inputarea\InputArea.tsx`, lines 86–105
+
+```typescript
+  // Restore pending input
+  useEffect(() => {
+    if (!pendingInput || isStreaming) {
+      return;
+    }
+
+    // 只在输入框为空时恢复
+    if (inputDraft.trim()) {
+      return;
+    }
+
+    const textContent = Content.getText(pendingInput.content);
+    if (textContent) {
+      setInputDraft(textContent);
+      setTimeout(() => {
+        textareaRef.current?.focus();
+        adjustHeight();
+      }, 0);
+    }
+  }, [pendingInput, isStreaming]);
+```
+
+This is the **de facto `handleInputRestore`**. It fires when `pendingInput` is non-null AND `isStreaming` is false. It restores the text content of the last failed/rolled-back message into the textarea, but only if the input box is currently empty.
+
+---
+
+## 4. Stream Completion — Sync Between Flat and Tab State
+
+### `stream_complete` handler (event-handlers.ts, lines 321–335)
+
+```typescript
+stream_complete: (draft, payload: { result: RunResult }) => {
+    addTokenUsage(draft.tokenUsage, draft.activeTokenUsage);
+    draft.activeTokenUsage = createEmptyTokenUsage();
+    draft.isStreaming = false;
+    draft.isCompacting = false;
+    draft.pendingInput = null;          // <-- CLEARS pendingInput
+    useApprovalStore.getState().clearRequests();
+    const lastAssistant = getLastAssistant(draft);
+    if (lastAssistant?.steps) {
+      finishAllTextItems(lastAssistant.steps);
+      if ((payload.result as any)?.status === "interrupted") {
+        markPendingToolsAsCancelled(lastAssistant.steps);
+      }
+    }
+  },
+```
+
+**Key observation:** `stream_complete` sets `draft.pendingInput = null` but does **NOT** call `syncTabStateFromFlat()`. This means the tab state's `pendingInput` is **not synced** here. However, recall that `processEvent` in `chat.store.ts` (lines 395–456) wraps the event handler call in a `produce()` block that swaps tab state into flat, calls the handler, then swaps back:
+
+```typescript
+// Lines 415-426 in chat.store.ts's processEvent:
+if (targetTab !== activeTab) {
+  syncTabStateFromFlat(draft, activeTab);
+  syncFlatStateFromTab(draft, targetTab);
+}
+processEvent(draft, event);
+syncTabStateFromFlat(draft, targetTab);         // <-- syncs back to the target tab
+if (targetTab !== activeTab) {
+  syncFlatStateFromTab(draft, activeTab);
+}
+```
+
+So when the event targets the active tab (most common case), the flow is:
+1. `processEvent` is called
+2. Inside `produce()`: `processEvent(draft, event)` runs → `stream_complete` sets `draft.pendingInput = null`
+3. `syncTabStateFromFlat(draft, targetTab)` copies the flat `pendingInput = null` back to `draft[activeTab].pendingInput`
+
+**Result:** After a successful stream completion, `pendingInput` is set to `null` in both flat and tab state.
+
+### `error` handler (lines 337–363)
+- **Preflight errors** (`handlePreflightError`): Does NOT clear `pendingInput` (instead it **sets** it via `draft.pendingInput = { content: userContent, model: "" }` at line 287, for rollback).
+- **User interrupt** errors: Does NOT clear `pendingInput` (no pendingInput mutation).
+- **Runtime errors** (`handleRuntimeError`): Does NOT clear `pendingInput` (the failed message is preserved with inline error, and `pendingInput` remains set so the user can retry).
+
+---
+
+## 5. All Places Where `pendingInput` Is Set
+
+### Set to non-null:
+
+| # | Location | Line | Code | Context |
+|---|----------|------|------|---------|
+| 1 | `chat.store.ts` — `sendMessage` | 356 | `draft[draft.activeTab].pendingInput = { content, model: currentModel }` | When sending a message |
+| 2 | `chat.store.ts` — `rollbackInput` | 601 | `draft[draft.activeTab].pendingInput = { content, model: currentModel }` | Explicit rollback action |
+| 3 | `chat.store.ts` — `sendNextQueued` | 691 | `tab.pendingInput = { content: next.content, model: next.model }` | When sending next queued item |
+| 4 | `event-handlers.ts` — `handlePreflightError` | 287 | `draft.pendingInput = { content: userContent, model: "" }` | On preflight error, to restore user input |
+
+### Set to null:
+
+| # | Location | Line | Code | Context |
+|---|----------|------|------|---------|
+| 1 | `chat.store.ts` — initial state (flat) | 257 | `pendingInput: null` | Default state |
+| 2 | `chat.store.ts` — `createEmptyTabState()` | 77 | `pendingInput: null` | Default tab state |
+| 3 | `event-handlers.ts` — `stream_complete` | 326 | `draft.pendingInput = null` | On successful stream completion |
+
+Note: `pendingInput` is **not** explicitly cleared in the `error` handler or `stream_aborted` handler. This is intentional — it remains set so the user can retry (via `retryLastMessage` which reads `pendingInput` at line 367) or the `InputArea` effect can restore the text into the input box.
+
+---
+
+## 6. The `handleInputRestore` Effect (Full Code)
+
+**File:** `C:\Users\zemuro\Antigravity\kimi_extension_mod\webview-ui\src\components\inputarea\InputArea.tsx`, lines 86–105
+
+```typescript
+  // Restore pending input
+  useEffect(() => {
+    if (!pendingInput || isStreaming) {
+      return;
+    }
+
+    // 只在输入框为空时恢复
+    if (inputDraft.trim()) {
+      return;
+    }
+
+    const textContent = Content.getText(pendingInput.content);
+    if (textContent) {
+      setInputDraft(textContent);
+      setTimeout(() => {
+        textareaRef.current?.focus();
+        adjustHeight();
+      }, 0);
+    }
+  }, [pendingInput, isStreaming]);
+```
+
+There is **no named function** called `handleInputRestore` anywhere in the codebase. The above `useEffect` is the only mechanism that restores previously-sent input into the textarea. It fires when:
+- `pendingInput` becomes non-null (e.g., after a preflight error sets `pendingInput`)
+- `isStreaming` becomes false (so the stream is done and the input can be restored)
+- The textarea is currently empty (won't overwrite user's new draft)[stage] run_soul_finished
+
+[summary]
+Here's a comprehensive analysis of the `sendMessage` flow and all related `pendingInput` / `handleInputRestore` logic:
+
+---
+
+## 1. `sendMessage` — Full Definition
+
+**File:** `C:\Users\zemuro\Antigravity\kimi_extension_mod\webview-ui\src\stores\chat.store.ts`, lines 332–364
+
+```typescript
+sendMessage: (text) => {
+    const { draftMedia, isStreaming } = get();
+    const { currentModel } = useSettingsStore.getState();
+
+    const readyMedia = draftMedia.filter((m) => m.dataUri).map((m) => m.dataUri!);
+    const content = readyMedia.length > 0 ? Content.build(text, readyMedia) : text;
+
+    if (Content.isEmpty(content)) {
+      return;
+    }
+
+    // If streaming, enqueue instead of sending
+    if (isStreaming) {
+      get().enqueue(content, currentModel);
+      set({ draftMedia: [] });
+      return;
+    }
+
+    // Clear draft and set streaming state on active tab
+    set(
+      produce((draft: ChatState) => {
+        clearAllInlineErrors(draft[draft.activeTab]);
+        draft.draftMedia = [];
+        draft[draft.activeTab].isStreaming = true;
+        draft[draft.activeTab].pendingInput = { content, model: currentModel };  // <-- sets pendingInput
+        syncFlatStateFromTab(draft, draft.activeTab);                            // <-- syncs to flat state
+        draft.handshakeReceived = false;
+      }),
+    );
+    useApprovalStore.getState().clearRequests();
+
+    doSend(get(), content, currentModel);
+  },
+```
+
+---
+
+## 2. Does `sendMessage` call `syncFlatStateFromTab` or `syncTabStateFromFlat`?
+
+**Yes, it calls `syncFlatStateFromTab`** — at line 357:
+
+```typescript
+// Line 357 inside the produce():
+syncFlatStateFromTab(draft, draft.activeTab);
+```
+
+This copies `draft[draft.activeTab].pendingInput` (and all other mirrored fields) into the flat state. The function definition (lines 87–101):
+
+```typescript
+/** Copy all mirrored fields from active tab → flat state (for component reads). */
+function syncFlatStateFromTab(draft: ChatState, tab: 'think' | 'do') {
+  draft.sessionId = draft[tab].sessionId;
+  draft.messages = draft[tab].messages;
+  draft.isStreaming = draft[tab].isStreaming;
+  draft.isCompacting = draft[tab].isCompacting;
+  draft.lastStatus = draft[tab].lastStatus;
+  draft.tokenUsage = draft[tab].tokenUsage;
+  draft.activeTokenUsage = draft[tab].activeTokenUsage;
+  draft.pendingInput = draft[tab].pendingInput;       // <-- line 95
+  draft.planMode = draft[tab].planMode;
+  draft.pendingQuestion = draft[tab].pendingQuestion;
+  draft.title = draft[tab].title;
+  draft.titleSource = draft[tab].titleSource;
+  draft.inputDraft = draft[tab].inputDraft;
+}
+```
+
+It does **not** call `syncTabStateFromFlat` (which goes the other direction: flat → tab).
+
+---
+
+## 3. `pendingInput` / `handleInputRestore` Logic Inside `sendMessage`
+
+There is **no explicit `handleInputRestore` function** anywhere in the codebase. The grep for `handleInputRestore`, `handleInputRecover`, and `restoreInput` returned **zero matches**.
+
+However, the **equivalent logic** is achieved in two places:
+
+### 3a. Inside `sendMessage` itself (line 356)
+
+`sendMessage` **sets** `pendingInput` to a non-null value **before** the stream starts:
+
+```typescript
+draft[draft.activeTab].pendingInput = { content, model: currentModel };
+```
+
+This is the record of what was sent, used for retry recovery.
+
+### 3b. The "restore" effect in `InputArea`
+
+**File:** `C:\Users\zemuro\Antigravity\kimi_extension_mod\webview-ui\src\components\inputarea\InputArea.tsx`, lines 86–105
+
+```typescript
+  // Restore pending input
+  useEffect(() => {
+    if (!pendingInput || isStreaming) {
+      return;
+    }
+
+    // 只在输入框为空时恢复
+    if (inputDraft.trim()) {
+      return;
+    }
+
+    const textContent = Content.getText(pendingInput.content);
+    if (textContent) {
+      setInputDraft(textContent);
+      setTimeout(() => {
+        textareaRef.current?.focus();
+        adjustHeight();
+      }, 0);
+    }
+  }, [pendingInput, isStreaming]);
+```
+
+This is the **de facto `handleInputRestore`**. It fires when `pendingInput` is non-null AND `isStreaming` is false. It restores the text content of the last failed/rolled-back message into the textarea, but only if the input box is currently empty.
+
+---
+
+## 4. Stream Completion — Sync Between Flat and Tab State
+
+### `stream_complete` handler (event-handlers.ts, lines 321–335)
+
+```typescript
+stream_complete: (draft, payload: { result: RunResult }) => {
+    addTokenUsage(draft.tokenUsage, draft.activeTokenUsage);
+    draft.activeTokenUsage = createEmptyTokenUsage();
+    draft.isStreaming = false;
+    draft.isCompacting = false;
+    draft.pendingInput = null;          // <-- CLEARS pendingInput
+    useApprovalStore.getState().clearRequests();
+    const lastAssistant = getLastAssistant(draft);
+    if (lastAssistant?.steps) {
+      finishAllTextItems(lastAssistant.steps);
+      if ((payload.result as any)?.status === "interrupted") {
+        markPendingToolsAsCancelled(lastAssistant.steps);
+      }
+    }
+  },
+```
+
+**Key observation:** `stream_complete` sets `draft.pendingInput = null` but does **NOT** call `syncTabStateFromFlat()`. This means the tab state's `pendingInput` is **not synced** here. However, recall that `processEvent` in `chat.store.ts` (lines 395–456) wraps the event handler call in a `produce()` block that swaps tab state into flat, calls the handler, then swaps back:
+
+```typescript
+// Lines 415-426 in chat.store.ts's processEvent:
+if (targetTab !== activeTab) {
+  syncTabStateFromFlat(draft, activeTab);
+  syncFlatStateFromTab(draft, targetTab);
+}
+processEvent(draft, event);
+syncTabStateFromFlat(draft, targetTab);         // <-- syncs back to the target tab
+if (targetTab !== activeTab) {
+  syncFlatStateFromTab(draft, activeTab);
+}
+```
+
+So when the event targets the active tab (most common case), the flow is:
+1. `processEvent` is called
+2. Inside `produce()`: `processEvent(draft, event)` runs → `stream_complete` sets `draft.pendingInput = null`
+3. `syncTabStateFromFlat(draft, targetTab)` copies the flat `pendingInput = null` back to `draft[activeTab].pendingInput`
+
+**Result:** After a successful stream completion, `pendingInput` is set to `null` in both flat and tab state.
+
+### `error` handler (lines 337–363)
+- **Preflight errors** (`handlePreflightError`): Does NOT clear `pendingInput` (instead it **sets** it via `draft.pendingInput = { content: userContent, model: "" }` at line 287, for rollback).
+- **User interrupt** errors: Does NOT clear `pendingInput` (no pendingInput mutation).
+- **Runtime errors** (`handleRuntimeError`): Does NOT clear `pendingInput` (the failed message is preserved with inline error, and `pendingInput` remains set so the user can retry).
+
+---
+
+## 5. All Places Where `pendingInput` Is Set
+
+### Set to non-null:
+
+| # | Location | Line | Code | Context |
+|---|----------|------|------|---------|
+| 1 | `chat.store.ts` — `sendMessage` | 356 | `draft[draft.activeTab].pendingInput = { content, model: currentModel }` | When sending a message |
+| 2 | `chat.store.ts` — `rollbackInput` | 601 | `draft[draft.activeTab].pendingInput = { content, model: currentModel }` | Explicit rollback action |
+| 3 | `chat.store.ts` — `sendNextQueued` | 691 | `tab.pendingInput = { content: next.content, model: next.model }` | When sending next queued item |
+| 4 | `event-handlers.ts` — `handlePreflightError` | 287 | `draft.pendingInput = { content: userContent, model: "" }` | On preflight error, to restore user input |
+
+### Set to null:
+
+| # | Location | Line | Code | Context |
+|---|----------|------|------|---------|
+| 1 | `chat.store.ts` — initial state (flat) | 257 | `pendingInput: null` | Default state |
+| 2 | `chat.store.ts` — `createEmptyTabState()` | 77 | `pendingInput: null` | Default tab state |
+| 3 | `event-handlers.ts` — `stream_complete` | 326 | `draft.pendingInput = null` | On successful stream completion |
+
+Note: `pendingInput` is **not** explicitly cleared in the `error` handler or `stream_aborted` handler. This is intentional — it remains set so the user can retry (via `retryLastMessage` which reads `pendingInput` at line 367) or the `InputArea` effect can restore the text into the input box.
+
+---
+
+## 6. The `handleInputRestore` Effect (Full Code)
+
+**File:** `C:\Users\zemuro\Antigravity\kimi_extension_mod\webview-ui\src\components\inputarea\InputArea.tsx`, lines 86–105
+
+```typescript
+  // Restore pending input
+  useEffect(() => {
+    if (!pendingInput || isStreaming) {
+      return;
+    }
+
+    // 只在输入框为空时恢复
+    if (inputDraft.trim()) {
+      return;
+    }
+
+    const textContent = Content.getText(pendingInput.content);
+    if (textContent) {
+      setInputDraft(textContent);
+      setTimeout(() => {
+        textareaRef.current?.focus();
+        adjustHeight();
+      }, 0);
+    }
+  }, [pendingInput, isStreaming]);
+```
+
+There is **no named function** called `handleInputRestore` anywhere in the codebase. The above `useEffect` is the only mechanism that restores previously-sent input into the textarea. It fires when:
+- `pendingInput` becomes non-null (e.g., after a preflight error sets `pendingInput`)
+- `isStreaming` becomes false (so the stream is done and the input can be restored)
+- The textarea is currently empty (won't overwrite user's new draft)

@@ -1,0 +1,62 @@
+<git-context>
+Working directory: c:\Users\zemuro\Antigravity\kimi_cli_mod
+Remote: https://github.com/zemuro/consilium.git
+Project: zemuro/consilium
+Branch: main
+Dirty files (23):
+  M .consilium/sessions/regular/.peer-status.json
+   M .consilium/sessions/regular/a3a538b1-a684-4d85-8ce7-2c16cd1af955/context.jsonl
+   M .consilium/sessions/regular/a3a538b1-a684-4d85-8ce7-2c16cd1af955/state.json
+   M .consilium/sessions/regular/a3a538b1-a684-4d85-8ce7-2c16cd1af955/wire.jsonl
+   M .consilium/sessions/think/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5.jsonl
+   M .consilium/sessions/think/logs/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5.jsonl
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/a21bef296/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/a282fea98/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/a2ed0e24b/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/a379ce013/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/a3a1ed65a/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/a58588e0a/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/a5a7e9973/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/a5b85bdf0/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/a62961465/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/a959c909b/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/aa983a4e9/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/ac24f3412/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/acd66ef07/
+  ?? .consilium/sessions/regular/7a2a33c0-0d93-4bb0-b104-b38cfe4150e5/subagents/aea4a7cf2/
+  ... and 3 more
+Recent commits:
+  052660a7 docs(plan): add implementation report for mode-specific input draft
+  4db45846 docs(plan): add implementation report for Phase 09 SDK paths fix
+  77c03cce feat(prompts): update variables and compaction settings
+</git-context>
+
+Explore the VS Code extension at `C:\Users\zemuro\Antigravity\kimi_extension_mod` to understand how sessions are created, how workspaces are detected, and what happens when a user opens a new folder / starts a new session.
+
+Focus on these areas:
+
+1. **Session creation flow:** How does a new Think or Do session get created? Look at:
+   - `src/panels/` — the panel/session creation logic
+   - Any `createSession` or `newSession` functions
+   - What happens in the CLI when a new session starts
+
+2. **Workspace detection:** How does the extension know which workspace folder the user is in?
+   - Look for `vscode.workspace.workspaceFolders` or `vscode.workspace.rootPath`
+   - How is `workDir` or `workspaceDir` passed around?
+
+3. **Session initialization:** What happens when a session is first created in a workspace?
+   - Look at `src/panels/ConsiliumPanel.ts` or similar
+   - How does the extension communicate with the CLI process to start a session?
+   - What arguments are passed to the CLI?
+
+4. **The bridge/connection layer:** How does the extension connect to the CLI agent?
+   - Look in `src/bridge/` or similar
+   - How does the extension start a CLI process for a given workspace?
+
+5. **State management:** What state is tracked per-workspace or per-session?
+   - Look in `src/store/` or `src/global.d.ts`
+   - Any existing `workspace` or `workDir` related state
+
+6. **The `consilium.code-workspace` file** or any workspace config — how does the extension know the workspace root?
+
+Please read the key files and provide detailed code snippets, file paths, and function signatures. Be thorough — I need to understand the full lifecycle from "user opens new folder" to "session is running".

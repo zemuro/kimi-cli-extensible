@@ -1,0 +1,2419 @@
+[stage] runner_started
+[stage] agent_built
+[stage] context_restored
+[stage] context_ready
+[stage] run_soul_start
+I'll read all 6 files in parallel.
+
+[tool] ReadFile
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool_result] error: File not found
+The `src/types.ts` file does not exist. Let me find the actual types location from the imports used in the other files — they import from `shared/types`.[tool] Glob
+[tool_result] error: Unsafe pattern
+The glob is searching the wrong directory. Let me explicitly search for types files in the extension repo[tool] Glob
+[tool] Glob
+[tool_result] error: Directory outside workspace
+[tool] Glob
+[tool_result] error: Directory outside workspace
+[tool_result] error: Directory outside workspace
+The Glob tool is restricted to the working directory. Let me use Shell to find and read the types file.
+
+[tool] Shell
+[tool_result] success
+Found it at `shared/types.ts`. Let me read it:
+
+[tool] ReadFile
+[tool_result] success
+Here are the complete contents of all 6 requested files:
+
+---
+
+## 1. `webview-ui/src/App.tsx` (168 lines)
+
+```tsx
+// node/vscode_extension/webview-ui/src/App.tsx
+import { useEffect, useState, useCallback } from "react";
+import { Header } from "./components/Header";
+import { ChatArea } from "./components/ChatArea";
+import { InputArea } from "./components/inputarea/InputArea";
+import { MCPServersModal } from "./components/MCPServersModal";
+import { WorkDirModal } from "./components/WorkDirModal";
+import { ConfigErrorScreen } from "./components/ConfigErrorScreen";
+import { SetupScreen } from "./components/SetupScreen";
+import { Toaster, toast } from "./components/ui/sonner";
+import { useChatStore, useSettingsStore } from "./stores";
+import { bridge, Events } from "./services";
+import { useAppInit } from "./hooks/useAppInit";
+import { isPreflightError } from "shared/errors";
+import type { UIStreamEvent, StreamError, ExtensionConfig } from "shared/types";
+import "./styles/index.css";
+
+function MainContent({ onAuthAction }: { onAuthAction: () => void }) {
+  const { processEvent, startNewConversation, sessionId, setTitle } = useChatStore();
+  const { setMCPServers, setExtensionConfig, extensionConfig } = useSettingsStore();
+
+  useEffect(() => {
+    // Batch events via requestAnimationFrame to prevent main thread saturation
+    // during high-frequency streams (thinking tokens, tool call parts).
+    let pendingEvents: UIStreamEvent[] = [];
+    let flushScheduled = false;
+
+    const flush = () => {
+      flushScheduled = false;
+      const batch = pendingEvents;
+      pendingEvents = [];
+      if (batch.length === 0) return;
+
+      // Process all buffered events in a single state update
+      for (const event of batch) {
+        processEvent(event);
+      }
+
+      // Handle errors from the batch
+      for (const event of batch) {
+        if (event.type === "error") {
+          const streamError = event as StreamError;
+          if (isPreflightError(streamError.code || "UNKNOWN")) {
+            toast.error(streamError.message);
+          }
+        }
+      }
+    };
+
+    const scheduleFlush = () => {
+      if (flushScheduled) return;
+      flushScheduled = true;
+      if (typeof requestAnimationFrame !== "undefined") {
+        requestAnimationFrame(flush);
+      } else {
+        setTimeout(flush, 0);
+      }
+    };
+
+    return bridge.on(Events.StreamEvent, (event: UIStreamEvent) => {
+      // 只有当前已有 session 时才过滤，确保 session_start 能正常处理
+      if (sessionId && "_sessionId" in event && event._sessionId && event._sessionId !== sessionId) {
+        console.log("Ignored stream event from another session:", event._sessionId);
+        return;
+      }
+      pendingEvents.push(event);
+      scheduleFlush();
+    });
+  }, [processEvent, sessionId]);
+
+  useEffect(() => {
+    const unsubs = [
+      bridge.on(Events.MCPServersChanged, setMCPServers),
+      bridge.on(Events.ExtensionConfigChanged, ({ config }: { config: ExtensionConfig }) => setExtensionConfig(config)),
+      bridge.on(Events.FocusInput, () => document.querySelector<HTMLTextAreaElement>("textarea")?.focus()),
+      bridge.on(Events.NewConversation, () => startNewConversation()),
+      bridge.on(Events.SessionTitleUpdated, ({ sessionId: updatedSessionId, title, source }: { sessionId: string; title: string; source: "user" | "llm" | "fallback" }) => {
+        setTitle(updatedSessionId, title, source);
+      }),
+    ];
+    return () => unsubs.forEach((u) => u());
+  }, [setMCPServers, setExtensionConfig, startNewConversation, setTitle]);
+
+  useEffect(() => {
+    useChatStore.getState().initTabs();
+  }, []);
+
+  useEffect(() => {
+    if (!extensionConfig.enableNewConversationShortcut) return;
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "n") {
+        e.preventDefault();
+        startNewConversation();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [extensionConfig.enableNewConversationShortcut, startNewConversation]);
+
+  return (
+    <>
+      <div className="flex-1 min-h-0 relative group/chat">
+        <ChatArea />
+      </div>
+      <div className="shrink-0 max-h-[80vh] flex flex-col min-h-0">
+        <InputArea onAuthAction={onAuthAction} />
+      </div>
+      <MCPServersModal />
+      <WorkDirModal />
+    </>
+  );
+}
+
+export default function App() {
+  const { status, errorMessage, cliResult, modelsCount, refresh } = useAppInit();
+  const extensionConfig = useSettingsStore((s) => s.extensionConfig);
+  const [forceShowSetup, setForceShowSetup] = useState(false);
+
+  const handleSetupSuccess = useCallback(() => {
+    setForceShowSetup(false);
+    refresh();
+  }, [refresh]);
+
+  // Show setup screen if no API key is configured or if explicitly requested
+  const hasApiKey = !!extensionConfig?.apiKey;
+  const shouldShowSetup = !hasApiKey || forceShowSetup;
+
+  if (shouldShowSetup && status !== "loading" && status !== "cli-error" && status !== "no-workspace") {
+    return (
+      <div className="flex flex-col h-screen text-foreground overflow-hidden">
+        <Header />
+        <SetupScreen onSetupSuccess={handleSetupSuccess} />
+        <Toaster position="top-center" />
+      </div>
+    );
+  }
+
+  // 如果没有模型
+  if (modelsCount === 0 && status === "no-models") {
+    return (
+      <div className="flex flex-col h-screen text-foreground overflow-hidden">
+        <Header />
+        <ConfigErrorScreen type="no-models" cliResult={cliResult} errorMessage={errorMessage} onRefresh={refresh} onOpenSetup={() => setForceShowSetup(true)} />
+        <Toaster position="top-center" />
+      </div>
+    );
+  }
+
+  // 其他错误状态
+  if (status === "cli-error" || status === "no-workspace") {
+    return (
+      <div className="flex flex-col h-screen text-foreground overflow-hidden">
+        <Header />
+        <ConfigErrorScreen type={status} cliResult={cliResult} errorMessage={errorMessage} />
+        <Toaster position="top-center" />
+      </div>
+    );
+  }
+
+  // 正常状态
+  return (
+    <div className="flex flex-col h-screen text-foreground overflow-hidden">
+      <Header />
+      <MainContent onAuthAction={() => setForceShowSetup(true)} />
+      <Toaster position="top-center" />
+    </div>
+  );
+}
+```
+
+---
+
+## 2. `webview-ui/src/hooks/useAppInit.ts` (133 lines)
+
+```tsx
+import { useState, useEffect, useCallback } from "react";
+import { bridge, Events } from "@/services";
+import { useSettingsStore } from "@/stores";
+import type { ExtensionConfig, CLICheckResult } from "shared/types";
+
+export type AppStatus = "loading" | "no-workspace" | "cli-error" | "not-logged-in" | "no-models" | "ready";
+
+export interface AppInitState {
+  status: AppStatus;
+  errorMessage: string | null;
+  cliResult: CLICheckResult | null;
+  modelsCount: number;
+  refresh: () => void;
+}
+
+export function useAppInit(): AppInitState {
+  const [state, setState] = useState<Omit<AppInitState, "refresh">>({
+    status: "loading",
+    errorMessage: null,
+    cliResult: null,
+    modelsCount: 0,
+  });
+  const [initKey, setInitKey] = useState(0);
+  const { initModels, setExtensionConfig, setMCPServers, setWireSlashCommands, setIsLoggedIn, setWorkspaceRoot } = useSettingsStore();
+
+  const refresh = useCallback(() => {
+    setState({ status: "loading", errorMessage: null, cliResult: null, modelsCount: 0 });
+    setInitKey((k) => k + 1);
+  }, []);
+
+  useEffect(() => {
+    return bridge.on<{ config: ExtensionConfig; changedKeys: string[] }>(Events.ExtensionConfigChanged, ({ config, changedKeys }) => {
+      setExtensionConfig(config);
+      if (changedKeys.includes("executablePath")) {
+        refresh();
+      }
+    });
+  }, [setExtensionConfig, refresh]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function init() {
+      try {
+        const workspace = await bridge.checkWorkspace();
+        if (cancelled) {
+          return;
+        }
+
+        if (!workspace.hasWorkspace) {
+          setState({ status: "no-workspace", errorMessage: null, cliResult: null, modelsCount: 0 });
+          return;
+        }
+
+        setWorkspaceRoot(workspace.workspaceRoot ?? workspace.path ?? null);
+
+        const [extensionConfig, mcpServers, cliResult] = await Promise.all([bridge.getExtensionConfig(), bridge.getMCPServers(), bridge.checkCLI()]);
+        if (cancelled) {
+          return;
+        }
+
+        setExtensionConfig(extensionConfig);
+        setMCPServers(mcpServers);
+        setWireSlashCommands(cliResult.slashCommands ?? []);
+
+        if (!cliResult.ok) {
+          setState({
+            status: "cli-error",
+            errorMessage: cliResult.error?.message ?? "CLI check failed",
+            cliResult,
+            modelsCount: 0,
+          });
+          return;
+        }
+
+        const [loginStatus, consiliumConfig] = await Promise.all([bridge.checkLoginStatus(), bridge.getModels()]);
+        if (cancelled) {
+          return;
+        }
+
+        console.log("[AppInit] Login status:", loginStatus, "consiliumConfig:", consiliumConfig);
+
+        setIsLoggedIn(loginStatus.loggedIn);
+        let finalModels = consiliumConfig.models || [];
+        if (extensionConfig.apiKey) {
+          const defaultThink = extensionConfig.defaultThinkModel?.trim();
+          const defaultDo = extensionConfig.defaultDoModel?.trim();
+          const customModels = [];
+          if (defaultThink && !finalModels.find(m => m.id === defaultThink)) {
+            customModels.push({ id: defaultThink, name: defaultThink, capabilities: ["thinking"] as any[] });
+          }
+          if (defaultDo && defaultDo !== defaultThink && !finalModels.find(m => m.id === defaultDo)) {
+            customModels.push({ id: defaultDo, name: defaultDo, capabilities: [] });
+          }
+          finalModels = [...finalModels, ...customModels];
+          consiliumConfig.models = finalModels;
+        }
+
+        initModels(finalModels, consiliumConfig.defaultModel, consiliumConfig.defaultThinking);
+
+        const modelsCount = finalModels.length;
+
+        if (!loginStatus.loggedIn && !extensionConfig.apiKey) {
+          setState({ status: "not-logged-in", errorMessage: null, cliResult, modelsCount });
+          return;
+        }
+
+        if (modelsCount === 0 && !extensionConfig.apiKey) {
+          setState({ status: "no-models", errorMessage: null, cliResult, modelsCount: 0 });
+          return;
+        }
+
+        setState({ status: "ready", errorMessage: null, cliResult, modelsCount });
+      } catch (err) {
+        if (!cancelled) {
+          setState({
+            status: "cli-error",
+            errorMessage: err instanceof Error ? err.message : "Failed to initialize",
+            cliResult: null,
+            modelsCount: 0,
+          });
+        }
+      }
+    }
+
+    init();
+    return () => {
+      cancelled = true;
+    };
+  }, [initKey, initModels, setExtensionConfig, setMCPServers, setWireSlashCommands, setIsLoggedIn]);
+
+  return { ...state, refresh };
+}
+```
+
+---
+
+## 3. `webview-ui/src/components/WelcomeScreen.tsx` (20 lines)
+
+```tsx
+import { ConsiliumLogo } from "./ConsiliumLogo";
+import { useWelcomeHint } from "@/hooks/useWelcomeHint";
+
+export function WelcomeScreen() {
+  const hint = useWelcomeHint();
+
+  return (
+    <div className="flex flex-col items-center gap-3 px-4">
+      <ConsiliumLogo className="h-48" />
+      {hint.component ? (
+        hint.component
+      ) : (
+        <div className="text-center space-y-0.5">
+          <p className="text-xs font-medium text-foreground">{hint.title}</p>
+          <p className="text-xs text-muted-foreground">{hint.description}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+## 4. `webview-ui/src/components/ConfigErrorScreen.tsx` (234 lines)
+
+```tsx
+import { useState } from "react";
+import { IconAlertTriangle, IconTerminal2, IconLoader2, IconFolderOpen, IconSettings, IconExternalLink, IconChevronRight, IconArrowLeft, IconRefresh, IconCopy, IconCheck } from "@tabler/icons-react";
+import { Button } from "@/components/ui/button";
+import { ConsiliumMascot } from "./ConsiliumMascot";
+import { ConsiliumLogo } from "./ConsiliumLogo";
+import { bridge } from "@/services";
+import type { CLICheckResult, CLIErrorType } from "shared/types";
+
+interface Props {
+  type: "loading" | "cli-error" | "no-models" | "no-workspace";
+  cliResult?: CLICheckResult | null;
+  errorMessage?: string | null;
+  onRefresh?: () => void;
+  onOpenSetup?: () => void;
+}
+
+const CLI_ERROR_TITLES: Record<CLIErrorType, string> = {
+  not_found: "CLI Not Found",
+  version_low: "CLI Outdated",
+  extract_failed: "Installation Failed",
+  protocol_error: "Connection Error",
+};
+
+function CLIErrorDetails({ message }: { message?: string }) {
+  const [copied, setCopied] = useState(false);
+
+  if (!message) {
+    return null;
+  }
+
+  const copyError = async () => {
+    await navigator.clipboard.writeText(message);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="bg-muted/50 rounded-lg p-4 text-left space-y-2">
+      <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 min-w-0">
+          <IconTerminal2 className="size-4" />
+          <span>CLI error output:</span>
+        </div>
+        <Button onClick={copyError} variant="ghost" size="xs" className="h-6 px-1.5 gap-1 shrink-0">
+          {copied ? <IconCheck className="size-3" /> : <IconCopy className="size-3" />}
+          {copied ? "Copied" : "Copy to Ask AI"}
+        </Button>
+      </div>
+      <pre className="max-h-36 overflow-auto whitespace-pre-wrap break-words text-xs bg-background rounded px-3 py-2 font-mono text-foreground">{message}</pre>
+    </div>
+  );
+}
+
+function CLIErrorContent({ cliResult, errorMessage: fallbackErrorMessage }: { cliResult?: CLICheckResult | null; errorMessage?: string | null }) {
+  const isCustomPath = cliResult?.resolved?.isCustomPath ?? false;
+  const errorType = cliResult?.error?.type ?? "not_found";
+  const title = CLI_ERROR_TITLES[errorType];
+  const path = cliResult?.resolved?.path;
+  const errorMessage = cliResult?.error?.message ?? fallbackErrorMessage ?? undefined;
+
+  if (isCustomPath) {
+    return (
+      <>
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-2 text-amber-500">
+            <IconAlertTriangle className="size-5" />
+            <span className="text-sm font-medium">{title}</span>
+          </div>
+          <p className="text-xs text-muted-foreground">The configured CLI path is invalid or the CLI version is incompatible.</p>
+          {path && <p className="text-xs text-muted-foreground/70 font-mono break-all">{path}</p>}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Button onClick={() => bridge.openSettings()} className="gap-2">
+            <IconSettings className="size-4" />
+            Open Settings
+          </Button>
+          <p className="text-xs text-muted-foreground/70 text-center">
+            Update <code className="bg-muted px-1 rounded">consilium.executablePath</code> or clear it to use bundled CLI
+          </p>
+        </div>
+
+        <CLIErrorDetails message={errorMessage} />
+
+        <div className="bg-muted/50 rounded-lg p-4 text-left space-y-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <IconTerminal2 className="size-4" />
+            <span>Or install CLI manually:</span>
+          </div>
+          <code className="block text-xs bg-background rounded px-3 py-2 font-mono select-all">curl -LsSf https://cdn.consilium.com/binaries/consilium-cli/install.sh | bash</code>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div className="space-y-2">
+        <div className="inline-flex items-center gap-2 text-amber-500">
+          <IconAlertTriangle className="size-5" />
+          <span className="text-sm font-medium">{title}</span>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {errorType === "extract_failed" ? "Failed to extract the bundled CLI. Please install manually." : "The bundled CLI is unavailable. Please install manually."}
+        </p>
+      </div>
+
+      <CLIErrorDetails message={errorMessage} />
+
+      <div className="bg-muted/50 rounded-lg p-4 text-left space-y-3">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <IconTerminal2 className="size-4" />
+          <span>Install CLI:</span>
+        </div>
+        <code className="block text-xs bg-background rounded px-3 py-2 font-mono select-all">curl -LsSf https://cdn.consilium.com/binaries/consilium-cli/install.sh | bash</code>
+      </div>
+
+      <p className="text-xs text-muted-foreground/70">
+        After installation, you may need to configure the path in{" "}
+        <button onClick={() => bridge.openSettings()} className="underline hover:text-foreground">
+          settings
+        </button>
+      </p>
+    </>
+  );
+}
+
+function NoModelsContent({ onRefresh, onOpenSetup }: { onRefresh?: () => void; onOpenSetup?: () => void }) {
+  return (
+    <>
+      <div className="space-y-2">
+        <div className="inline-flex items-center gap-2 text-amber-500">
+          <IconAlertTriangle className="size-5" />
+          <span className="text-sm font-medium">Setup Required</span>
+        </div>
+        <p className="text-xs text-muted-foreground">No models configured. Please configure your API settings to continue:</p>
+      </div>
+
+      <div className="space-y-4">
+        <div className="bg-muted/50 rounded-lg p-4 text-left space-y-3">
+          <p className="text-xs font-medium text-foreground">Configure API Settings</p>
+          <p className="text-xs text-muted-foreground">
+            Provide your API credentials and default models.
+          </p>
+          <Button onClick={onOpenSetup} variant="outline" size="sm" className="gap-2 w-full">
+            <IconSettings className="size-4" />
+            Configure API Settings
+          </Button>
+        </div>
+      </div>
+
+      {(onOpenSetup || onRefresh) && (
+        <div className="flex flex-col min-[400px]:flex-row min-[400px]:justify-between gap-2 w-full">
+          {onOpenSetup && (
+            <Button onClick={onOpenSetup} variant="ghost" size="sm" className="gap-1 text-muted-foreground">
+              <IconArrowLeft className="size-3" />
+              Back to API Setup
+            </Button>
+          )}
+          {onRefresh && (
+            <Button onClick={onRefresh} variant="ghost" size="sm" className="gap-1 text-muted-foreground">
+              <IconRefresh className="size-3" />
+              Reload
+            </Button>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+export function ConfigErrorScreen({ type, cliResult, errorMessage, onRefresh, onOpenSetup }: Props) {
+  if (type === "loading") {
+    return (
+      <div className="h-full flex items-center justify-center p-6">
+        <div className="text-center space-y-4">
+          <ConsiliumLogo className="h-40 mx-auto opacity-50" />
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 text-muted-foreground">
+              <IconLoader2 className="size-4 animate-spin" />
+              <span className="text-sm">Loading...</span>
+            </div>
+            <p className="text-xs text-muted-foreground/70">Consilium is initializing. May take up to 30 seconds. Please wait.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "no-workspace") {
+    return (
+      <div className="h-full flex items-center justify-center p-6">
+        <div className="max-w-sm text-center space-y-6">
+          <ConsiliumLogo className="h-40 mx-auto opacity-50" />
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 text-amber-500">
+              <IconFolderOpen className="size-5" />
+              <span className="text-sm font-medium">No Workspace Open</span>
+            </div>
+            <p className="text-xs text-muted-foreground/70">Please open a folder to start using Consilium.</p>
+          </div>
+          <Button onClick={() => bridge.openFolder()} className="gap-2">
+            <IconFolderOpen className="size-4" />
+            Open Folder
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "cli-error") {
+    return (
+      <div className="flex-1 min-h-0 overflow-y-auto p-6">
+        <div className="max-w-sm mx-auto text-center space-y-6">
+          <ConsiliumLogo className="h-40 mx-auto opacity-50" />
+          <CLIErrorContent cliResult={cliResult} errorMessage={errorMessage} />
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "no-models") {
+    return (
+      <div className="h-full flex items-center justify-center p-6">
+        <div className="max-w-sm text-center space-y-6">
+          <ConsiliumLogo className="h-40 mx-auto opacity-50" />
+          <NoModelsContent onRefresh={onRefresh} onOpenSetup={onOpenSetup} />
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+```
+
+---
+
+## 5. `src/bridge-handler.ts` (451 lines)
+
+```typescript
+import * as vscode from "vscode";
+import * as path from "node:path";
+import * as fs from "node:fs";
+import { VSCodeSettings } from "./config/vscode-settings";
+import { getCLIManager, FileManager } from "./managers";
+import { handlers, type HandlerContext, type BroadcastFn, type ReloadWebviewFn, type ShowLogsFn } from "./handlers";
+import { createSession, parseConfig, getModelThinkingMode, getModelById, type Session, type Turn } from "@consilium/agent-sdk";
+import { readSessionTitle, writeSessionTitle, readThinkSessionTitle, writeThinkSessionTitle } from "./lib/session-storage";
+import type { SessionMetadata } from "../shared/types";
+import { sessionLog } from "./utils/logger.js";
+
+function resolveAgentFile(
+  activeTab: 'think' | 'do',
+  workspaceRoot: string | null,
+  extensionRoot: string,
+): string | undefined {
+  const agentName = activeTab === 'think' ? 'think.yaml' : 'do.yaml';
+
+  // 1. Workspace-local override
+  if (workspaceRoot) {
+    const localPath = path.join(workspaceRoot, '.consilium', 'agents', agentName);
+    if (fs.existsSync(localPath)) {
+      return localPath;
+    }
+  }
+
+  // 2. Built-in profile template
+  const profile = VSCodeSettings.agentProfile;
+  if (profile && extensionRoot) {
+    const templatePath = path.join(extensionRoot, 'resources', 'agent-profiles', profile, agentName);
+    if (fs.existsSync(templatePath)) {
+      return templatePath;
+    }
+  }
+
+  // 3. Fallback to CLI default (no --agent-file)
+  return undefined;
+}
+
+function resolveSubagentRoleOverrides(
+  workspaceRoot: string | null,
+  extensionRoot: string,
+): Record<string, string> | undefined {
+  if (!workspaceRoot || !extensionRoot) {
+    return undefined;
+  }
+
+  const workspaceAgentsDir = path.join(workspaceRoot, '.consilium', 'agents');
+  const workspaceRolePath = path.join(workspaceAgentsDir, 'plan_editor_role.md');
+
+  // 1. Workspace-local role file takes precedence.
+  if (fs.existsSync(workspaceRolePath)) {
+    console.log(`[Bridge] Using workspace plan_editor role override: ${workspaceRolePath}`);
+    return { plan_editor: workspaceRolePath };
+  }
+
+  // 2. Seed from built-in profile template if available.
+  const profile = VSCodeSettings.agentProfile;
+  if (profile) {
+    const profileRolePath = path.join(extensionRoot, 'resources', 'agent-profiles', profile, 'plan_editor_role.md');
+    if (fs.existsSync(profileRolePath)) {
+      fs.mkdirSync(workspaceAgentsDir, { recursive: true });
+      fs.copyFileSync(profileRolePath, workspaceRolePath);
+      console.log(`[Bridge] Seeded workspace plan_editor role from profile ${profile}: ${workspaceRolePath}`);
+      return { plan_editor: workspaceRolePath };
+    }
+  }
+
+  // 3. No override; use CLI built-in default.
+  console.log('[Bridge] No workspace/profile plan_editor role override found; using CLI default');
+  return undefined;
+}
+
+interface RpcMessage {
+  id: string;
+  method: string;
+  params?: unknown;
+}
+
+interface RpcResult {
+  id: string;
+  result?: unknown;
+  error?: string;
+}
+
+/** Close a session with a timeout guard to prevent hung processes from leaking. */
+async function safeCloseSession(session: Session, label: string, timeoutMs = 5000): Promise<void> {
+  const closePromise = session.close();
+  let timer: NodeJS.Timeout | undefined;
+  const timeoutPromise = new Promise<void>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`close() timed out after ${timeoutMs}ms`)), timeoutMs);
+  });
+  try {
+    await Promise.race([closePromise, timeoutPromise]);
+  } catch (err) {
+    sessionLog.error("safeCloseSession failed", { label, error: String(err) });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export class BridgeHandler {
+  private sessions = new Map<string, Session>();
+  private turns = new Map<string, Turn>();
+  private customWorkDirs = new Map<string, string>(); // webviewId -> custom workDir
+  private fileManager: FileManager;
+  private activeTabs = new Map<string, 'think' | 'do'>();
+
+  constructor(
+    private broadcast: BroadcastFn,
+    private workspaceState: vscode.Memento,
+    private globalState: vscode.Memento,
+    private reloadWebview: ReloadWebviewFn,
+    private showLogs: ShowLogsFn,
+    private extensionRoot: string,
+  ) {
+    this.fileManager = new FileManager(() => this.workspaceRoot, broadcast);
+    
+    // PERSISTENCE TEST
+    const testKey = 'consilium-persistence-test-v2';
+    const existing = this.workspaceState.get(testKey, 0) as number;
+    sessionLog.log("PERSISTENCE TEST", { existing });
+    this.workspaceState.update(testKey, existing + 1).then(() => {
+      sessionLog.log("PERSISTENCE TEST updated", { value: existing + 1 });
+    });
+  }
+
+  async handle(msg: RpcMessage, webviewId: string): Promise<RpcResult> {
+    try {
+      if (msg.method === "setActiveTab") {
+        const { tab } = (msg.params as any) || {};
+        sessionLog.log("SETTING activeTab", { webviewId, tab });
+        this.activeTabs.set(webviewId, tab);
+        await this.persistTabState(webviewId);
+        return { id: msg.id, result: { ok: true, setTo: tab } };
+      }
+
+      sessionLog.log("handle RPC", { method: msg.method, webviewId, activeTab: this.activeTabs.get(webviewId) ?? 'default-think' });
+      return {
+        id: msg.id,
+        result: await this.dispatch(msg.method, msg.params, webviewId),
+      };
+    } catch (err) {
+      return {
+        id: msg.id,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+  }
+
+  private getSessionKey(webviewId: string): string {
+    const tab = this.activeTabs.get(webviewId) ?? 'think';
+    const key = tab === 'think' ? webviewId : `${webviewId}:do`;
+    sessionLog.log("getSessionKey", { webviewId, tab, key });
+    return key;
+  }
+
+  private tabStateKey(webviewId: string): string {
+    const type = webviewId.startsWith('sidebar') ? 'sidebar' : 'panel';
+    return `consilium-dual-tab-state-${type}`;
+  }
+
+  private persistTabState(webviewId: string): void {
+    const thinkSession = this.sessions.get(webviewId);
+    const doSession = this.sessions.get(`${webviewId}:do`);
+    const activeTab = this.activeTabs.get(webviewId) ?? 'think';
+    const data = {
+      thinkSessionId: thinkSession?.sessionId ?? null,
+      doSessionId: doSession?.sessionId ?? null,
+      activeTab,
+    };
+    sessionLog.log("persistTabState", { webviewId, data });
+    this.workspaceState.update(this.tabStateKey(webviewId), data);
+  }
+
+  private restoreTabState(webviewId: string): { thinkSessionId?: string; doSessionId?: string; activeTab?: 'think' | 'do' } {
+    return this.workspaceState.get(this.tabStateKey(webviewId), {});
+  }
+
+  public setSessionMetadata(sessionId: string, meta: SessionMetadata, workDir?: string): void {
+    const isThink = meta.mode === "think";
+
+    // Write title to authoritative file storage when possible.
+    // An empty string title intentionally clears a previously set title.
+    if (isThink) {
+      writeThinkSessionTitle(
+        sessionId,
+        meta.title ?? "",
+        meta.titleSource ?? "user",
+        meta.titleGeneratedAt,
+        workDir,
+      );
+    } else if (workDir) {
+      writeSessionTitle(
+        workDir,
+        sessionId,
+        meta.title ?? "",
+        meta.titleSource ?? "user",
+        meta.titleGeneratedAt,
+      );
+    }
+
+    // Keep globalState as the source of truth for mode and as a fallback/cache.
+    const key = `consilium-session-meta-${sessionId}`;
+    const existing: SessionMetadata | undefined = this.globalState.get(key);
+    this.globalState.update(key, { ...existing, ...meta });
+  }
+
+  public getSessionMetadata(sessionId: string, workDir?: string): SessionMetadata | undefined {
+    // Start from legacy globalState sidecar for mode and fallback title.
+    const key = `consilium-session-meta-${sessionId}`;
+    const sidecar: SessionMetadata | undefined = this.globalState.get(key);
+    const isThink = sidecar?.mode === "think";
+
+    // Prefer file-based title storage.
+    if (!isThink && workDir) {
+      const fileTitle = readSessionTitle(workDir, sessionId);
+      if (fileTitle) {
+        return {
+          mode: sidecar?.mode,
+          title: fileTitle.title,
+          titleSource: fileTitle.source,
+          titleGeneratedAt: fileTitle.generatedAt,
+        };
+      }
+    }
+
+    const thinkTitle = readThinkSessionTitle(sessionId, workDir);
+    if (thinkTitle) {
+      return {
+        mode: sidecar?.mode ?? "think",
+        title: thinkTitle.title,
+        titleSource: thinkTitle.source,
+        titleGeneratedAt: thinkTitle.generatedAt,
+      };
+    }
+
+    return sidecar;
+  }
+
+  private get workspaceRoot(): string | null {
+    return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? null;
+  }
+
+  private getWorkDir(webviewId: string): string | null {
+    return this.customWorkDirs.get(webviewId) ?? this.workspaceRoot;
+  }
+
+  setCustomWorkDir(webviewId: string, workDir: string | null): void {
+    if (workDir && workDir !== this.workspaceRoot) {
+      this.customWorkDirs.set(webviewId, workDir);
+    } else {
+      this.customWorkDirs.delete(webviewId);
+    }
+    // Close sessions when workDir changes
+    this.sessions.get(webviewId)?.close();
+    this.sessions.delete(webviewId);
+    this.turns.delete(webviewId);
+
+    const doKey = `${webviewId}:do`;
+    this.sessions.get(doKey)?.close();
+    this.sessions.delete(doKey);
+    this.turns.delete(doKey);
+
+    this.fileManager.clearTracked(webviewId);
+    this.fileManager.clearTracked(doKey);
+  }
+
+  private requireWorkDir(webviewId: string): string {
+    const w = this.getWorkDir(webviewId);
+    if (!w) {
+      throw new Error("No workspace folder open");
+    }
+    return w;
+  }
+
+  private async dispatch(method: string, params: unknown, webviewId: string): Promise<unknown> {
+    const handler = handlers[method];
+    if (!handler) {
+      throw new Error(`Unknown method: ${method}`);
+    }
+    return handler(params, this.createContext(webviewId));
+  }
+
+  private createContext(webviewId: string): HandlerContext {
+    return {
+      webviewId,
+      workDir: this.getWorkDir(webviewId),
+      workspaceRoot: this.workspaceRoot,
+      workspaceState: this.workspaceState,
+      requireWorkDir: () => this.requireWorkDir(webviewId),
+      broadcast: this.broadcast,
+      fileManager: this.fileManager,
+      reloadWebview: () => this.reloadWebview(webviewId),
+      showLogs: this.showLogs,
+      setSessionMetadata: (sessionId, meta) => this.setSessionMetadata(sessionId, meta, this.getWorkDir(webviewId) ?? undefined),
+      getSessionMetadata: (sessionId) => this.getSessionMetadata(sessionId, this.getWorkDir(webviewId) ?? undefined),
+      getRestoredTabState: () => this.restoreTabState(webviewId),
+      getSession: () => this.sessions.get(this.getSessionKey(webviewId)),
+      getSessionId: () => this.fileManager.getSessionId(this.getSessionKey(webviewId)),
+      getFileManagerKey: () => this.getSessionKey(webviewId),
+      getTurn: () => this.turns.get(this.getSessionKey(webviewId)),
+      setTurn: (turn: Turn | null) => {
+        const key = this.getSessionKey(webviewId);
+        if (turn) {
+          this.turns.set(key, turn);
+        } else {
+          this.turns.delete(key);
+        }
+      },
+      getOrCreateSession: (model, thinking, sessionId, mode) => this.getOrCreateSession(webviewId, model, thinking, sessionId, mode),
+      closeSession: async () => {
+        const key = this.getSessionKey(webviewId);
+        const session = this.sessions.get(key);
+        if (session) {
+          await session.close();
+          this.sessions.delete(key);
+        }
+        this.turns.delete(key);
+      },
+      saveAllDirty: () => this.saveAllDirty(),
+      setCustomWorkDir: (workDir: string | null) => this.setCustomWorkDir(webviewId, workDir),
+    };
+  }
+
+  private async saveAllDirty(): Promise<void> {
+    const dirty = vscode.workspace.textDocuments.filter((d) => d.isDirty && !d.isUntitled);
+    await Promise.all(dirty.map((d) => d.save()));
+  }
+
+  private async getOrCreateSession(webviewId: string, model: string, thinking: boolean, sessionId?: string, mode?: 'think' | 'do'): Promise<Session> {
+    const workDir = this.requireWorkDir(webviewId);
+    const cli = getCLIManager();
+    const config = parseConfig();
+
+    // Determine actual thinking state based on model capability
+    const modelConfig = getModelById(config.models, model);
+    const thinkingMode = modelConfig ? getModelThinkingMode(modelConfig) : "none";
+
+    let actualThinking: boolean;
+    if (thinkingMode === "always") {
+      actualThinking = true;
+    } else if (thinkingMode === "none") {
+      actualThinking = false;
+    } else {
+      actualThinking = thinking;
+    }
+
+    const executable = cli.getExecutablePath();
+    const env = VSCodeSettings.environmentVariables;
+    const globalYoloMode = VSCodeSettings.yoloMode;
+    const requestedMode = mode ?? 'think';
+    const actualDoMode = requestedMode === 'do';
+    const actualYoloMode = actualDoMode ? true : globalYoloMode;
+    const generationConfig = VSCodeSettings.generationConfig;
+
+    const key = requestedMode === 'do' ? `${webviewId}:do` : webviewId;
+    const agentFile = resolveAgentFile(requestedMode, this.workspaceRoot, this.extensionRoot);
+    const subagentSystemPrompts = resolveSubagentRoleOverrides(this.workspaceRoot, this.extensionRoot);
+    sessionLog.log("getOrCreateSession", { webviewId, requestedSessionId: sessionId, existingKey: key, model, yoloMode: actualYoloMode, doMode: actualDoMode, agentFile: agentFile ?? '<default>' });
+    const existing = this.sessions.get(key);
+
+    // Guard against silently converting an existing session from one mode to another.
+    // This prevents a Do session loaded into the Think tab from being overwritten.
+    if (existing && sessionId && sessionId === existing.sessionId && existing.doMode !== actualDoMode) {
+      throw new Error(
+        `Session ${sessionId} is a ${existing.doMode ? 'Do' : 'Think'} session. ` +
+        `Switch to the ${existing.doMode ? 'Do' : 'Think'} tab before continuing.`
+      );
+    }
+
+    // Check if we need to restart the session
+    if (existing) {
+      const needsRestart =
+        (sessionId && sessionId !== existing.sessionId) ||
+        model !== existing.model ||
+        actualThinking !== existing.thinking ||
+        actualYoloMode !== existing.yoloMode ||
+        actualDoMode !== existing.doMode ||
+        executable !== existing.executable ||
+        JSON.stringify(env) !== JSON.stringify(existing.env) ||
+        JSON.stringify(generationConfig) !== JSON.stringify((existing as any)._generationOverrides);
+
+      if (needsRestart) {
+        await safeCloseSession(existing, key);
+        this.sessions.delete(key);
+        this.turns.delete(key);
+      }
+    }
+
+    const current = this.sessions.get(key);
+    if (current) {
+      return current;
+    }
+
+    const session = createSession({
+      workDir,
+      model,
+      thinking: actualThinking,
+      yoloMode: actualYoloMode,
+      doMode: actualDoMode,
+      sessionId,
+      executable,
+      env,
+      agentFile,
+      subagentSystemPrompts,
+      clientInfo: { name: "consilium-code-for-vs-code", version: VSCodeSettings.getExtensionConfig().version },
+      generationOverrides: generationConfig.temperature !== undefined || generationConfig.topP !== undefined || generationConfig.maxTokens !== undefined
+        ? generationConfig
+        : undefined,
+    });
+
+    this.sessions.set(key, session);
+    this.fileManager.setSessionId(key, session.sessionId);
+    this.persistTabState(webviewId);
+    return session;
+  }
+
+  async disposeView(webviewId: string): Promise<void> {
+    // Close think session
+    const thinkSession = this.sessions.get(webviewId);
+    if (thinkSession) {
+      await safeCloseSession(thinkSession, webviewId);
+      this.sessions.delete(webviewId);
+      this.turns.delete(webviewId);
+    }
+    this.fileManager.disposeView(webviewId);
+
+    // Close do session
+    const doKey = `${webviewId}:do`;
+    const doSession = this.sessions.get(doKey);
+    if (doSession) {
+      await safeCloseSession(doSession, doKey);
+      this.sessions.delete(doKey);
+      this.turns.delete(doKey);
+    }
+    this.fileManager.disposeView(doKey);
+
+    // Clear active tab
+    this.activeTabs.delete(webviewId);
+  }
+
+  async dispose(): Promise<void> {
+    this.fileManager.dispose();
+    for (const s of this.sessions.values()) {
+      await s.close();
+    }
+    this.sessions.clear();
+    this.turns.clear();
+  }
+}
+```
+
+---
+
+## 6. `shared/types.ts` (126 lines) — no `src/types.ts` exists
+
+The actual types file is at `shared/types.ts` (not `src/types.ts`):
+
+```typescript
+import type { RunResult, StreamEvent, ContentPart, SlashCommandInfo } from "@consilium/agent-sdk";
+
+export interface GenerationConfig {
+  temperature?: number;
+  topP?: number;
+  maxTokens?: number;
+}
+
+export interface SessionConfig {
+  model: string;
+  thinking?: boolean;
+  generation?: GenerationConfig;
+}
+
+export interface ProjectFile {
+  path: string;
+  name: string;
+  isDirectory: boolean;
+}
+
+export interface EditorContext {
+  content: string;
+  language: string;
+  fileName: string;
+  selection?: {
+    text: string;
+    startLine: number;
+    endLine: number;
+  };
+}
+
+export interface FileChange {
+  path: string;
+  status: "Modified" | "Added" | "Deleted";
+  additions: number;
+  deletions: number;
+}
+
+export interface ExtensionConfig {
+  executablePath: string;
+  yoloMode: boolean;
+  autosave: boolean;
+  useCtrlEnterToSend: boolean;
+  enableNewConversationShortcut: boolean;
+  environmentVariables: Record<string, string>;
+  showThinkingContent: boolean;
+  showThinkingExpanded: boolean;
+  version: string;
+  generationConfig: GenerationConfig;
+  apiKey: string;
+  apiProviderType: string;
+  apiBaseUrl: string;
+  apiCustomHeaders: Record<string, string>;
+  defaultThinkModel: string;
+  defaultDoModel: string;
+}
+
+export interface WorkspaceStatus {
+  hasWorkspace: boolean;
+  path?: string;
+  workspaceRoot?: string;
+}
+
+export type ErrorPhase = "preflight" | "runtime";
+
+export interface StreamError {
+  type: "error";
+  code: string;
+  message: string;
+  detail?: string;
+  phase: ErrorPhase;
+}
+
+export type UIStreamEvent =
+  | { type: "session_start"; sessionId: string; model?: string; _sessionId?: string; mode?: 'think' | 'do' }
+  | { type: "stream_complete"; result: RunResult; _sessionId?: string; mode?: 'think' | 'do' }
+  | { type: "stream_aborted"; result: { status: "interrupted" }; _sessionId?: string; mode?: 'think' | 'do' }
+  | { type: "history_restored"; result: { status: "restored" }; _sessionId?: string; mode?: 'think' | 'do' }
+  | (StreamError & { _sessionId?: string; mode?: 'think' | 'do' })
+  | (StreamEvent & { _sessionId?: string; mode?: 'think' | 'do' });
+
+export type SyntheticEventType = "stream_aborted" | "history_restored";
+
+export type CLIErrorType = "not_found" | "version_low" | "extract_failed" | "protocol_error";
+
+export interface CLICheckResult {
+  ok: boolean;
+  slashCommands?: SlashCommandInfo[];
+  error?: {
+    type: CLIErrorType;
+    message: string;
+  };
+  resolved: {
+    isCustomPath: boolean;
+    path: string;
+  };
+}
+
+export interface LoginStatus {
+  loggedIn: boolean;
+}
+
+export type { QuestionRequest, QuestionItem, QuestionOption, QuestionResponse } from "@consilium/agent-sdk";
+export type SessionMode = 'think' | 'do' | 'legacy';
+
+export type TitleSource = 'user' | 'llm' | 'fallback';
+
+export interface SessionMetadata {
+  mode?: SessionMode;
+  pairedSessionId?: string;
+  title?: string;
+  titleSource?: TitleSource;
+  titleGeneratedAt?: number;
+}
+export interface QuotaInfo {
+  used: number;
+  limit: number;
+  percentage: number;
+}
+
+export interface PeerStatus {
+  is_alive: boolean;
+  last_updated_at: number;
+}
+```
+
+---
+
+**Summary of findings:**
+
+1. **`App.tsx`** — Renders conditionally based on `status` (from `useAppInit`) and `modelsCount`. Statuses: `loading`, `no-workspace`, `cli-error`, `no-models`, `not-logged-in`, `ready`. The `SetupScreen` is shown when no API key is set (`!hasApiKey`) or `forceShowSetup` is true, but only when status is not `loading`, `cli-error`, or `no-workspace`.
+
+2. **`useAppInit.ts`** — Defines `AppStatus = "loading" | "no-workspace" | "cli-error" | "not-logged-in" | "no-models" | "ready"`. The init flow: check workspace → get extension config, MCP servers, CLI check → check login status + get models → determine final status. Has a `refresh()` mechanism via `initKey` state.
+
+3. **`WelcomeScreen.tsx`** — Simple component showing `ConsiliumLogo` + a hint (either a component or title/description). Used as the empty-state content inside `ChatArea`.
+
+4. **`ConfigErrorScreen.tsx`** — Renders different error screens based on `type` prop (`loading`, `no-workspace`, `cli-error`, `no-models`). Each renders centered content with logo, icon, title, description, and action buttons. Uses internal `CLIErrorContent` and `NoModelsContent` sub-components.
+
+5. **`bridge-handler.ts`** — The `BridgeHandler` class manages sessions, turns, custom work dirs, file manager, and active tabs. It handles RPC messages via `handle(msg, webviewId)`, dispatching to registered `handlers[method]`. Key methods: `getOrCreateSession` (creates/restarts sessions), `disposeView`/`dispose` (cleanup), `setCustomWorkDir`, `setSessionMetadata`/`getSessionMetadata`.
+
+6. **`shared/types.ts`** — Contains all shared type definitions: `ExtensionConfig`, `CLICheckResult`, `LoginStatus`, `UIStreamEvent`, `AppStatus` (used in webview), `SessionMetadata`, `WorkspaceStatus`, etc.[stage] run_soul_finished
+
+[summary]
+Here are the complete contents of all 6 requested files:
+
+---
+
+## 1. `webview-ui/src/App.tsx` (168 lines)
+
+```tsx
+// node/vscode_extension/webview-ui/src/App.tsx
+import { useEffect, useState, useCallback } from "react";
+import { Header } from "./components/Header";
+import { ChatArea } from "./components/ChatArea";
+import { InputArea } from "./components/inputarea/InputArea";
+import { MCPServersModal } from "./components/MCPServersModal";
+import { WorkDirModal } from "./components/WorkDirModal";
+import { ConfigErrorScreen } from "./components/ConfigErrorScreen";
+import { SetupScreen } from "./components/SetupScreen";
+import { Toaster, toast } from "./components/ui/sonner";
+import { useChatStore, useSettingsStore } from "./stores";
+import { bridge, Events } from "./services";
+import { useAppInit } from "./hooks/useAppInit";
+import { isPreflightError } from "shared/errors";
+import type { UIStreamEvent, StreamError, ExtensionConfig } from "shared/types";
+import "./styles/index.css";
+
+function MainContent({ onAuthAction }: { onAuthAction: () => void }) {
+  const { processEvent, startNewConversation, sessionId, setTitle } = useChatStore();
+  const { setMCPServers, setExtensionConfig, extensionConfig } = useSettingsStore();
+
+  useEffect(() => {
+    // Batch events via requestAnimationFrame to prevent main thread saturation
+    // during high-frequency streams (thinking tokens, tool call parts).
+    let pendingEvents: UIStreamEvent[] = [];
+    let flushScheduled = false;
+
+    const flush = () => {
+      flushScheduled = false;
+      const batch = pendingEvents;
+      pendingEvents = [];
+      if (batch.length === 0) return;
+
+      // Process all buffered events in a single state update
+      for (const event of batch) {
+        processEvent(event);
+      }
+
+      // Handle errors from the batch
+      for (const event of batch) {
+        if (event.type === "error") {
+          const streamError = event as StreamError;
+          if (isPreflightError(streamError.code || "UNKNOWN")) {
+            toast.error(streamError.message);
+          }
+        }
+      }
+    };
+
+    const scheduleFlush = () => {
+      if (flushScheduled) return;
+      flushScheduled = true;
+      if (typeof requestAnimationFrame !== "undefined") {
+        requestAnimationFrame(flush);
+      } else {
+        setTimeout(flush, 0);
+      }
+    };
+
+    return bridge.on(Events.StreamEvent, (event: UIStreamEvent) => {
+      // 只有当前已有 session 时才过滤，确保 session_start 能正常处理
+      if (sessionId && "_sessionId" in event && event._sessionId && event._sessionId !== sessionId) {
+        console.log("Ignored stream event from another session:", event._sessionId);
+        return;
+      }
+      pendingEvents.push(event);
+      scheduleFlush();
+    });
+  }, [processEvent, sessionId]);
+
+  useEffect(() => {
+    const unsubs = [
+      bridge.on(Events.MCPServersChanged, setMCPServers),
+      bridge.on(Events.ExtensionConfigChanged, ({ config }: { config: ExtensionConfig }) => setExtensionConfig(config)),
+      bridge.on(Events.FocusInput, () => document.querySelector<HTMLTextAreaElement>("textarea")?.focus()),
+      bridge.on(Events.NewConversation, () => startNewConversation()),
+      bridge.on(Events.SessionTitleUpdated, ({ sessionId: updatedSessionId, title, source }: { sessionId: string; title: string; source: "user" | "llm" | "fallback" }) => {
+        setTitle(updatedSessionId, title, source);
+      }),
+    ];
+    return () => unsubs.forEach((u) => u());
+  }, [setMCPServers, setExtensionConfig, startNewConversation, setTitle]);
+
+  useEffect(() => {
+    useChatStore.getState().initTabs();
+  }, []);
+
+  useEffect(() => {
+    if (!extensionConfig.enableNewConversationShortcut) return;
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "n") {
+        e.preventDefault();
+        startNewConversation();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [extensionConfig.enableNewConversationShortcut, startNewConversation]);
+
+  return (
+    <>
+      <div className="flex-1 min-h-0 relative group/chat">
+        <ChatArea />
+      </div>
+      <div className="shrink-0 max-h-[80vh] flex flex-col min-h-0">
+        <InputArea onAuthAction={onAuthAction} />
+      </div>
+      <MCPServersModal />
+      <WorkDirModal />
+    </>
+  );
+}
+
+export default function App() {
+  const { status, errorMessage, cliResult, modelsCount, refresh } = useAppInit();
+  const extensionConfig = useSettingsStore((s) => s.extensionConfig);
+  const [forceShowSetup, setForceShowSetup] = useState(false);
+
+  const handleSetupSuccess = useCallback(() => {
+    setForceShowSetup(false);
+    refresh();
+  }, [refresh]);
+
+  // Show setup screen if no API key is configured or if explicitly requested
+  const hasApiKey = !!extensionConfig?.apiKey;
+  const shouldShowSetup = !hasApiKey || forceShowSetup;
+
+  if (shouldShowSetup && status !== "loading" && status !== "cli-error" && status !== "no-workspace") {
+    return (
+      <div className="flex flex-col h-screen text-foreground overflow-hidden">
+        <Header />
+        <SetupScreen onSetupSuccess={handleSetupSuccess} />
+        <Toaster position="top-center" />
+      </div>
+    );
+  }
+
+  // 如果没有模型
+  if (modelsCount === 0 && status === "no-models") {
+    return (
+      <div className="flex flex-col h-screen text-foreground overflow-hidden">
+        <Header />
+        <ConfigErrorScreen type="no-models" cliResult={cliResult} errorMessage={errorMessage} onRefresh={refresh} onOpenSetup={() => setForceShowSetup(true)} />
+        <Toaster position="top-center" />
+      </div>
+    );
+  }
+
+  // 其他错误状态
+  if (status === "cli-error" || status === "no-workspace") {
+    return (
+      <div className="flex flex-col h-screen text-foreground overflow-hidden">
+        <Header />
+        <ConfigErrorScreen type={status} cliResult={cliResult} errorMessage={errorMessage} />
+        <Toaster position="top-center" />
+      </div>
+    );
+  }
+
+  // 正常状态
+  return (
+    <div className="flex flex-col h-screen text-foreground overflow-hidden">
+      <Header />
+      <MainContent onAuthAction={() => setForceShowSetup(true)} />
+      <Toaster position="top-center" />
+    </div>
+  );
+}
+```
+
+---
+
+## 2. `webview-ui/src/hooks/useAppInit.ts` (133 lines)
+
+```tsx
+import { useState, useEffect, useCallback } from "react";
+import { bridge, Events } from "@/services";
+import { useSettingsStore } from "@/stores";
+import type { ExtensionConfig, CLICheckResult } from "shared/types";
+
+export type AppStatus = "loading" | "no-workspace" | "cli-error" | "not-logged-in" | "no-models" | "ready";
+
+export interface AppInitState {
+  status: AppStatus;
+  errorMessage: string | null;
+  cliResult: CLICheckResult | null;
+  modelsCount: number;
+  refresh: () => void;
+}
+
+export function useAppInit(): AppInitState {
+  const [state, setState] = useState<Omit<AppInitState, "refresh">>({
+    status: "loading",
+    errorMessage: null,
+    cliResult: null,
+    modelsCount: 0,
+  });
+  const [initKey, setInitKey] = useState(0);
+  const { initModels, setExtensionConfig, setMCPServers, setWireSlashCommands, setIsLoggedIn, setWorkspaceRoot } = useSettingsStore();
+
+  const refresh = useCallback(() => {
+    setState({ status: "loading", errorMessage: null, cliResult: null, modelsCount: 0 });
+    setInitKey((k) => k + 1);
+  }, []);
+
+  useEffect(() => {
+    return bridge.on<{ config: ExtensionConfig; changedKeys: string[] }>(Events.ExtensionConfigChanged, ({ config, changedKeys }) => {
+      setExtensionConfig(config);
+      if (changedKeys.includes("executablePath")) {
+        refresh();
+      }
+    });
+  }, [setExtensionConfig, refresh]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function init() {
+      try {
+        const workspace = await bridge.checkWorkspace();
+        if (cancelled) {
+          return;
+        }
+
+        if (!workspace.hasWorkspace) {
+          setState({ status: "no-workspace", errorMessage: null, cliResult: null, modelsCount: 0 });
+          return;
+        }
+
+        setWorkspaceRoot(workspace.workspaceRoot ?? workspace.path ?? null);
+
+        const [extensionConfig, mcpServers, cliResult] = await Promise.all([bridge.getExtensionConfig(), bridge.getMCPServers(), bridge.checkCLI()]);
+        if (cancelled) {
+          return;
+        }
+
+        setExtensionConfig(extensionConfig);
+        setMCPServers(mcpServers);
+        setWireSlashCommands(cliResult.slashCommands ?? []);
+
+        if (!cliResult.ok) {
+          setState({
+            status: "cli-error",
+            errorMessage: cliResult.error?.message ?? "CLI check failed",
+            cliResult,
+            modelsCount: 0,
+          });
+          return;
+        }
+
+        const [loginStatus, consiliumConfig] = await Promise.all([bridge.checkLoginStatus(), bridge.getModels()]);
+        if (cancelled) {
+          return;
+        }
+
+        console.log("[AppInit] Login status:", loginStatus, "consiliumConfig:", consiliumConfig);
+
+        setIsLoggedIn(loginStatus.loggedIn);
+        let finalModels = consiliumConfig.models || [];
+        if (extensionConfig.apiKey) {
+          const defaultThink = extensionConfig.defaultThinkModel?.trim();
+          const defaultDo = extensionConfig.defaultDoModel?.trim();
+          const customModels = [];
+          if (defaultThink && !finalModels.find(m => m.id === defaultThink)) {
+            customModels.push({ id: defaultThink, name: defaultThink, capabilities: ["thinking"] as any[] });
+          }
+          if (defaultDo && defaultDo !== defaultThink && !finalModels.find(m => m.id === defaultDo)) {
+            customModels.push({ id: defaultDo, name: defaultDo, capabilities: [] });
+          }
+          finalModels = [...finalModels, ...customModels];
+          consiliumConfig.models = finalModels;
+        }
+
+        initModels(finalModels, consiliumConfig.defaultModel, consiliumConfig.defaultThinking);
+
+        const modelsCount = finalModels.length;
+
+        if (!loginStatus.loggedIn && !extensionConfig.apiKey) {
+          setState({ status: "not-logged-in", errorMessage: null, cliResult, modelsCount });
+          return;
+        }
+
+        if (modelsCount === 0 && !extensionConfig.apiKey) {
+          setState({ status: "no-models", errorMessage: null, cliResult, modelsCount: 0 });
+          return;
+        }
+
+        setState({ status: "ready", errorMessage: null, cliResult, modelsCount });
+      } catch (err) {
+        if (!cancelled) {
+          setState({
+            status: "cli-error",
+            errorMessage: err instanceof Error ? err.message : "Failed to initialize",
+            cliResult: null,
+            modelsCount: 0,
+          });
+        }
+      }
+    }
+
+    init();
+    return () => {
+      cancelled = true;
+    };
+  }, [initKey, initModels, setExtensionConfig, setMCPServers, setWireSlashCommands, setIsLoggedIn]);
+
+  return { ...state, refresh };
+}
+```
+
+---
+
+## 3. `webview-ui/src/components/WelcomeScreen.tsx` (20 lines)
+
+```tsx
+import { ConsiliumLogo } from "./ConsiliumLogo";
+import { useWelcomeHint } from "@/hooks/useWelcomeHint";
+
+export function WelcomeScreen() {
+  const hint = useWelcomeHint();
+
+  return (
+    <div className="flex flex-col items-center gap-3 px-4">
+      <ConsiliumLogo className="h-48" />
+      {hint.component ? (
+        hint.component
+      ) : (
+        <div className="text-center space-y-0.5">
+          <p className="text-xs font-medium text-foreground">{hint.title}</p>
+          <p className="text-xs text-muted-foreground">{hint.description}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+## 4. `webview-ui/src/components/ConfigErrorScreen.tsx` (234 lines)
+
+```tsx
+import { useState } from "react";
+import { IconAlertTriangle, IconTerminal2, IconLoader2, IconFolderOpen, IconSettings, IconExternalLink, IconChevronRight, IconArrowLeft, IconRefresh, IconCopy, IconCheck } from "@tabler/icons-react";
+import { Button } from "@/components/ui/button";
+import { ConsiliumMascot } from "./ConsiliumMascot";
+import { ConsiliumLogo } from "./ConsiliumLogo";
+import { bridge } from "@/services";
+import type { CLICheckResult, CLIErrorType } from "shared/types";
+
+interface Props {
+  type: "loading" | "cli-error" | "no-models" | "no-workspace";
+  cliResult?: CLICheckResult | null;
+  errorMessage?: string | null;
+  onRefresh?: () => void;
+  onOpenSetup?: () => void;
+}
+
+const CLI_ERROR_TITLES: Record<CLIErrorType, string> = {
+  not_found: "CLI Not Found",
+  version_low: "CLI Outdated",
+  extract_failed: "Installation Failed",
+  protocol_error: "Connection Error",
+};
+
+function CLIErrorDetails({ message }: { message?: string }) {
+  const [copied, setCopied] = useState(false);
+
+  if (!message) {
+    return null;
+  }
+
+  const copyError = async () => {
+    await navigator.clipboard.writeText(message);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="bg-muted/50 rounded-lg p-4 text-left space-y-2">
+      <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 min-w-0">
+          <IconTerminal2 className="size-4" />
+          <span>CLI error output:</span>
+        </div>
+        <Button onClick={copyError} variant="ghost" size="xs" className="h-6 px-1.5 gap-1 shrink-0">
+          {copied ? <IconCheck className="size-3" /> : <IconCopy className="size-3" />}
+          {copied ? "Copied" : "Copy to Ask AI"}
+        </Button>
+      </div>
+      <pre className="max-h-36 overflow-auto whitespace-pre-wrap break-words text-xs bg-background rounded px-3 py-2 font-mono text-foreground">{message}</pre>
+    </div>
+  );
+}
+
+function CLIErrorContent({ cliResult, errorMessage: fallbackErrorMessage }: { cliResult?: CLICheckResult | null; errorMessage?: string | null }) {
+  const isCustomPath = cliResult?.resolved?.isCustomPath ?? false;
+  const errorType = cliResult?.error?.type ?? "not_found";
+  const title = CLI_ERROR_TITLES[errorType];
+  const path = cliResult?.resolved?.path;
+  const errorMessage = cliResult?.error?.message ?? fallbackErrorMessage ?? undefined;
+
+  if (isCustomPath) {
+    return (
+      <>
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-2 text-amber-500">
+            <IconAlertTriangle className="size-5" />
+            <span className="text-sm font-medium">{title}</span>
+          </div>
+          <p className="text-xs text-muted-foreground">The configured CLI path is invalid or the CLI version is incompatible.</p>
+          {path && <p className="text-xs text-muted-foreground/70 font-mono break-all">{path}</p>}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Button onClick={() => bridge.openSettings()} className="gap-2">
+            <IconSettings className="size-4" />
+            Open Settings
+          </Button>
+          <p className="text-xs text-muted-foreground/70 text-center">
+            Update <code className="bg-muted px-1 rounded">consilium.executablePath</code> or clear it to use bundled CLI
+          </p>
+        </div>
+
+        <CLIErrorDetails message={errorMessage} />
+
+        <div className="bg-muted/50 rounded-lg p-4 text-left space-y-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <IconTerminal2 className="size-4" />
+            <span>Or install CLI manually:</span>
+          </div>
+          <code className="block text-xs bg-background rounded px-3 py-2 font-mono select-all">curl -LsSf https://cdn.consilium.com/binaries/consilium-cli/install.sh | bash</code>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div className="space-y-2">
+        <div className="inline-flex items-center gap-2 text-amber-500">
+          <IconAlertTriangle className="size-5" />
+          <span className="text-sm font-medium">{title}</span>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {errorType === "extract_failed" ? "Failed to extract the bundled CLI. Please install manually." : "The bundled CLI is unavailable. Please install manually."}
+        </p>
+      </div>
+
+      <CLIErrorDetails message={errorMessage} />
+
+      <div className="bg-muted/50 rounded-lg p-4 text-left space-y-3">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <IconTerminal2 className="size-4" />
+          <span>Install CLI:</span>
+        </div>
+        <code className="block text-xs bg-background rounded px-3 py-2 font-mono select-all">curl -LsSf https://cdn.consilium.com/binaries/consilium-cli/install.sh | bash</code>
+      </div>
+
+      <p className="text-xs text-muted-foreground/70">
+        After installation, you may need to configure the path in{" "}
+        <button onClick={() => bridge.openSettings()} className="underline hover:text-foreground">
+          settings
+        </button>
+      </p>
+    </>
+  );
+}
+
+function NoModelsContent({ onRefresh, onOpenSetup }: { onRefresh?: () => void; onOpenSetup?: () => void }) {
+  return (
+    <>
+      <div className="space-y-2">
+        <div className="inline-flex items-center gap-2 text-amber-500">
+          <IconAlertTriangle className="size-5" />
+          <span className="text-sm font-medium">Setup Required</span>
+        </div>
+        <p className="text-xs text-muted-foreground">No models configured. Please configure your API settings to continue:</p>
+      </div>
+
+      <div className="space-y-4">
+        <div className="bg-muted/50 rounded-lg p-4 text-left space-y-3">
+          <p className="text-xs font-medium text-foreground">Configure API Settings</p>
+          <p className="text-xs text-muted-foreground">
+            Provide your API credentials and default models.
+          </p>
+          <Button onClick={onOpenSetup} variant="outline" size="sm" className="gap-2 w-full">
+            <IconSettings className="size-4" />
+            Configure API Settings
+          </Button>
+        </div>
+      </div>
+
+      {(onOpenSetup || onRefresh) && (
+        <div className="flex flex-col min-[400px]:flex-row min-[400px]:justify-between gap-2 w-full">
+          {onOpenSetup && (
+            <Button onClick={onOpenSetup} variant="ghost" size="sm" className="gap-1 text-muted-foreground">
+              <IconArrowLeft className="size-3" />
+              Back to API Setup
+            </Button>
+          )}
+          {onRefresh && (
+            <Button onClick={onRefresh} variant="ghost" size="sm" className="gap-1 text-muted-foreground">
+              <IconRefresh className="size-3" />
+              Reload
+            </Button>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+export function ConfigErrorScreen({ type, cliResult, errorMessage, onRefresh, onOpenSetup }: Props) {
+  if (type === "loading") {
+    return (
+      <div className="h-full flex items-center justify-center p-6">
+        <div className="text-center space-y-4">
+          <ConsiliumLogo className="h-40 mx-auto opacity-50" />
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 text-muted-foreground">
+              <IconLoader2 className="size-4 animate-spin" />
+              <span className="text-sm">Loading...</span>
+            </div>
+            <p className="text-xs text-muted-foreground/70">Consilium is initializing. May take up to 30 seconds. Please wait.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "no-workspace") {
+    return (
+      <div className="h-full flex items-center justify-center p-6">
+        <div className="max-w-sm text-center space-y-6">
+          <ConsiliumLogo className="h-40 mx-auto opacity-50" />
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 text-amber-500">
+              <IconFolderOpen className="size-5" />
+              <span className="text-sm font-medium">No Workspace Open</span>
+            </div>
+            <p className="text-xs text-muted-foreground/70">Please open a folder to start using Consilium.</p>
+          </div>
+          <Button onClick={() => bridge.openFolder()} className="gap-2">
+            <IconFolderOpen className="size-4" />
+            Open Folder
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "cli-error") {
+    return (
+      <div className="flex-1 min-h-0 overflow-y-auto p-6">
+        <div className="max-w-sm mx-auto text-center space-y-6">
+          <ConsiliumLogo className="h-40 mx-auto opacity-50" />
+          <CLIErrorContent cliResult={cliResult} errorMessage={errorMessage} />
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "no-models") {
+    return (
+      <div className="h-full flex items-center justify-center p-6">
+        <div className="max-w-sm text-center space-y-6">
+          <ConsiliumLogo className="h-40 mx-auto opacity-50" />
+          <NoModelsContent onRefresh={onRefresh} onOpenSetup={onOpenSetup} />
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+```
+
+---
+
+## 5. `src/bridge-handler.ts` (451 lines)
+
+```typescript
+import * as vscode from "vscode";
+import * as path from "node:path";
+import * as fs from "node:fs";
+import { VSCodeSettings } from "./config/vscode-settings";
+import { getCLIManager, FileManager } from "./managers";
+import { handlers, type HandlerContext, type BroadcastFn, type ReloadWebviewFn, type ShowLogsFn } from "./handlers";
+import { createSession, parseConfig, getModelThinkingMode, getModelById, type Session, type Turn } from "@consilium/agent-sdk";
+import { readSessionTitle, writeSessionTitle, readThinkSessionTitle, writeThinkSessionTitle } from "./lib/session-storage";
+import type { SessionMetadata } from "../shared/types";
+import { sessionLog } from "./utils/logger.js";
+
+function resolveAgentFile(
+  activeTab: 'think' | 'do',
+  workspaceRoot: string | null,
+  extensionRoot: string,
+): string | undefined {
+  const agentName = activeTab === 'think' ? 'think.yaml' : 'do.yaml';
+
+  // 1. Workspace-local override
+  if (workspaceRoot) {
+    const localPath = path.join(workspaceRoot, '.consilium', 'agents', agentName);
+    if (fs.existsSync(localPath)) {
+      return localPath;
+    }
+  }
+
+  // 2. Built-in profile template
+  const profile = VSCodeSettings.agentProfile;
+  if (profile && extensionRoot) {
+    const templatePath = path.join(extensionRoot, 'resources', 'agent-profiles', profile, agentName);
+    if (fs.existsSync(templatePath)) {
+      return templatePath;
+    }
+  }
+
+  // 3. Fallback to CLI default (no --agent-file)
+  return undefined;
+}
+
+function resolveSubagentRoleOverrides(
+  workspaceRoot: string | null,
+  extensionRoot: string,
+): Record<string, string> | undefined {
+  if (!workspaceRoot || !extensionRoot) {
+    return undefined;
+  }
+
+  const workspaceAgentsDir = path.join(workspaceRoot, '.consilium', 'agents');
+  const workspaceRolePath = path.join(workspaceAgentsDir, 'plan_editor_role.md');
+
+  // 1. Workspace-local role file takes precedence.
+  if (fs.existsSync(workspaceRolePath)) {
+    console.log(`[Bridge] Using workspace plan_editor role override: ${workspaceRolePath}`);
+    return { plan_editor: workspaceRolePath };
+  }
+
+  // 2. Seed from built-in profile template if available.
+  const profile = VSCodeSettings.agentProfile;
+  if (profile) {
+    const profileRolePath = path.join(extensionRoot, 'resources', 'agent-profiles', profile, 'plan_editor_role.md');
+    if (fs.existsSync(profileRolePath)) {
+      fs.mkdirSync(workspaceAgentsDir, { recursive: true });
+      fs.copyFileSync(profileRolePath, workspaceRolePath);
+      console.log(`[Bridge] Seeded workspace plan_editor role from profile ${profile}: ${workspaceRolePath}`);
+      return { plan_editor: workspaceRolePath };
+    }
+  }
+
+  // 3. No override; use CLI built-in default.
+  console.log('[Bridge] No workspace/profile plan_editor role override found; using CLI default');
+  return undefined;
+}
+
+interface RpcMessage {
+  id: string;
+  method: string;
+  params?: unknown;
+}
+
+interface RpcResult {
+  id: string;
+  result?: unknown;
+  error?: string;
+}
+
+/** Close a session with a timeout guard to prevent hung processes from leaking. */
+async function safeCloseSession(session: Session, label: string, timeoutMs = 5000): Promise<void> {
+  const closePromise = session.close();
+  let timer: NodeJS.Timeout | undefined;
+  const timeoutPromise = new Promise<void>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`close() timed out after ${timeoutMs}ms`)), timeoutMs);
+  });
+  try {
+    await Promise.race([closePromise, timeoutPromise]);
+  } catch (err) {
+    sessionLog.error("safeCloseSession failed", { label, error: String(err) });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export class BridgeHandler {
+  private sessions = new Map<string, Session>();
+  private turns = new Map<string, Turn>();
+  private customWorkDirs = new Map<string, string>(); // webviewId -> custom workDir
+  private fileManager: FileManager;
+  private activeTabs = new Map<string, 'think' | 'do'>();
+
+  constructor(
+    private broadcast: BroadcastFn,
+    private workspaceState: vscode.Memento,
+    private globalState: vscode.Memento,
+    private reloadWebview: ReloadWebviewFn,
+    private showLogs: ShowLogsFn,
+    private extensionRoot: string,
+  ) {
+    this.fileManager = new FileManager(() => this.workspaceRoot, broadcast);
+    
+    // PERSISTENCE TEST
+    const testKey = 'consilium-persistence-test-v2';
+    const existing = this.workspaceState.get(testKey, 0) as number;
+    sessionLog.log("PERSISTENCE TEST", { existing });
+    this.workspaceState.update(testKey, existing + 1).then(() => {
+      sessionLog.log("PERSISTENCE TEST updated", { value: existing + 1 });
+    });
+  }
+
+  async handle(msg: RpcMessage, webviewId: string): Promise<RpcResult> {
+    try {
+      if (msg.method === "setActiveTab") {
+        const { tab } = (msg.params as any) || {};
+        sessionLog.log("SETTING activeTab", { webviewId, tab });
+        this.activeTabs.set(webviewId, tab);
+        await this.persistTabState(webviewId);
+        return { id: msg.id, result: { ok: true, setTo: tab } };
+      }
+
+      sessionLog.log("handle RPC", { method: msg.method, webviewId, activeTab: this.activeTabs.get(webviewId) ?? 'default-think' });
+      return {
+        id: msg.id,
+        result: await this.dispatch(msg.method, msg.params, webviewId),
+      };
+    } catch (err) {
+      return {
+        id: msg.id,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+  }
+
+  private getSessionKey(webviewId: string): string {
+    const tab = this.activeTabs.get(webviewId) ?? 'think';
+    const key = tab === 'think' ? webviewId : `${webviewId}:do`;
+    sessionLog.log("getSessionKey", { webviewId, tab, key });
+    return key;
+  }
+
+  private tabStateKey(webviewId: string): string {
+    const type = webviewId.startsWith('sidebar') ? 'sidebar' : 'panel';
+    return `consilium-dual-tab-state-${type}`;
+  }
+
+  private persistTabState(webviewId: string): void {
+    const thinkSession = this.sessions.get(webviewId);
+    const doSession = this.sessions.get(`${webviewId}:do`);
+    const activeTab = this.activeTabs.get(webviewId) ?? 'think';
+    const data = {
+      thinkSessionId: thinkSession?.sessionId ?? null,
+      doSessionId: doSession?.sessionId ?? null,
+      activeTab,
+    };
+    sessionLog.log("persistTabState", { webviewId, data });
+    this.workspaceState.update(this.tabStateKey(webviewId), data);
+  }
+
+  private restoreTabState(webviewId: string): { thinkSessionId?: string; doSessionId?: string; activeTab?: 'think' | 'do' } {
+    return this.workspaceState.get(this.tabStateKey(webviewId), {});
+  }
+
+  public setSessionMetadata(sessionId: string, meta: SessionMetadata, workDir?: string): void {
+    const isThink = meta.mode === "think";
+
+    // Write title to authoritative file storage when possible.
+    // An empty string title intentionally clears a previously set title.
+    if (isThink) {
+      writeThinkSessionTitle(
+        sessionId,
+        meta.title ?? "",
+        meta.titleSource ?? "user",
+        meta.titleGeneratedAt,
+        workDir,
+      );
+    } else if (workDir) {
+      writeSessionTitle(
+        workDir,
+        sessionId,
+        meta.title ?? "",
+        meta.titleSource ?? "user",
+        meta.titleGeneratedAt,
+      );
+    }
+
+    // Keep globalState as the source of truth for mode and as a fallback/cache.
+    const key = `consilium-session-meta-${sessionId}`;
+    const existing: SessionMetadata | undefined = this.globalState.get(key);
+    this.globalState.update(key, { ...existing, ...meta });
+  }
+
+  public getSessionMetadata(sessionId: string, workDir?: string): SessionMetadata | undefined {
+    // Start from legacy globalState sidecar for mode and fallback title.
+    const key = `consilium-session-meta-${sessionId}`;
+    const sidecar: SessionMetadata | undefined = this.globalState.get(key);
+    const isThink = sidecar?.mode === "think";
+
+    // Prefer file-based title storage.
+    if (!isThink && workDir) {
+      const fileTitle = readSessionTitle(workDir, sessionId);
+      if (fileTitle) {
+        return {
+          mode: sidecar?.mode,
+          title: fileTitle.title,
+          titleSource: fileTitle.source,
+          titleGeneratedAt: fileTitle.generatedAt,
+        };
+      }
+    }
+
+    const thinkTitle = readThinkSessionTitle(sessionId, workDir);
+    if (thinkTitle) {
+      return {
+        mode: sidecar?.mode ?? "think",
+        title: thinkTitle.title,
+        titleSource: thinkTitle.source,
+        titleGeneratedAt: thinkTitle.generatedAt,
+      };
+    }
+
+    return sidecar;
+  }
+
+  private get workspaceRoot(): string | null {
+    return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? null;
+  }
+
+  private getWorkDir(webviewId: string): string | null {
+    return this.customWorkDirs.get(webviewId) ?? this.workspaceRoot;
+  }
+
+  setCustomWorkDir(webviewId: string, workDir: string | null): void {
+    if (workDir && workDir !== this.workspaceRoot) {
+      this.customWorkDirs.set(webviewId, workDir);
+    } else {
+      this.customWorkDirs.delete(webviewId);
+    }
+    // Close sessions when workDir changes
+    this.sessions.get(webviewId)?.close();
+    this.sessions.delete(webviewId);
+    this.turns.delete(webviewId);
+
+    const doKey = `${webviewId}:do`;
+    this.sessions.get(doKey)?.close();
+    this.sessions.delete(doKey);
+    this.turns.delete(doKey);
+
+    this.fileManager.clearTracked(webviewId);
+    this.fileManager.clearTracked(doKey);
+  }
+
+  private requireWorkDir(webviewId: string): string {
+    const w = this.getWorkDir(webviewId);
+    if (!w) {
+      throw new Error("No workspace folder open");
+    }
+    return w;
+  }
+
+  private async dispatch(method: string, params: unknown, webviewId: string): Promise<unknown> {
+    const handler = handlers[method];
+    if (!handler) {
+      throw new Error(`Unknown method: ${method}`);
+    }
+    return handler(params, this.createContext(webviewId));
+  }
+
+  private createContext(webviewId: string): HandlerContext {
+    return {
+      webviewId,
+      workDir: this.getWorkDir(webviewId),
+      workspaceRoot: this.workspaceRoot,
+      workspaceState: this.workspaceState,
+      requireWorkDir: () => this.requireWorkDir(webviewId),
+      broadcast: this.broadcast,
+      fileManager: this.fileManager,
+      reloadWebview: () => this.reloadWebview(webviewId),
+      showLogs: this.showLogs,
+      setSessionMetadata: (sessionId, meta) => this.setSessionMetadata(sessionId, meta, this.getWorkDir(webviewId) ?? undefined),
+      getSessionMetadata: (sessionId) => this.getSessionMetadata(sessionId, this.getWorkDir(webviewId) ?? undefined),
+      getRestoredTabState: () => this.restoreTabState(webviewId),
+      getSession: () => this.sessions.get(this.getSessionKey(webviewId)),
+      getSessionId: () => this.fileManager.getSessionId(this.getSessionKey(webviewId)),
+      getFileManagerKey: () => this.getSessionKey(webviewId),
+      getTurn: () => this.turns.get(this.getSessionKey(webviewId)),
+      setTurn: (turn: Turn | null) => {
+        const key = this.getSessionKey(webviewId);
+        if (turn) {
+          this.turns.set(key, turn);
+        } else {
+          this.turns.delete(key);
+        }
+      },
+      getOrCreateSession: (model, thinking, sessionId, mode) => this.getOrCreateSession(webviewId, model, thinking, sessionId, mode),
+      closeSession: async () => {
+        const key = this.getSessionKey(webviewId);
+        const session = this.sessions.get(key);
+        if (session) {
+          await session.close();
+          this.sessions.delete(key);
+        }
+        this.turns.delete(key);
+      },
+      saveAllDirty: () => this.saveAllDirty(),
+      setCustomWorkDir: (workDir: string | null) => this.setCustomWorkDir(webviewId, workDir),
+    };
+  }
+
+  private async saveAllDirty(): Promise<void> {
+    const dirty = vscode.workspace.textDocuments.filter((d) => d.isDirty && !d.isUntitled);
+    await Promise.all(dirty.map((d) => d.save()));
+  }
+
+  private async getOrCreateSession(webviewId: string, model: string, thinking: boolean, sessionId?: string, mode?: 'think' | 'do'): Promise<Session> {
+    const workDir = this.requireWorkDir(webviewId);
+    const cli = getCLIManager();
+    const config = parseConfig();
+
+    // Determine actual thinking state based on model capability
+    const modelConfig = getModelById(config.models, model);
+    const thinkingMode = modelConfig ? getModelThinkingMode(modelConfig) : "none";
+
+    let actualThinking: boolean;
+    if (thinkingMode === "always") {
+      actualThinking = true;
+    } else if (thinkingMode === "none") {
+      actualThinking = false;
+    } else {
+      actualThinking = thinking;
+    }
+
+    const executable = cli.getExecutablePath();
+    const env = VSCodeSettings.environmentVariables;
+    const globalYoloMode = VSCodeSettings.yoloMode;
+    const requestedMode = mode ?? 'think';
+    const actualDoMode = requestedMode === 'do';
+    const actualYoloMode = actualDoMode ? true : globalYoloMode;
+    const generationConfig = VSCodeSettings.generationConfig;
+
+    const key = requestedMode === 'do' ? `${webviewId}:do` : webviewId;
+    const agentFile = resolveAgentFile(requestedMode, this.workspaceRoot, this.extensionRoot);
+    const subagentSystemPrompts = resolveSubagentRoleOverrides(this.workspaceRoot, this.extensionRoot);
+    sessionLog.log("getOrCreateSession", { webviewId, requestedSessionId: sessionId, existingKey: key, model, yoloMode: actualYoloMode, doMode: actualDoMode, agentFile: agentFile ?? '<default>' });
+    const existing = this.sessions.get(key);
+
+    // Guard against silently converting an existing session from one mode to another.
+    // This prevents a Do session loaded into the Think tab from being overwritten.
+    if (existing && sessionId && sessionId === existing.sessionId && existing.doMode !== actualDoMode) {
+      throw new Error(
+        `Session ${sessionId} is a ${existing.doMode ? 'Do' : 'Think'} session. ` +
+        `Switch to the ${existing.doMode ? 'Do' : 'Think'} tab before continuing.`
+      );
+    }
+
+    // Check if we need to restart the session
+    if (existing) {
+      const needsRestart =
+        (sessionId && sessionId !== existing.sessionId) ||
+        model !== existing.model ||
+        actualThinking !== existing.thinking ||
+        actualYoloMode !== existing.yoloMode ||
+        actualDoMode !== existing.doMode ||
+        executable !== existing.executable ||
+        JSON.stringify(env) !== JSON.stringify(existing.env) ||
+        JSON.stringify(generationConfig) !== JSON.stringify((existing as any)._generationOverrides);
+
+      if (needsRestart) {
+        await safeCloseSession(existing, key);
+        this.sessions.delete(key);
+        this.turns.delete(key);
+      }
+    }
+
+    const current = this.sessions.get(key);
+    if (current) {
+      return current;
+    }
+
+    const session = createSession({
+      workDir,
+      model,
+      thinking: actualThinking,
+      yoloMode: actualYoloMode,
+      doMode: actualDoMode,
+      sessionId,
+      executable,
+      env,
+      agentFile,
+      subagentSystemPrompts,
+      clientInfo: { name: "consilium-code-for-vs-code", version: VSCodeSettings.getExtensionConfig().version },
+      generationOverrides: generationConfig.temperature !== undefined || generationConfig.topP !== undefined || generationConfig.maxTokens !== undefined
+        ? generationConfig
+        : undefined,
+    });
+
+    this.sessions.set(key, session);
+    this.fileManager.setSessionId(key, session.sessionId);
+    this.persistTabState(webviewId);
+    return session;
+  }
+
+  async disposeView(webviewId: string): Promise<void> {
+    // Close think session
+    const thinkSession = this.sessions.get(webviewId);
+    if (thinkSession) {
+      await safeCloseSession(thinkSession, webviewId);
+      this.sessions.delete(webviewId);
+      this.turns.delete(webviewId);
+    }
+    this.fileManager.disposeView(webviewId);
+
+    // Close do session
+    const doKey = `${webviewId}:do`;
+    const doSession = this.sessions.get(doKey);
+    if (doSession) {
+      await safeCloseSession(doSession, doKey);
+      this.sessions.delete(doKey);
+      this.turns.delete(doKey);
+    }
+    this.fileManager.disposeView(doKey);
+
+    // Clear active tab
+    this.activeTabs.delete(webviewId);
+  }
+
+  async dispose(): Promise<void> {
+    this.fileManager.dispose();
+    for (const s of this.sessions.values()) {
+      await s.close();
+    }
+    this.sessions.clear();
+    this.turns.clear();
+  }
+}
+```
+
+---
+
+## 6. `shared/types.ts` (126 lines) — no `src/types.ts` exists
+
+The actual types file is at `shared/types.ts` (not `src/types.ts`):
+
+```typescript
+import type { RunResult, StreamEvent, ContentPart, SlashCommandInfo } from "@consilium/agent-sdk";
+
+export interface GenerationConfig {
+  temperature?: number;
+  topP?: number;
+  maxTokens?: number;
+}
+
+export interface SessionConfig {
+  model: string;
+  thinking?: boolean;
+  generation?: GenerationConfig;
+}
+
+export interface ProjectFile {
+  path: string;
+  name: string;
+  isDirectory: boolean;
+}
+
+export interface EditorContext {
+  content: string;
+  language: string;
+  fileName: string;
+  selection?: {
+    text: string;
+    startLine: number;
+    endLine: number;
+  };
+}
+
+export interface FileChange {
+  path: string;
+  status: "Modified" | "Added" | "Deleted";
+  additions: number;
+  deletions: number;
+}
+
+export interface ExtensionConfig {
+  executablePath: string;
+  yoloMode: boolean;
+  autosave: boolean;
+  useCtrlEnterToSend: boolean;
+  enableNewConversationShortcut: boolean;
+  environmentVariables: Record<string, string>;
+  showThinkingContent: boolean;
+  showThinkingExpanded: boolean;
+  version: string;
+  generationConfig: GenerationConfig;
+  apiKey: string;
+  apiProviderType: string;
+  apiBaseUrl: string;
+  apiCustomHeaders: Record<string, string>;
+  defaultThinkModel: string;
+  defaultDoModel: string;
+}
+
+export interface WorkspaceStatus {
+  hasWorkspace: boolean;
+  path?: string;
+  workspaceRoot?: string;
+}
+
+export type ErrorPhase = "preflight" | "runtime";
+
+export interface StreamError {
+  type: "error";
+  code: string;
+  message: string;
+  detail?: string;
+  phase: ErrorPhase;
+}
+
+export type UIStreamEvent =
+  | { type: "session_start"; sessionId: string; model?: string; _sessionId?: string; mode?: 'think' | 'do' }
+  | { type: "stream_complete"; result: RunResult; _sessionId?: string; mode?: 'think' | 'do' }
+  | { type: "stream_aborted"; result: { status: "interrupted" }; _sessionId?: string; mode?: 'think' | 'do' }
+  | { type: "history_restored"; result: { status: "restored" }; _sessionId?: string; mode?: 'think' | 'do' }
+  | (StreamError & { _sessionId?: string; mode?: 'think' | 'do' })
+  | (StreamEvent & { _sessionId?: string; mode?: 'think' | 'do' });
+
+export type SyntheticEventType = "stream_aborted" | "history_restored";
+
+export type CLIErrorType = "not_found" | "version_low" | "extract_failed" | "protocol_error";
+
+export interface CLICheckResult {
+  ok: boolean;
+  slashCommands?: SlashCommandInfo[];
+  error?: {
+    type: CLIErrorType;
+    message: string;
+  };
+  resolved: {
+    isCustomPath: boolean;
+    path: string;
+  };
+}
+
+export interface LoginStatus {
+  loggedIn: boolean;
+}
+
+export type { QuestionRequest, QuestionItem, QuestionOption, QuestionResponse } from "@consilium/agent-sdk";
+export type SessionMode = 'think' | 'do' | 'legacy';
+
+export type TitleSource = 'user' | 'llm' | 'fallback';
+
+export interface SessionMetadata {
+  mode?: SessionMode;
+  pairedSessionId?: string;
+  title?: string;
+  titleSource?: TitleSource;
+  titleGeneratedAt?: number;
+}
+export interface QuotaInfo {
+  used: number;
+  limit: number;
+  percentage: number;
+}
+
+export interface PeerStatus {
+  is_alive: boolean;
+  last_updated_at: number;
+}
+```
+
+---
+
+**Summary of findings:**
+
+1. **`App.tsx`** — Renders conditionally based on `status` (from `useAppInit`) and `modelsCount`. Statuses: `loading`, `no-workspace`, `cli-error`, `no-models`, `not-logged-in`, `ready`. The `SetupScreen` is shown when no API key is set (`!hasApiKey`) or `forceShowSetup` is true, but only when status is not `loading`, `cli-error`, or `no-workspace`.
+
+2. **`useAppInit.ts`** — Defines `AppStatus = "loading" | "no-workspace" | "cli-error" | "not-logged-in" | "no-models" | "ready"`. The init flow: check workspace → get extension config, MCP servers, CLI check → check login status + get models → determine final status. Has a `refresh()` mechanism via `initKey` state.
+
+3. **`WelcomeScreen.tsx`** — Simple component showing `ConsiliumLogo` + a hint (either a component or title/description). Used as the empty-state content inside `ChatArea`.
+
+4. **`ConfigErrorScreen.tsx`** — Renders different error screens based on `type` prop (`loading`, `no-workspace`, `cli-error`, `no-models`). Each renders centered content with logo, icon, title, description, and action buttons. Uses internal `CLIErrorContent` and `NoModelsContent` sub-components.
+
+5. **`bridge-handler.ts`** — The `BridgeHandler` class manages sessions, turns, custom work dirs, file manager, and active tabs. It handles RPC messages via `handle(msg, webviewId)`, dispatching to registered `handlers[method]`. Key methods: `getOrCreateSession` (creates/restarts sessions), `disposeView`/`dispose` (cleanup), `setCustomWorkDir`, `setSessionMetadata`/`getSessionMetadata`.
+
+6. **`shared/types.ts`** — Contains all shared type definitions: `ExtensionConfig`, `CLICheckResult`, `LoginStatus`, `UIStreamEvent`, `AppStatus` (used in webview), `SessionMetadata`, `WorkspaceStatus`, etc.

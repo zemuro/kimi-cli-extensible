@@ -1,0 +1,393 @@
+[stage] runner_started
+[stage] agent_built
+[stage] context_restored
+[stage] context_ready
+[stage] run_soul_start
+[tool] ReadFile
+[tool_result] error: File not found
+The file path `c:\Users\zemuro\Antigravity\kimi_extension_mod\src\web\stores\chat.store.ts` does not exist. Let me check whether it exists under a slightly different path or in the current[tool] Glob
+[tool] Glob
+[tool_result] error: Unsafe pattern
+[tool_result] error: Unsafe pattern
+The file path `c:\Users\zemuro\Antigravity\kimi_extension_mod` does not exist on this system. The current project is `kimi_cli_mod`, not `kimi_extension_mod`. Let me search for any `chat.store.ts` files within the current project and the broader `Antigravity` directory.
+
+[tool] Glob
+[tool] Glob
+[tool_result] error: Unsafe pattern
+[tool] Shell
+[tool_result] error: Unsafe pattern
+[tool_result] success
+Found it — `kimi_extension_mod` is a sibling directory. Let me read the file now[tool] ReadFile
+[tool_result] error: File not found
+Let me explore the structure of `kimi_extension_mod` to find the correct path.
+
+[tool] Shell
+[tool_result] success
+[tool] Shell
+[tool] Shell
+[tool_result] success
+[tool_result] success
+Found it at `webview-ui/src/stores/chat.store.ts`. Let me read it now[tool] ReadFile
+[tool_result] success
+Now let me check the event handlers to see if `pendingInput` is ever cleared during event processing[tool] ReadFile
+[tool_result] success
+Here is the complete report on `pendingInput` in `chat.store.ts`:
+
+---
+
+## 1. `TabState` interface — `pendingInput` field type (lines 141–156)
+
+```typescript
+export interface TabState {
+  sessionId: string | null;
+  messages: ChatMessage[];
+  peerStatus: PeerStatus | null;
+  isStreaming: boolean;
+  isCompacting: boolean;
+  lastStatus: StatusUpdate | null;
+  tokenUsage: TokenUsage;
+  activeTokenUsage: TokenUsage;
+  pendingInput: PendingInput | null;    // <-- line 150
+  planMode: boolean;
+  pendingQuestion: QuestionRequest | null;
+  title?: string;
+  titleSource?: TitleSource;
+  inputDraft: string;
+}
+```
+
+The type is `PendingInput | null`, where `PendingInput` is defined at lines 130–133:
+
+```typescript
+export interface PendingInput {
+  content: string | ContentPart[];
+  model: string;
+}
+```
+
+The flat `ChatState` also has `pendingInput: PendingInput | null` at line 168.
+
+---
+
+## 2. `sendMessage` action (lines 332–363)
+
+```typescript
+sendMessage: (text) => {
+    const { draftMedia, isStreaming } = get();
+    const { currentModel } = useSettingsStore.getState();
+
+    const readyMedia = draftMedia.filter((m) => m.dataUri).map((m) => m.dataUri!);
+    const content = readyMedia.length > 0 ? Content.build(text, readyMedia) : text;
+
+    if (Content.isEmpty(content)) {
+      return;
+    }
+
+    // If streaming, enqueue instead of sending
+    if (isStreaming) {
+      get().enqueue(content, currentModel);
+      set({ draftMedia: [] });
+      return;                              // <-- returns without setting pendingInput
+    }
+
+    // Clear draft and set streaming state on active tab
+    set(
+      produce((draft: ChatState) => {
+        clearAllInlineErrors(draft[draft.activeTab]);
+        draft.draftMedia = [];
+        draft[draft.activeTab].isStreaming = true;
+        draft[draft.activeTab].pendingInput = { content, model: currentModel };  // <-- SETS pendingInput (line 356)
+        syncFlatStateFromTab(draft, draft.activeTab);
+        draft.handshakeReceived = false;
+      }),
+    );
+    useApprovalStore.getState().clearRequests();
+
+    doSend(get(), content, currentModel);
+  },
+```
+
+**Key observations about `sendMessage`:**
+- It **sets** `pendingInput` to `{ content, model: currentModel }` on line 356 when the message is actually sent.
+- If the content is empty, it returns early without setting `pendingInput`.
+- If already streaming, it enqueues the message and returns early **without** setting `pendingInput`.
+- `sendMessage` itself **never clears** `pendingInput` to `null`.
+
+---
+
+## 3. Actions that clear or set `pendingInput` to `null`
+
+### `stream_complete` event handler (event-handlers.ts, lines 321–335)
+
+```typescript
+stream_complete: (draft, payload: { result: RunResult }) => {
+    addTokenUsage(draft.tokenUsage, draft.activeTokenUsage);
+    draft.activeTokenUsage = createEmptyTokenUsage();
+    draft.isStreaming = false;
+    draft.isCompacting = false;
+    draft.pendingInput = null;              // <-- CLEARS pendingInput to null (line 326)
+    useApprovalStore.getState().clearRequests();
+    ...
+  },
+```
+
+This is the **primary place** where `pendingInput` is cleared to `null` — when the stream completes successfully.
+
+### `loadSession` action (lines 458–511)
+
+```typescript
+loadSession: async (sessionId, events, titleInfo) => {
+    ...
+    set(produce((draft: ChatState) => {
+      draft[draft.activeTab] = createEmptyTabState();  // <-- TabState is replaced, so pendingInput becomes null
+      ...
+    }));
+    ...
+  },
+```
+
+`createEmptyTabState()` (lines 67–84) initializes `pendingInput: null`, so loading a new session effectively clears it.
+
+### `startNewConversation` action (lines 513–532)
+
+```typescript
+startNewConversation: async () => {
+    ...
+    set(produce((draft: ChatState) => {
+      draft[draft.activeTab] = createEmptyTabState();  // <-- same as above, pendingInput becomes null
+      ...
+    }));
+    ...
+  },
+```
+
+Same as `loadSession` — resets the tab state to empty, which sets `pendingInput` to `null`.
+
+### `sendNextQueued` action (lines 677–700)
+
+```typescript
+sendNextQueued: () => {
+    ...
+    set(
+      produce((draft: ChatState) => {
+        ...
+        tab.pendingInput = { content: next.content, model: next.model };  // <-- SETS pendingInput again
+        ...
+      }),
+    );
+    ...
+  },
+```
+
+This **sets** `pendingInput` (like `sendMessage`), doesn't clear it.
+
+### `handlePreflightError` (event-handlers.ts, lines 267–289)
+
+```typescript
+function handlePreflightError(draft: ChatState, code: string, message: string): void {
+    ...
+    draft.isStreaming = false;
+    ...
+    // 触发回滚（通过 pendingInput 保存）
+    draft.pendingInput = { content: userContent, model: "" };  // <-- RESETS pendingInput to the user's original message for rollback
+  },
+```
+
+This **replaces** `pendingInput` with the user's original content (for rollback), rather than clearing it to `null`.
+
+---
+
+## Summary
+
+| Location | Line(s) | What happens to `pendingInput` |
+|---|---|---|
+| `sendMessage` | 356 | **Sets** to `{ content, model }` when sending |
+| `stream_complete` handler | 326 | **Clears** to `null` — the only normal-success path that clears it |
+| `handlePreflightError` | 287 | **Replaces** with `{ userContent, "" }` for rollback |
+| `loadSession` | 469 | **Clears** (via `createEmptyTabState()`) |
+| `startNewConversation` | 525 | **Clears** (via `createEmptyTabState()`) |
+| `sendNextQueued` | 691 | **Sets** to `{ content, model }` (same as `sendMessage`) |
+| `retryLastMessage` | 392 | Does **not** touch `pendingInput` — it reads it and reuses it |
+
+**Bottom line:** `pendingInput` is set when a message is sent (or queued for sending), and is cleared to `null` only on `stream_complete`. It is never cleared in `error` or `stream_aborted` handlers — in those cases, it may be preserved or replaced (e.g., `handlePreflightError` replaces it with the rolled-back content).[stage] run_soul_finished
+
+[summary]
+Here is the complete report on `pendingInput` in `chat.store.ts`:
+
+---
+
+## 1. `TabState` interface — `pendingInput` field type (lines 141–156)
+
+```typescript
+export interface TabState {
+  sessionId: string | null;
+  messages: ChatMessage[];
+  peerStatus: PeerStatus | null;
+  isStreaming: boolean;
+  isCompacting: boolean;
+  lastStatus: StatusUpdate | null;
+  tokenUsage: TokenUsage;
+  activeTokenUsage: TokenUsage;
+  pendingInput: PendingInput | null;    // <-- line 150
+  planMode: boolean;
+  pendingQuestion: QuestionRequest | null;
+  title?: string;
+  titleSource?: TitleSource;
+  inputDraft: string;
+}
+```
+
+The type is `PendingInput | null`, where `PendingInput` is defined at lines 130–133:
+
+```typescript
+export interface PendingInput {
+  content: string | ContentPart[];
+  model: string;
+}
+```
+
+The flat `ChatState` also has `pendingInput: PendingInput | null` at line 168.
+
+---
+
+## 2. `sendMessage` action (lines 332–363)
+
+```typescript
+sendMessage: (text) => {
+    const { draftMedia, isStreaming } = get();
+    const { currentModel } = useSettingsStore.getState();
+
+    const readyMedia = draftMedia.filter((m) => m.dataUri).map((m) => m.dataUri!);
+    const content = readyMedia.length > 0 ? Content.build(text, readyMedia) : text;
+
+    if (Content.isEmpty(content)) {
+      return;
+    }
+
+    // If streaming, enqueue instead of sending
+    if (isStreaming) {
+      get().enqueue(content, currentModel);
+      set({ draftMedia: [] });
+      return;                              // <-- returns without setting pendingInput
+    }
+
+    // Clear draft and set streaming state on active tab
+    set(
+      produce((draft: ChatState) => {
+        clearAllInlineErrors(draft[draft.activeTab]);
+        draft.draftMedia = [];
+        draft[draft.activeTab].isStreaming = true;
+        draft[draft.activeTab].pendingInput = { content, model: currentModel };  // <-- SETS pendingInput (line 356)
+        syncFlatStateFromTab(draft, draft.activeTab);
+        draft.handshakeReceived = false;
+      }),
+    );
+    useApprovalStore.getState().clearRequests();
+
+    doSend(get(), content, currentModel);
+  },
+```
+
+**Key observations about `sendMessage`:**
+- It **sets** `pendingInput` to `{ content, model: currentModel }` on line 356 when the message is actually sent.
+- If the content is empty, it returns early without setting `pendingInput`.
+- If already streaming, it enqueues the message and returns early **without** setting `pendingInput`.
+- `sendMessage` itself **never clears** `pendingInput` to `null`.
+
+---
+
+## 3. Actions that clear or set `pendingInput` to `null`
+
+### `stream_complete` event handler (event-handlers.ts, lines 321–335)
+
+```typescript
+stream_complete: (draft, payload: { result: RunResult }) => {
+    addTokenUsage(draft.tokenUsage, draft.activeTokenUsage);
+    draft.activeTokenUsage = createEmptyTokenUsage();
+    draft.isStreaming = false;
+    draft.isCompacting = false;
+    draft.pendingInput = null;              // <-- CLEARS pendingInput to null (line 326)
+    useApprovalStore.getState().clearRequests();
+    ...
+  },
+```
+
+This is the **primary place** where `pendingInput` is cleared to `null` — when the stream completes successfully.
+
+### `loadSession` action (lines 458–511)
+
+```typescript
+loadSession: async (sessionId, events, titleInfo) => {
+    ...
+    set(produce((draft: ChatState) => {
+      draft[draft.activeTab] = createEmptyTabState();  // <-- TabState is replaced, so pendingInput becomes null
+      ...
+    }));
+    ...
+  },
+```
+
+`createEmptyTabState()` (lines 67–84) initializes `pendingInput: null`, so loading a new session effectively clears it.
+
+### `startNewConversation` action (lines 513–532)
+
+```typescript
+startNewConversation: async () => {
+    ...
+    set(produce((draft: ChatState) => {
+      draft[draft.activeTab] = createEmptyTabState();  // <-- same as above, pendingInput becomes null
+      ...
+    }));
+    ...
+  },
+```
+
+Same as `loadSession` — resets the tab state to empty, which sets `pendingInput` to `null`.
+
+### `sendNextQueued` action (lines 677–700)
+
+```typescript
+sendNextQueued: () => {
+    ...
+    set(
+      produce((draft: ChatState) => {
+        ...
+        tab.pendingInput = { content: next.content, model: next.model };  // <-- SETS pendingInput again
+        ...
+      }),
+    );
+    ...
+  },
+```
+
+This **sets** `pendingInput` (like `sendMessage`), doesn't clear it.
+
+### `handlePreflightError` (event-handlers.ts, lines 267–289)
+
+```typescript
+function handlePreflightError(draft: ChatState, code: string, message: string): void {
+    ...
+    draft.isStreaming = false;
+    ...
+    // 触发回滚（通过 pendingInput 保存）
+    draft.pendingInput = { content: userContent, model: "" };  // <-- RESETS pendingInput to the user's original message for rollback
+  },
+```
+
+This **replaces** `pendingInput` with the user's original content (for rollback), rather than clearing it to `null`.
+
+---
+
+## Summary
+
+| Location | Line(s) | What happens to `pendingInput` |
+|---|---|---|
+| `sendMessage` | 356 | **Sets** to `{ content, model }` when sending |
+| `stream_complete` handler | 326 | **Clears** to `null` — the only normal-success path that clears it |
+| `handlePreflightError` | 287 | **Replaces** with `{ userContent, "" }` for rollback |
+| `loadSession` | 469 | **Clears** (via `createEmptyTabState()`) |
+| `startNewConversation` | 525 | **Clears** (via `createEmptyTabState()`) |
+| `sendNextQueued` | 691 | **Sets** to `{ content, model }` (same as `sendMessage`) |
+| `retryLastMessage` | 392 | Does **not** touch `pendingInput` — it reads it and reuses it |
+
+**Bottom line:** `pendingInput` is set when a message is sent (or queued for sending), and is cleared to `null` only on `stream_complete`. It is never cleared in `error` or `stream_aborted` handlers — in those cases, it may be preserved or replaced (e.g., `handlePreflightError` replaces it with the rolled-back content).

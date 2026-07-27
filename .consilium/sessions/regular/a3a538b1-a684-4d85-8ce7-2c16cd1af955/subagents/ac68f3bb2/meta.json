@@ -1,0 +1,16 @@
+{
+  "agent_id": "ac68f3bb2",
+  "subagent_type": "plan_editor",
+  "status": "idle",
+  "description": "Write project setup review",
+  "created_at": 1785156187.2453732,
+  "updated_at": 1785156258.5293999,
+  "last_task_id": null,
+  "launch_spec": {
+    "agent_id": "ac68f3bb2",
+    "subagent_type": "plan_editor",
+    "model_override": null,
+    "effective_model": null,
+    "created_at": 1785156187.2453732
+  }
+}

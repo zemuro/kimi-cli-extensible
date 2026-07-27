@@ -1,0 +1,577 @@
+[stage] runner_started
+[stage] agent_built
+[stage] context_restored
+[stage] context_ready
+[stage] run_soul_start
+[tool] ReadFile
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool_result] success
+以下是三个文件的完整内容：
+
+---
+
+## 1. `stores/chat.store.ts`（689 行，完整读取）
+
+### `TabState` 接口（第 138–152 行）
+
+```ts
+export interface TabState {
+  sessionId: string | null;
+  messages: ChatMessage[];
+  peerStatus: PeerStatus | null;
+  isStreaming: boolean;
+  isCompacting: boolean;
+  lastStatus: StatusUpdate | null;
+  tokenUsage: TokenUsage;
+  activeTokenUsage: TokenUsage;
+  pendingInput: PendingInput | null;
+  planMode: boolean;
+  pendingQuestion: QuestionRequest | null;
+  title?: string;
+  titleSource?: TitleSource;
+}
+```
+
+### `ChatState` 接口（第 154–200 行）
+
+```ts
+export interface ChatState {
+  sessionId: string | null;
+  messages: ChatMessage[];
+  isStreaming: boolean;
+  isCompacting: boolean;
+  handshakeReceived: boolean;
+  draftMedia: DraftMediaItem[];
+  lastStatus: StatusUpdate | null;
+  tokenUsage: TokenUsage;
+  activeTokenUsage: TokenUsage;
+  pendingInput: PendingInput | null;
+  queue: QueuedItem[];
+  pendingQuestion: QuestionRequest | null;
+  planMode: boolean;
+  activeTab: 'think' | 'do';
+  title?: string;
+  titleSource?: TitleSource;
+  think: TabState;
+  do: TabState;
+  setActiveTab: (tab: 'think' | 'do') => void;
+  get currentTabState(): TabState;
+  pendingReview?: any;
+  initTabs: () => Promise<void>;
+  sendMessage: (text: string) => void;
+  retryLastMessage: () => void;
+  processEvent: (event: UIStreamEvent) => void;
+  loadSession: (...) => Promise<void>;
+  startNewConversation: () => Promise<void>;
+  abort: () => void;
+  addDraftMedia: (id: string, dataUri?: string) => void;
+  updateDraftMedia: (id: string, dataUri: string) => void;
+  removeDraftMedia: (id: string) => void;
+  clearDraftMedia: () => void;
+  getMediaInConversation: () => MediaInConversation;
+  hasProcessingMedia: () => boolean;
+  rollbackInput: (content: string | ContentPart[]) => void;
+  respondQuestion: (answers: Record<string, string>) => Promise<void>;
+  setTitle: (sessionId: string | null, title: string, source: TitleSource) => void;
+  renameSession: (sessionId: string, newTitle: string) => Promise<void>;
+  enqueue: (content: string | ContentPart[], model: string) => void;
+  removeFromQueue: (id: string) => void;
+  editQueueItem: (id: string, content: string | ContentPart[]) => void;
+  moveQueueItemUp: (id: string) => void;
+  sendNextQueued: () => void;
+}
+```
+
+### `setActiveTab` 动作（第 259–272 行）
+
+```ts
+setActiveTab: (tab: 'think' | 'do') => {
+  const state = get();
+  if (state.activeTab === tab) return;
+
+  set(produce((draft: ChatState) => {
+    // Save full outgoing tab state
+    syncTabStateFromFlat(draft, draft.activeTab);
+    // Load incoming tab state into flat
+    syncFlatStateFromTab(draft, tab);
+    draft.activeTab = tab;
+  }));
+
+  bridge.setActiveTab(tab);
+},
+```
+
+**关键点：** 切换标签时，先将当前扁平状态保存到 `draft.activeTab`（即退出标签），然后将即将激活的标签状态加载到扁平状态。`pendingInput` 随此同步。
+
+### `syncFlatStateFromTab` 和 `syncTabStateFromFlat`（第 86–115 行）
+
+```ts
+/** Copy all mirrored fields from active tab → flat state (for component reads). */
+function syncFlatStateFromTab(draft: ChatState, tab: 'think' | 'do') {
+  draft.sessionId = draft[tab].sessionId;
+  draft.messages = draft[tab].messages;
+  draft.isStreaming = draft[tab].isStreaming;
+  draft.isCompacting = draft[tab].isCompacting;
+  draft.lastStatus = draft[tab].lastStatus;
+  draft.tokenUsage = draft[tab].tokenUsage;
+  draft.activeTokenUsage = draft[tab].activeTokenUsage;
+  draft.pendingInput = draft[tab].pendingInput;
+  draft.planMode = draft[tab].planMode;
+  draft.pendingQuestion = draft[tab].pendingQuestion;
+  draft.title = draft[tab].title;
+  draft.titleSource = draft[tab].titleSource;
+}
+
+/** Copy all mirrored fields from flat state → tab (for tab switching). */
+function syncTabStateFromFlat(draft: ChatState, tab: 'think' | 'do') {
+  draft[tab].sessionId = draft.sessionId;
+  draft[tab].messages = draft.messages;
+  draft[tab].isStreaming = draft.isStreaming;
+  draft[tab].isCompacting = draft.isCompacting;
+  draft[tab].lastStatus = draft.lastStatus;
+  draft[tab].tokenUsage = draft.tokenUsage;
+  draft[tab].activeTokenUsage = draft.activeTokenUsage;
+  draft[tab].pendingInput = draft.pendingInput;
+  draft[tab].planMode = draft.planMode;
+  draft[tab].pendingQuestion = draft.pendingQuestion;
+  draft[tab].title = draft.title;
+  draft[tab].titleSource = draft.titleSource;
+}
+```
+
+**这两个函数互为逆操作。** 它们同步一组"镜像字段"，包括 `pendingInput`。扁平状态（`ChatState`）实际上是当前激活标签的快捷方式/代理。`pendingInput` 是这些镜像字段之一，因此在标签切换时被保存和恢复。
+
+### `PendingInput` 接口（第 127–130 行）
+
+```ts
+export interface PendingInput {
+  content: string | ContentPart[];
+  model: string;
+}
+```
+
+### `pendingInput` 的使用方式
+
+| 位置 | 作用 |
+|---|---|
+| `sendMessage`（第 348 行） | 发送时设置为 `{ content, model: currentModel }` |
+| `sendNextQueued`（第 679 行） | 发送队列中下一项时设置 |
+| `rollbackInput`（第 593 行） | 回滚时将输入写回 `pendingInput` |
+| `retryLastMessage`（第 384 行） | 使用 `pendingInput` 重新发送上次消息 |
+| `loadSession`（第 497 行） | 加载后清除 `pendingInput`（设为 `null`） |
+| 初始化（第 67–83 行） | `createEmptyTabState()` 将 `pendingInput` 设为 `null` |
+
+**重要：`pendingInput` 存储的是**最后发送的内容**，而不是当前草稿文本。它不是用户当前正在输入的实时值。
+
+### 输入相关状态如何按标签存储
+
+**每个标签没有单独的 `inputValue` 或草稿文本字段。** 输入框文本是 `InputArea.tsx` 中的本地 React 状态（`useState("")`）。`pendingInput` 是存储在每个标签上的唯一输入相关状态，但它仅用于在流结束后恢复输入内容（`rollbackInput`）或重试。每个标签的 `pendingInput` 通过 `syncFlatStateFromTab` 和 `syncTabStateFromFlat` 在标签切换时保存和恢复。
+
+---
+
+## 2. `components/inputarea/InputArea.tsx`（437 行，完整读取）
+
+### 本地状态
+
+```ts
+const textareaRef = useRef<HTMLTextAreaElement>(null);
+const menuRef = useRef<HTMLDivElement>(null);
+const [text, setText] = useState("");          // <-- textarea 值的本地状态
+const [cursorPos, setCursorPos] = useState(0);  // 用于 @ 提及和斜杠命令
+const [previewMedia, setPreviewMedia] = useState<string | null>(null);
+```
+
+### `handleSend`（第 146–154 行）
+
+```ts
+const handleSend = useMemoizedFn(() => {
+  if (isProcessing || (!text.trim() && draftMedia.length === 0)) {
+    return;
+  }
+
+  addToHistory(text);
+  sendMessage(text);    // 调用 store 的 sendMessage
+  clearInput();         // 清除本地文本状态
+});
+```
+
+它：
+1. 检查是否有内容可发送
+2. 将文本添加到输入历史记录（用于上/下箭头导航）
+3. 调用 store 的 `sendMessage(text)`
+4. 通过 `clearInput()` 清除本地文本状态
+
+### 输入值的恢复（第 86–104 行）
+
+```ts
+// Restore pending input
+useEffect(() => {
+  if (!pendingInput || isStreaming) {
+    return;
+  }
+
+  // 只在输入框为空时恢复
+  if (text.trim()) {
+    return;
+  }
+
+  const textContent = Content.getText(pendingInput.content);
+  if (textContent) {
+    setText(textContent);
+    setTimeout(() => {
+      textareaRef.current?.focus();
+      adjustHeight();
+    }, 0);
+  }
+}, [pendingInput, isStreaming]);
+```
+
+当 `pendingInput` 发生变化且输入框为空时，此 effect 会用 `pendingInput` 的内容填充 `text`。这发生在 `rollbackInput` 操作之后。
+
+### textarea 元素的完整渲染（第 355–368 行）
+
+```tsx
+<textarea
+  ref={textareaRef}
+  value={text}
+  onChange={handleChange}
+  onKeyDown={handleKeyDown}
+  onSelect={handleSelect}
+  onPaste={handlePaste}
+  placeholder={isStreaming ? "Add a follow-up..." : "Ask Consilium... (/ commands · @ files · Alt+K code)"}
+  className={cn(
+    "w-full min-h-12 max-h-35 px-2.5 py-1.5 text-xs leading-relaxed",
+    "bg-transparent resize-none outline-none border-none overflow-y-auto",
+    "placeholder:text-muted-foreground",
+  )}
+/>
+```
+
+`textarea` 是一个受控组件，其 `value` 绑定到本地 `text` 状态。`onChange` 处理函数（`handleChange`，第 264 行）更新 `text` 和 `cursorPos`。
+
+---
+
+## 3. `components/Header.tsx`（143 行，完整读取）
+
+### `setActiveTab` 调用（第 59 和 78 行）
+
+**Think 按钮：**
+```tsx
+<button
+  onClick={() => setActiveTab?.("think")}
+  ...
+>
+```
+
+**Do 按钮：**
+```tsx
+<button
+  onClick={() => setActiveTab?.("do")}
+  ...
+>
+```
+
+Header 从 store 中解构出 `setActiveTab`：
+```ts
+const { startNewConversation, sessionId, messages, isStreaming, activeTab, setActiveTab } = useChatStore();
+```
+
+### 标签切换如何触发状态同步
+
+`setActiveTab` 调用（第 259–272 行）在 store 内部处理同步：
+
+1. 如果已是激活标签，则提前返回（`if (state.activeTab === tab) return;`）
+2. 在 `produce` 中的 immer draft 中：
+   - 调用 `syncTabStateFromFlat(draft, draft.activeTab)` — 将当前扁平状态保存到退出标签
+   - 调用 `syncFlatStateFromTab(draft, tab)` — 将进入标签的状态加载到扁平状态
+   - 设置 `draft.activeTab = tab`
+3. 通知后端 `bridge.setActiveTab(tab)`
+
+**关键点：** 由于 `pendingInput` 是同步的镜像字段之一，当用户在 Think 标签中有一个待恢复的 `pendingInput` 然后切换到 Do 标签时，Think 的 `pendingInput` 会被保存到 `draft.think.pendingInput`，然后 Do 的 `pendingInput` 会从 `draft.do.pendingInput` 加载到扁平状态。但是，`InputArea.tsx` 中使用 `pendingInput` 恢复文本的 `useEffect` 依赖于 `pendingInput` 变化触发重新渲染，且仅在 `text` 为空时触发。[stage] run_soul_finished
+
+[summary]
+以下是三个文件的完整内容：
+
+---
+
+## 1. `stores/chat.store.ts`（689 行，完整读取）
+
+### `TabState` 接口（第 138–152 行）
+
+```ts
+export interface TabState {
+  sessionId: string | null;
+  messages: ChatMessage[];
+  peerStatus: PeerStatus | null;
+  isStreaming: boolean;
+  isCompacting: boolean;
+  lastStatus: StatusUpdate | null;
+  tokenUsage: TokenUsage;
+  activeTokenUsage: TokenUsage;
+  pendingInput: PendingInput | null;
+  planMode: boolean;
+  pendingQuestion: QuestionRequest | null;
+  title?: string;
+  titleSource?: TitleSource;
+}
+```
+
+### `ChatState` 接口（第 154–200 行）
+
+```ts
+export interface ChatState {
+  sessionId: string | null;
+  messages: ChatMessage[];
+  isStreaming: boolean;
+  isCompacting: boolean;
+  handshakeReceived: boolean;
+  draftMedia: DraftMediaItem[];
+  lastStatus: StatusUpdate | null;
+  tokenUsage: TokenUsage;
+  activeTokenUsage: TokenUsage;
+  pendingInput: PendingInput | null;
+  queue: QueuedItem[];
+  pendingQuestion: QuestionRequest | null;
+  planMode: boolean;
+  activeTab: 'think' | 'do';
+  title?: string;
+  titleSource?: TitleSource;
+  think: TabState;
+  do: TabState;
+  setActiveTab: (tab: 'think' | 'do') => void;
+  get currentTabState(): TabState;
+  pendingReview?: any;
+  initTabs: () => Promise<void>;
+  sendMessage: (text: string) => void;
+  retryLastMessage: () => void;
+  processEvent: (event: UIStreamEvent) => void;
+  loadSession: (...) => Promise<void>;
+  startNewConversation: () => Promise<void>;
+  abort: () => void;
+  addDraftMedia: (id: string, dataUri?: string) => void;
+  updateDraftMedia: (id: string, dataUri: string) => void;
+  removeDraftMedia: (id: string) => void;
+  clearDraftMedia: () => void;
+  getMediaInConversation: () => MediaInConversation;
+  hasProcessingMedia: () => boolean;
+  rollbackInput: (content: string | ContentPart[]) => void;
+  respondQuestion: (answers: Record<string, string>) => Promise<void>;
+  setTitle: (sessionId: string | null, title: string, source: TitleSource) => void;
+  renameSession: (sessionId: string, newTitle: string) => Promise<void>;
+  enqueue: (content: string | ContentPart[], model: string) => void;
+  removeFromQueue: (id: string) => void;
+  editQueueItem: (id: string, content: string | ContentPart[]) => void;
+  moveQueueItemUp: (id: string) => void;
+  sendNextQueued: () => void;
+}
+```
+
+### `setActiveTab` 动作（第 259–272 行）
+
+```ts
+setActiveTab: (tab: 'think' | 'do') => {
+  const state = get();
+  if (state.activeTab === tab) return;
+
+  set(produce((draft: ChatState) => {
+    // Save full outgoing tab state
+    syncTabStateFromFlat(draft, draft.activeTab);
+    // Load incoming tab state into flat
+    syncFlatStateFromTab(draft, tab);
+    draft.activeTab = tab;
+  }));
+
+  bridge.setActiveTab(tab);
+},
+```
+
+**关键点：** 切换标签时，先将当前扁平状态保存到 `draft.activeTab`（即退出标签），然后将即将激活的标签状态加载到扁平状态。`pendingInput` 随此同步。
+
+### `syncFlatStateFromTab` 和 `syncTabStateFromFlat`（第 86–115 行）
+
+```ts
+/** Copy all mirrored fields from active tab → flat state (for component reads). */
+function syncFlatStateFromTab(draft: ChatState, tab: 'think' | 'do') {
+  draft.sessionId = draft[tab].sessionId;
+  draft.messages = draft[tab].messages;
+  draft.isStreaming = draft[tab].isStreaming;
+  draft.isCompacting = draft[tab].isCompacting;
+  draft.lastStatus = draft[tab].lastStatus;
+  draft.tokenUsage = draft[tab].tokenUsage;
+  draft.activeTokenUsage = draft[tab].activeTokenUsage;
+  draft.pendingInput = draft[tab].pendingInput;
+  draft.planMode = draft[tab].planMode;
+  draft.pendingQuestion = draft[tab].pendingQuestion;
+  draft.title = draft[tab].title;
+  draft.titleSource = draft[tab].titleSource;
+}
+
+/** Copy all mirrored fields from flat state → tab (for tab switching). */
+function syncTabStateFromFlat(draft: ChatState, tab: 'think' | 'do') {
+  draft[tab].sessionId = draft.sessionId;
+  draft[tab].messages = draft.messages;
+  draft[tab].isStreaming = draft.isStreaming;
+  draft[tab].isCompacting = draft.isCompacting;
+  draft[tab].lastStatus = draft.lastStatus;
+  draft[tab].tokenUsage = draft.tokenUsage;
+  draft[tab].activeTokenUsage = draft.activeTokenUsage;
+  draft[tab].pendingInput = draft.pendingInput;
+  draft[tab].planMode = draft.planMode;
+  draft[tab].pendingQuestion = draft.pendingQuestion;
+  draft[tab].title = draft.title;
+  draft[tab].titleSource = draft.titleSource;
+}
+```
+
+**这两个函数互为逆操作。** 它们同步一组"镜像字段"，包括 `pendingInput`。扁平状态（`ChatState`）实际上是当前激活标签的快捷方式/代理。`pendingInput` 是这些镜像字段之一，因此在标签切换时被保存和恢复。
+
+### `PendingInput` 接口（第 127–130 行）
+
+```ts
+export interface PendingInput {
+  content: string | ContentPart[];
+  model: string;
+}
+```
+
+### `pendingInput` 的使用方式
+
+| 位置 | 作用 |
+|---|---|
+| `sendMessage`（第 348 行） | 发送时设置为 `{ content, model: currentModel }` |
+| `sendNextQueued`（第 679 行） | 发送队列中下一项时设置 |
+| `rollbackInput`（第 593 行） | 回滚时将输入写回 `pendingInput` |
+| `retryLastMessage`（第 384 行） | 使用 `pendingInput` 重新发送上次消息 |
+| `loadSession`（第 497 行） | 加载后清除 `pendingInput`（设为 `null`） |
+| 初始化（第 67–83 行） | `createEmptyTabState()` 将 `pendingInput` 设为 `null` |
+
+**重要：`pendingInput` 存储的是**最后发送的内容**，而不是当前草稿文本。它不是用户当前正在输入的实时值。
+
+### 输入相关状态如何按标签存储
+
+**每个标签没有单独的 `inputValue` 或草稿文本字段。** 输入框文本是 `InputArea.tsx` 中的本地 React 状态（`useState("")`）。`pendingInput` 是存储在每个标签上的唯一输入相关状态，但它仅用于在流结束后恢复输入内容（`rollbackInput`）或重试。每个标签的 `pendingInput` 通过 `syncFlatStateFromTab` 和 `syncTabStateFromFlat` 在标签切换时保存和恢复。
+
+---
+
+## 2. `components/inputarea/InputArea.tsx`（437 行，完整读取）
+
+### 本地状态
+
+```ts
+const textareaRef = useRef<HTMLTextAreaElement>(null);
+const menuRef = useRef<HTMLDivElement>(null);
+const [text, setText] = useState("");          // <-- textarea 值的本地状态
+const [cursorPos, setCursorPos] = useState(0);  // 用于 @ 提及和斜杠命令
+const [previewMedia, setPreviewMedia] = useState<string | null>(null);
+```
+
+### `handleSend`（第 146–154 行）
+
+```ts
+const handleSend = useMemoizedFn(() => {
+  if (isProcessing || (!text.trim() && draftMedia.length === 0)) {
+    return;
+  }
+
+  addToHistory(text);
+  sendMessage(text);    // 调用 store 的 sendMessage
+  clearInput();         // 清除本地文本状态
+});
+```
+
+它：
+1. 检查是否有内容可发送
+2. 将文本添加到输入历史记录（用于上/下箭头导航）
+3. 调用 store 的 `sendMessage(text)`
+4. 通过 `clearInput()` 清除本地文本状态
+
+### 输入值的恢复（第 86–104 行）
+
+```ts
+// Restore pending input
+useEffect(() => {
+  if (!pendingInput || isStreaming) {
+    return;
+  }
+
+  // 只在输入框为空时恢复
+  if (text.trim()) {
+    return;
+  }
+
+  const textContent = Content.getText(pendingInput.content);
+  if (textContent) {
+    setText(textContent);
+    setTimeout(() => {
+      textareaRef.current?.focus();
+      adjustHeight();
+    }, 0);
+  }
+}, [pendingInput, isStreaming]);
+```
+
+当 `pendingInput` 发生变化且输入框为空时，此 effect 会用 `pendingInput` 的内容填充 `text`。这发生在 `rollbackInput` 操作之后。
+
+### textarea 元素的完整渲染（第 355–368 行）
+
+```tsx
+<textarea
+  ref={textareaRef}
+  value={text}
+  onChange={handleChange}
+  onKeyDown={handleKeyDown}
+  onSelect={handleSelect}
+  onPaste={handlePaste}
+  placeholder={isStreaming ? "Add a follow-up..." : "Ask Consilium... (/ commands · @ files · Alt+K code)"}
+  className={cn(
+    "w-full min-h-12 max-h-35 px-2.5 py-1.5 text-xs leading-relaxed",
+    "bg-transparent resize-none outline-none border-none overflow-y-auto",
+    "placeholder:text-muted-foreground",
+  )}
+/>
+```
+
+`textarea` 是一个受控组件，其 `value` 绑定到本地 `text` 状态。`onChange` 处理函数（`handleChange`，第 264 行）更新 `text` 和 `cursorPos`。
+
+---
+
+## 3. `components/Header.tsx`（143 行，完整读取）
+
+### `setActiveTab` 调用（第 59 和 78 行）
+
+**Think 按钮：**
+```tsx
+<button
+  onClick={() => setActiveTab?.("think")}
+  ...
+>
+```
+
+**Do 按钮：**
+```tsx
+<button
+  onClick={() => setActiveTab?.("do")}
+  ...
+>
+```
+
+Header 从 store 中解构出 `setActiveTab`：
+```ts
+const { startNewConversation, sessionId, messages, isStreaming, activeTab, setActiveTab } = useChatStore();
+```
+
+### 标签切换如何触发状态同步
+
+`setActiveTab` 调用（第 259–272 行）在 store 内部处理同步：
+
+1. 如果已是激活标签，则提前返回（`if (state.activeTab === tab) return;`）
+2. 在 `produce` 中的 immer draft 中：
+   - 调用 `syncTabStateFromFlat(draft, draft.activeTab)` — 将当前扁平状态保存到退出标签
+   - 调用 `syncFlatStateFromTab(draft, tab)` — 将进入标签的状态加载到扁平状态
+   - 设置 `draft.activeTab = tab`
+3. 通知后端 `bridge.setActiveTab(tab)`
+
+**关键点：** 由于 `pendingInput` 是同步的镜像字段之一，当用户在 Think 标签中有一个待恢复的 `pendingInput` 然后切换到 Do 标签时，Think 的 `pendingInput` 会被保存到 `draft.think.pendingInput`，然后 Do 的 `pendingInput` 会从 `draft.do.pendingInput` 加载到扁平状态。但是，`InputArea.tsx` 中使用 `pendingInput` 恢复文本的 `useEffect` 依赖于 `pendingInput` 变化触发重新渲染，且仅在 `text` 为空时触发。

@@ -1,0 +1,16 @@
+{
+  "agent_id": "a62961465",
+  "subagent_type": "plan_editor",
+  "status": "idle",
+  "description": "Think plan edit",
+  "created_at": 1785144419.7119365,
+  "updated_at": 1785144484.203053,
+  "last_task_id": null,
+  "launch_spec": {
+    "agent_id": "a62961465",
+    "subagent_type": "plan_editor",
+    "model_override": null,
+    "effective_model": null,
+    "created_at": 1785144419.7119365
+  }
+}

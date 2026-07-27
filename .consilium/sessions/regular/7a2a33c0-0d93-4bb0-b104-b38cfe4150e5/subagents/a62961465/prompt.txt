@@ -1,0 +1,5 @@
+Move the file at `C:\Users\zemuro\Antigravity\kimi_extension_mod\plan\archive\reports\mode-specific-input-draft-implementation.md` to `C:\Users\zemuro\Antigravity\kimi_extension_mod\plan\reports\mode-specific-input-draft-implementation.md`.
+
+Do this by reading the content from the archive location, then writing it to the reports location, then deleting the file from the archive location.
+
+Then verify the file exists at the new location and is gone from the old location.

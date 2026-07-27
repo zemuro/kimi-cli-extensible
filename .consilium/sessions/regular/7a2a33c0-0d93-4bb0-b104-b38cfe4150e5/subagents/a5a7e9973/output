@@ -1,0 +1,819 @@
+[stage] runner_started
+[stage] agent_built
+[stage] context_restored
+[stage] context_ready
+[stage] run_soul_start
+[tool] ReadFile
+[tool] ReadFile
+[tool_result] error: File not found
+[tool_result] error: File not found
+The exact paths don't exist. Let me locate these files within the `kimi_extension_mod` directory.
+
+[tool] Glob
+[tool] Glob
+[tool_result] error: Unsafe pattern
+[tool] Glob
+[tool_result] error: Unsafe pattern
+[tool] Glob
+[tool_result] error: Unsafe pattern
+[tool] Shell
+[tool_result] error: Unsafe pattern
+[tool_result] success
+The `kimi_extension_mod` directory doesn't exist under the current working directory (`kimi_cli_mod`). Let me look for it as a sibling or elsewhere on the system[tool] Shell
+[tool_result] success
+Found it — it's a sibling directory. Let me read both files now[tool] ReadFile
+[tool] ReadFile
+[tool_result] error: File not found
+[tool_result] error: File not found
+Let me explore the `kimi_extension_mod` directory structure to find the correct paths[tool] Shell
+[tool] Glob
+[tool_result] success
+[tool_result] error: Directory outside workspace
+The `kimi_extension_mod` directory doesn't have a `src/chat/` subdirectory or files named `InputArea.tsx` or `chat.store.ts`. Let me search for any files with related names.
+
+[tool] Shell
+[tool] Shell
+[tool_result] success
+[tool_result] success
+Found them — they're in the `webview-ui/` subdirectory. Let me read both files now[tool] ReadFile
+[tool] ReadFile
+[tool_result] success
+[tool_result] success
+Here is the full content of both files, organized by your requested sections.
+
+---
+
+## `InputArea.tsx` — Full Content & Key Sections
+
+**File:** `C:\Users\zemuro\Antigravity\kimi_extension_mod\webview-ui\src\components\inputarea\InputArea.tsx`  
+**Total lines:** 439
+
+### Imports (lines 1–25)
+
+```tsx
+import { useRef, useMemo, useState, useEffect, useCallback } from "react";
+import { useMemoizedFn } from "ahooks";
+import { IconSend, IconPlayerStop, IconChevronDown, IconPlus } from "@tabler/icons-react";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ActionMenu } from "../ActionMenu";
+import { SlashCommandMenu } from "../SlashCommandMenu";
+import { FilePickerMenu } from "../FilePickerMenu";
+import { MediaThumbnail } from "../MediaThumbnail";
+import { MediaPreviewModal } from "../MediaPreviewModal";
+import { BottomToolbar } from "../BottomToolbar";
+import { StreamingConfirmDialog } from "../StreamingConfirmDialog";
+import { ThinkingButton } from "../ThinkingButton";
+import { PlanModeButton } from "../PlanModeButton";
+import { useChatStore, useSettingsStore, getModelById, getModelsForMedia } from "@/stores";
+import { bridge, Events } from "@/services";
+import { Content } from "@/lib/content";
+import { cn } from "@/lib/utils";
+import { useSlashMenu, findActiveToken } from "./hooks/useSlashMenu";
+import { useFilePicker } from "./hooks/useFilePicker";
+import { useMediaUpload } from "./hooks/useMediaUpload";
+import { useClickOutside } from "./hooks/useClickOutside";
+import { useInputHistory } from "./hooks/useInputHistory";
+import { computeMentionInsert } from "./utils";
+```
+
+### Destructuring from stores (lines 37–40)
+
+```tsx
+const { isStreaming, sendMessage, abort, draftMedia, removeDraftMedia, hasProcessingMedia, getMediaInConversation, pendingInput, queue, planMode } = useChatStore();
+const inputDraft = useChatStore(s => s.inputDraft);
+const setInputDraft = useChatStore(s => s.setInputDraft);
+const { currentModel, thinkingEnabled, updateModel, toggleThinking, models, extensionConfig, getCurrentThinkingMode } = useSettingsStore();
+```
+
+### `handleSend` (lines 147–155)
+
+```tsx
+const handleSend = useMemoizedFn(() => {
+  if (isProcessing || (!inputDraft.trim() && draftMedia.length === 0)) {
+    return;
+  }
+
+  addToHistory(inputDraft);
+  sendMessage(inputDraft);
+  clearInput();
+});
+```
+
+### `handleInputRestore` — not present as a named function
+
+There is **no** function or callback explicitly named `handleInputRestore`. However, the **restore pending input logic** is implemented as a `useEffect`:
+
+### Restore pending input `useEffect` (lines 87–105)
+
+```tsx
+// Restore pending input
+useEffect(() => {
+  if (!pendingInput || isStreaming) {
+    return;
+  }
+
+  // 只在输入框为空时恢复
+  if (inputDraft.trim()) {
+    return;
+  }
+
+  const textContent = Content.getText(pendingInput.content);
+  if (textContent) {
+    setInputDraft(textContent);
+    setTimeout(() => {
+      textareaRef.current?.focus();
+      adjustHeight();
+    }, 0);
+  }
+}, [pendingInput, isStreaming]);
+```
+
+### References to `pendingInput`, `setPendingInput`, `inputDraft`, `setInputDraft`
+
+| Variable | Where referenced |
+|---|---|
+| `pendingInput` | Line 37: destructured from `useChatStore()` |
+| `pendingInput` | Line 88: used as dependency in restore `useEffect` |
+| `pendingInput` | Line 105: dependency of restore `useEffect` |
+| `setPendingInput` | **Not referenced anywhere** in this file |
+| `inputDraft` | Line 38: `const inputDraft = useChatStore(s => s.inputDraft)` |
+| `inputDraft` | Line 93: checked in restore `useEffect` |
+| `inputDraft` | Line 107: passed to `findActiveToken` |
+| `inputDraft` | Line 124: passed to `useInputHistory` |
+| `inputDraft` | Line 129–133: `clearInput` calls `setInputDraft("")` |
+| `inputDraft` | Line 137: used in `removeActiveToken` |
+| `inputDraft` | Line 148: checked in `handleSend` |
+| `inputDraft` | Line 153: passed to `sendMessage` |
+| `inputDraft` | Line 163: passed to `computeMentionInsert` |
+| `inputDraft` | Line 171: `setInputDraft` called in `applyMention` |
+| `inputDraft` | Line 224: used in `InsertMention` event handler |
+| `inputDraft` | Line 267: `setInputDraft(e.target.value)` in `handleChange` |
+| `inputDraft` | Line 278: used in `handleAddButtonClick` |
+| `inputDraft` | Line 289: `canSend` uses `inputDraft.trim()` |
+| `inputDraft` | Line 359: `value={inputDraft}` on textarea |
+| `setInputDraft` | Line 39: `const setInputDraft = useChatStore(s => s.setInputDraft)` |
+| `setInputDraft` | Line 99: called in restore `useEffect` |
+| `setInputDraft` | Line 125: passed to `useInputHistory` as `setText` |
+| `setInputDraft` | Line 130: called in `clearInput` |
+| `setInputDraft` | Line 139: called in `removeActiveToken` |
+| `setInputDraft` | Line 171: called in `applyMention` |
+| `setInputDraft` | Line 225: called in `InsertMention` handler |
+| `setInputDraft` | Line 267: called in `handleChange` |
+| `setInputDraft` | Line 279: called in `handleAddButtonClick` |
+
+### All `useEffect` blocks
+
+**1. Auto-switch model for media support (lines 73–84)**
+```tsx
+useEffect(() => {
+  if (!mediaReq.image && !mediaReq.video) {
+    return;
+  }
+  const isCurrentModelValid = availableModels.some((m) => m.id === currentModel);
+  if (isCurrentModelValid) {
+    return;
+  }
+  if (availableModels.length > 0) {
+    updateModel(availableModels[0].id);
+  }
+}, [mediaReq.image, mediaReq.video, currentModel, availableModels, updateModel]);
+```
+
+**2. Restore pending input (lines 87–105)**
+```tsx
+useEffect(() => {
+  if (!pendingInput || isStreaming) {
+    return;
+  }
+  if (inputDraft.trim()) {
+    return;
+  }
+  const textContent = Content.getText(pendingInput.content);
+  if (textContent) {
+    setInputDraft(textContent);
+    setTimeout(() => {
+      textareaRef.current?.focus();
+      adjustHeight();
+    }, 0);
+  }
+}, [pendingInput, isStreaming]);
+```
+
+**3. Reset slash menu when visibility changes (lines 212–214)**
+```tsx
+useEffect(() => {
+  resetSlashMenu();
+}, [showSlashMenu, resetSlashMenu]);
+```
+
+**4. Reset file picker when hidden (lines 216–220)**
+```tsx
+useEffect(() => {
+  if (!showFileMenu) {
+    resetFilePicker();
+  }
+}, [showFileMenu, resetFilePicker]);
+```
+
+**5. Bridge `InsertMention` event listener (lines 222–234)**
+```tsx
+useEffect(() => {
+  const unsub = bridge.on<{ mention: string }>(Events.InsertMention, ({ mention }) => {
+    const current = useChatStore.getState().inputDraft;
+    setInputDraft(current + mention + " ");
+
+    setTimeout(() => {
+      textareaRef.current?.focus();
+      adjustHeight();
+    }, 0);
+  });
+
+  return unsub;
+}, [adjustHeight]);
+```
+
+### All `useCallback` blocks
+
+**Only one `useCallback`** — `closeMenus` (lines 204–208):
+```tsx
+const closeMenus = useCallback(() => {
+  if (showSlashMenu || showFileMenu) {
+    removeActiveToken();
+  }
+}, [showSlashMenu, showFileMenu, removeActiveToken]);
+```
+
+All other functions use `useMemoizedFn` (from `ahooks`), which is a stable reference hook: `handleSend`, `handleSlashCommand`, `applyMention`, `handleKeyDown`, `handleAddButtonClick`, `clearInput`, `removeActiveToken`.
+
+---
+
+## `chat.store.ts` — Full Content & Key Sections
+
+**File:** `C:\Users\zemuro\Antigravity\kimi_extension_mod\webview-ui\src\stores\chat.store.ts`  
+**Total lines:** 701
+
+### `TabState` interface (lines 141–156)
+
+```tsx
+export interface TabState {
+  sessionId: string | null;
+  messages: ChatMessage[];
+  peerStatus: PeerStatus | null;
+  isStreaming: boolean;
+  isCompacting: boolean;
+  lastStatus: StatusUpdate | null;
+  tokenUsage: TokenUsage;
+  activeTokenUsage: TokenUsage;
+  pendingInput: PendingInput | null;
+  planMode: boolean;
+  pendingQuestion: QuestionRequest | null;
+  title?: string;
+  titleSource?: TitleSource;
+  inputDraft: string;
+}
+```
+
+### `ChatState` interface (lines 158–207)
+
+```tsx
+export interface ChatState {
+  sessionId: string | null;
+  messages: ChatMessage[];
+  isStreaming: boolean;
+  isCompacting: boolean;
+  handshakeReceived: boolean;
+  draftMedia: DraftMediaItem[];
+  lastStatus: StatusUpdate | null;
+  tokenUsage: TokenUsage;
+  activeTokenUsage: TokenUsage;
+  pendingInput: PendingInput | null;
+  queue: QueuedItem[];
+  pendingQuestion: QuestionRequest | null;
+  planMode: boolean;
+  activeTab: 'think' | 'do';
+  title?: string;
+  titleSource?: TitleSource;
+  inputDraft: string;
+  think: TabState;
+  do: TabState;
+  setActiveTab: (tab: 'think' | 'do') => void;
+  get currentTabState(): TabState;
+  pendingReview?: any;
+  initTabs: () => Promise<void>;
+
+  sendMessage: (text: string) => void;
+  retryLastMessage: () => void;
+  processEvent: (event: UIStreamEvent) => void;
+  loadSession: (sessionId: string, events: UIStreamEvent[], titleInfo?: { title?: string; titleSource?: TitleSource }) => Promise<void>;
+  startNewConversation: () => Promise<void>;
+  abort: () => void;
+  addDraftMedia: (id: string, dataUri?: string) => void;
+  updateDraftMedia: (id: string, dataUri: string) => void;
+  removeDraftMedia: (id: string) => void;
+  clearDraftMedia: () => void;
+  getMediaInConversation: () => MediaInConversation;
+  hasProcessingMedia: () => boolean;
+  rollbackInput: (content: string | ContentPart[]) => void;
+  respondQuestion: (answers: Record<string, string>) => Promise<void>;
+  setTitle: (sessionId: string | null, title: string, source: TitleSource) => void;
+  renameSession: (sessionId: string, newTitle: string) => Promise<void>;
+
+  setInputDraft: (text: string) => void;
+
+  enqueue: (content: string | ContentPart[], model: string) => void;
+  removeFromQueue: (id: string) => void;
+  editQueueItem: (id: string, content: string | ContentPart[]) => void;
+  moveQueueItemUp: (id: string) => void;
+  sendNextQueued: () => void;
+}
+```
+
+### `PendingInput` interface (lines 130–133)
+
+```tsx
+export interface PendingInput {
+  content: string | ContentPart[];
+  model: string;
+}
+```
+
+### `createEmptyTabState()` (lines 67–84)
+
+```tsx
+function createEmptyTabState(): TabState {
+  return {
+    sessionId: null,
+    messages: [],
+    peerStatus: null,
+    isStreaming: false,
+    isCompacting: false,
+    lastStatus: null,
+    tokenUsage: createEmptyTokenUsage(),
+    activeTokenUsage: createEmptyTokenUsage(),
+    pendingInput: null,
+    planMode: false,
+    pendingQuestion: null,
+    title: undefined,
+    titleSource: undefined,
+    inputDraft: "",
+  };
+}
+```
+
+### `setPendingInput` action — **Not defined as a separate action**
+
+There is **no** `setPendingInput` action in the store. `pendingInput` is only set internally via `produce` (immer) within other actions like `sendMessage`, `sendNextQueued`, `rollbackInput`, and `loadSession`/`startNewConversation` (which reset it via `createEmptyTabState()`).
+
+### `setInputDraft` action definition (lines 645–647)
+
+```tsx
+setInputDraft: (text) => {
+  set({ inputDraft: text });
+},
+```
+
+Note: This only sets the **flat** `inputDraft`, **not** the tab-scoped one. The `syncTabStateFromFlat` function copies flat → tab when switching tabs, which means `inputDraft` is correctly persisted per-tab through the sync mechanism.
+
+### `pendingInput` usage in sync functions
+
+**`syncFlatStateFromTab` (lines 87–101):**
+```tsx
+function syncFlatStateFromTab(draft: ChatState, tab: 'think' | 'do') {
+  draft.sessionId = draft[tab].sessionId;
+  draft.messages = draft[tab].messages;
+  draft.isStreaming = draft[tab].isStreaming;
+  draft.isCompacting = draft[tab].isCompacting;
+  draft.lastStatus = draft[tab].lastStatus;
+  draft.tokenUsage = draft[tab].tokenUsage;
+  draft.activeTokenUsage = draft[tab].activeTokenUsage;
+  draft.pendingInput = draft[tab].pendingInput;   // line 95
+  draft.planMode = draft[tab].planMode;
+  draft.pendingQuestion = draft[tab].pendingQuestion;
+  draft.title = draft[tab].title;
+  draft.titleSource = draft[tab].titleSource;
+  draft.inputDraft = draft[tab].inputDraft;
+}
+```
+
+**`syncTabStateFromFlat` (lines 104–118):**
+```tsx
+function syncTabStateFromFlat(draft: ChatState, tab: 'think' | 'do') {
+  draft[tab].sessionId = draft.sessionId;
+  draft[tab].messages = draft.messages;
+  draft[tab].isStreaming = draft.isStreaming;
+  draft[tab].isCompacting = draft.isCompacting;
+  draft[tab].lastStatus = draft.lastStatus;
+  draft[tab].tokenUsage = draft.tokenUsage;
+  draft[tab].activeTokenUsage = draft.activeTokenUsage;
+  draft[tab].pendingInput = draft.pendingInput;   // line 112
+  draft[tab].planMode = draft.planMode;
+  draft[tab].pendingQuestion = draft.pendingQuestion;
+  draft[tab].title = draft.title;
+  draft[tab].titleSource = draft.titleSource;
+  draft[tab].inputDraft = draft.inputDraft;
+}
+```
+
+### Where `pendingInput` is used/set in store actions
+
+| Action | Line(s) | What happens with `pendingInput` |
+|---|---|---|
+| `sendMessage` | 356–357 | Sets `tab.pendingInput = { content, model: currentModel }` via `produce` |
+| `retryLastMessage` | 367, 392 | Reads `pendingInput` from flat state, uses `pendingInput.content` and `pendingInput.model` to resend |
+| `sendNextQueued` | 691 | Sets `tab.pendingInput = { content: next.content, model: next.model }` via `produce` |
+| `rollbackInput` | 601 | Sets `tab.pendingInput = { content, model: currentModel }` via `produce` |
+| `loadSession` | 469 | Resets active tab to `createEmptyTabState()` (so `pendingInput = null`) |
+| `startNewConversation` | 525 | Resets active tab to `createEmptyTabState()` (so `pendingInput = null`) |
+| `createEmptyTabState` | 77 | Initial value: `pendingInput: null` |[stage] run_soul_finished
+
+[summary]
+Here is the full content of both files, organized by your requested sections.
+
+---
+
+## `InputArea.tsx` — Full Content & Key Sections
+
+**File:** `C:\Users\zemuro\Antigravity\kimi_extension_mod\webview-ui\src\components\inputarea\InputArea.tsx`  
+**Total lines:** 439
+
+### Imports (lines 1–25)
+
+```tsx
+import { useRef, useMemo, useState, useEffect, useCallback } from "react";
+import { useMemoizedFn } from "ahooks";
+import { IconSend, IconPlayerStop, IconChevronDown, IconPlus } from "@tabler/icons-react";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ActionMenu } from "../ActionMenu";
+import { SlashCommandMenu } from "../SlashCommandMenu";
+import { FilePickerMenu } from "../FilePickerMenu";
+import { MediaThumbnail } from "../MediaThumbnail";
+import { MediaPreviewModal } from "../MediaPreviewModal";
+import { BottomToolbar } from "../BottomToolbar";
+import { StreamingConfirmDialog } from "../StreamingConfirmDialog";
+import { ThinkingButton } from "../ThinkingButton";
+import { PlanModeButton } from "../PlanModeButton";
+import { useChatStore, useSettingsStore, getModelById, getModelsForMedia } from "@/stores";
+import { bridge, Events } from "@/services";
+import { Content } from "@/lib/content";
+import { cn } from "@/lib/utils";
+import { useSlashMenu, findActiveToken } from "./hooks/useSlashMenu";
+import { useFilePicker } from "./hooks/useFilePicker";
+import { useMediaUpload } from "./hooks/useMediaUpload";
+import { useClickOutside } from "./hooks/useClickOutside";
+import { useInputHistory } from "./hooks/useInputHistory";
+import { computeMentionInsert } from "./utils";
+```
+
+### Destructuring from stores (lines 37–40)
+
+```tsx
+const { isStreaming, sendMessage, abort, draftMedia, removeDraftMedia, hasProcessingMedia, getMediaInConversation, pendingInput, queue, planMode } = useChatStore();
+const inputDraft = useChatStore(s => s.inputDraft);
+const setInputDraft = useChatStore(s => s.setInputDraft);
+const { currentModel, thinkingEnabled, updateModel, toggleThinking, models, extensionConfig, getCurrentThinkingMode } = useSettingsStore();
+```
+
+### `handleSend` (lines 147–155)
+
+```tsx
+const handleSend = useMemoizedFn(() => {
+  if (isProcessing || (!inputDraft.trim() && draftMedia.length === 0)) {
+    return;
+  }
+
+  addToHistory(inputDraft);
+  sendMessage(inputDraft);
+  clearInput();
+});
+```
+
+### `handleInputRestore` — not present as a named function
+
+There is **no** function or callback explicitly named `handleInputRestore`. However, the **restore pending input logic** is implemented as a `useEffect`:
+
+### Restore pending input `useEffect` (lines 87–105)
+
+```tsx
+// Restore pending input
+useEffect(() => {
+  if (!pendingInput || isStreaming) {
+    return;
+  }
+
+  // 只在输入框为空时恢复
+  if (inputDraft.trim()) {
+    return;
+  }
+
+  const textContent = Content.getText(pendingInput.content);
+  if (textContent) {
+    setInputDraft(textContent);
+    setTimeout(() => {
+      textareaRef.current?.focus();
+      adjustHeight();
+    }, 0);
+  }
+}, [pendingInput, isStreaming]);
+```
+
+### References to `pendingInput`, `setPendingInput`, `inputDraft`, `setInputDraft`
+
+| Variable | Where referenced |
+|---|---|
+| `pendingInput` | Line 37: destructured from `useChatStore()` |
+| `pendingInput` | Line 88: used as dependency in restore `useEffect` |
+| `pendingInput` | Line 105: dependency of restore `useEffect` |
+| `setPendingInput` | **Not referenced anywhere** in this file |
+| `inputDraft` | Line 38: `const inputDraft = useChatStore(s => s.inputDraft)` |
+| `inputDraft` | Line 93: checked in restore `useEffect` |
+| `inputDraft` | Line 107: passed to `findActiveToken` |
+| `inputDraft` | Line 124: passed to `useInputHistory` |
+| `inputDraft` | Line 129–133: `clearInput` calls `setInputDraft("")` |
+| `inputDraft` | Line 137: used in `removeActiveToken` |
+| `inputDraft` | Line 148: checked in `handleSend` |
+| `inputDraft` | Line 153: passed to `sendMessage` |
+| `inputDraft` | Line 163: passed to `computeMentionInsert` |
+| `inputDraft` | Line 171: `setInputDraft` called in `applyMention` |
+| `inputDraft` | Line 224: used in `InsertMention` event handler |
+| `inputDraft` | Line 267: `setInputDraft(e.target.value)` in `handleChange` |
+| `inputDraft` | Line 278: used in `handleAddButtonClick` |
+| `inputDraft` | Line 289: `canSend` uses `inputDraft.trim()` |
+| `inputDraft` | Line 359: `value={inputDraft}` on textarea |
+| `setInputDraft` | Line 39: `const setInputDraft = useChatStore(s => s.setInputDraft)` |
+| `setInputDraft` | Line 99: called in restore `useEffect` |
+| `setInputDraft` | Line 125: passed to `useInputHistory` as `setText` |
+| `setInputDraft` | Line 130: called in `clearInput` |
+| `setInputDraft` | Line 139: called in `removeActiveToken` |
+| `setInputDraft` | Line 171: called in `applyMention` |
+| `setInputDraft` | Line 225: called in `InsertMention` handler |
+| `setInputDraft` | Line 267: called in `handleChange` |
+| `setInputDraft` | Line 279: called in `handleAddButtonClick` |
+
+### All `useEffect` blocks
+
+**1. Auto-switch model for media support (lines 73–84)**
+```tsx
+useEffect(() => {
+  if (!mediaReq.image && !mediaReq.video) {
+    return;
+  }
+  const isCurrentModelValid = availableModels.some((m) => m.id === currentModel);
+  if (isCurrentModelValid) {
+    return;
+  }
+  if (availableModels.length > 0) {
+    updateModel(availableModels[0].id);
+  }
+}, [mediaReq.image, mediaReq.video, currentModel, availableModels, updateModel]);
+```
+
+**2. Restore pending input (lines 87–105)**
+```tsx
+useEffect(() => {
+  if (!pendingInput || isStreaming) {
+    return;
+  }
+  if (inputDraft.trim()) {
+    return;
+  }
+  const textContent = Content.getText(pendingInput.content);
+  if (textContent) {
+    setInputDraft(textContent);
+    setTimeout(() => {
+      textareaRef.current?.focus();
+      adjustHeight();
+    }, 0);
+  }
+}, [pendingInput, isStreaming]);
+```
+
+**3. Reset slash menu when visibility changes (lines 212–214)**
+```tsx
+useEffect(() => {
+  resetSlashMenu();
+}, [showSlashMenu, resetSlashMenu]);
+```
+
+**4. Reset file picker when hidden (lines 216–220)**
+```tsx
+useEffect(() => {
+  if (!showFileMenu) {
+    resetFilePicker();
+  }
+}, [showFileMenu, resetFilePicker]);
+```
+
+**5. Bridge `InsertMention` event listener (lines 222–234)**
+```tsx
+useEffect(() => {
+  const unsub = bridge.on<{ mention: string }>(Events.InsertMention, ({ mention }) => {
+    const current = useChatStore.getState().inputDraft;
+    setInputDraft(current + mention + " ");
+
+    setTimeout(() => {
+      textareaRef.current?.focus();
+      adjustHeight();
+    }, 0);
+  });
+
+  return unsub;
+}, [adjustHeight]);
+```
+
+### All `useCallback` blocks
+
+**Only one `useCallback`** — `closeMenus` (lines 204–208):
+```tsx
+const closeMenus = useCallback(() => {
+  if (showSlashMenu || showFileMenu) {
+    removeActiveToken();
+  }
+}, [showSlashMenu, showFileMenu, removeActiveToken]);
+```
+
+All other functions use `useMemoizedFn` (from `ahooks`), which is a stable reference hook: `handleSend`, `handleSlashCommand`, `applyMention`, `handleKeyDown`, `handleAddButtonClick`, `clearInput`, `removeActiveToken`.
+
+---
+
+## `chat.store.ts` — Full Content & Key Sections
+
+**File:** `C:\Users\zemuro\Antigravity\kimi_extension_mod\webview-ui\src\stores\chat.store.ts`  
+**Total lines:** 701
+
+### `TabState` interface (lines 141–156)
+
+```tsx
+export interface TabState {
+  sessionId: string | null;
+  messages: ChatMessage[];
+  peerStatus: PeerStatus | null;
+  isStreaming: boolean;
+  isCompacting: boolean;
+  lastStatus: StatusUpdate | null;
+  tokenUsage: TokenUsage;
+  activeTokenUsage: TokenUsage;
+  pendingInput: PendingInput | null;
+  planMode: boolean;
+  pendingQuestion: QuestionRequest | null;
+  title?: string;
+  titleSource?: TitleSource;
+  inputDraft: string;
+}
+```
+
+### `ChatState` interface (lines 158–207)
+
+```tsx
+export interface ChatState {
+  sessionId: string | null;
+  messages: ChatMessage[];
+  isStreaming: boolean;
+  isCompacting: boolean;
+  handshakeReceived: boolean;
+  draftMedia: DraftMediaItem[];
+  lastStatus: StatusUpdate | null;
+  tokenUsage: TokenUsage;
+  activeTokenUsage: TokenUsage;
+  pendingInput: PendingInput | null;
+  queue: QueuedItem[];
+  pendingQuestion: QuestionRequest | null;
+  planMode: boolean;
+  activeTab: 'think' | 'do';
+  title?: string;
+  titleSource?: TitleSource;
+  inputDraft: string;
+  think: TabState;
+  do: TabState;
+  setActiveTab: (tab: 'think' | 'do') => void;
+  get currentTabState(): TabState;
+  pendingReview?: any;
+  initTabs: () => Promise<void>;
+
+  sendMessage: (text: string) => void;
+  retryLastMessage: () => void;
+  processEvent: (event: UIStreamEvent) => void;
+  loadSession: (sessionId: string, events: UIStreamEvent[], titleInfo?: { title?: string; titleSource?: TitleSource }) => Promise<void>;
+  startNewConversation: () => Promise<void>;
+  abort: () => void;
+  addDraftMedia: (id: string, dataUri?: string) => void;
+  updateDraftMedia: (id: string, dataUri: string) => void;
+  removeDraftMedia: (id: string) => void;
+  clearDraftMedia: () => void;
+  getMediaInConversation: () => MediaInConversation;
+  hasProcessingMedia: () => boolean;
+  rollbackInput: (content: string | ContentPart[]) => void;
+  respondQuestion: (answers: Record<string, string>) => Promise<void>;
+  setTitle: (sessionId: string | null, title: string, source: TitleSource) => void;
+  renameSession: (sessionId: string, newTitle: string) => Promise<void>;
+
+  setInputDraft: (text: string) => void;
+
+  enqueue: (content: string | ContentPart[], model: string) => void;
+  removeFromQueue: (id: string) => void;
+  editQueueItem: (id: string, content: string | ContentPart[]) => void;
+  moveQueueItemUp: (id: string) => void;
+  sendNextQueued: () => void;
+}
+```
+
+### `PendingInput` interface (lines 130–133)
+
+```tsx
+export interface PendingInput {
+  content: string | ContentPart[];
+  model: string;
+}
+```
+
+### `createEmptyTabState()` (lines 67–84)
+
+```tsx
+function createEmptyTabState(): TabState {
+  return {
+    sessionId: null,
+    messages: [],
+    peerStatus: null,
+    isStreaming: false,
+    isCompacting: false,
+    lastStatus: null,
+    tokenUsage: createEmptyTokenUsage(),
+    activeTokenUsage: createEmptyTokenUsage(),
+    pendingInput: null,
+    planMode: false,
+    pendingQuestion: null,
+    title: undefined,
+    titleSource: undefined,
+    inputDraft: "",
+  };
+}
+```
+
+### `setPendingInput` action — **Not defined as a separate action**
+
+There is **no** `setPendingInput` action in the store. `pendingInput` is only set internally via `produce` (immer) within other actions like `sendMessage`, `sendNextQueued`, `rollbackInput`, and `loadSession`/`startNewConversation` (which reset it via `createEmptyTabState()`).
+
+### `setInputDraft` action definition (lines 645–647)
+
+```tsx
+setInputDraft: (text) => {
+  set({ inputDraft: text });
+},
+```
+
+Note: This only sets the **flat** `inputDraft`, **not** the tab-scoped one. The `syncTabStateFromFlat` function copies flat → tab when switching tabs, which means `inputDraft` is correctly persisted per-tab through the sync mechanism.
+
+### `pendingInput` usage in sync functions
+
+**`syncFlatStateFromTab` (lines 87–101):**
+```tsx
+function syncFlatStateFromTab(draft: ChatState, tab: 'think' | 'do') {
+  draft.sessionId = draft[tab].sessionId;
+  draft.messages = draft[tab].messages;
+  draft.isStreaming = draft[tab].isStreaming;
+  draft.isCompacting = draft[tab].isCompacting;
+  draft.lastStatus = draft[tab].lastStatus;
+  draft.tokenUsage = draft[tab].tokenUsage;
+  draft.activeTokenUsage = draft[tab].activeTokenUsage;
+  draft.pendingInput = draft[tab].pendingInput;   // line 95
+  draft.planMode = draft[tab].planMode;
+  draft.pendingQuestion = draft[tab].pendingQuestion;
+  draft.title = draft[tab].title;
+  draft.titleSource = draft[tab].titleSource;
+  draft.inputDraft = draft[tab].inputDraft;
+}
+```
+
+**`syncTabStateFromFlat` (lines 104–118):**
+```tsx
+function syncTabStateFromFlat(draft: ChatState, tab: 'think' | 'do') {
+  draft[tab].sessionId = draft.sessionId;
+  draft[tab].messages = draft.messages;
+  draft[tab].isStreaming = draft.isStreaming;
+  draft[tab].isCompacting = draft.isCompacting;
+  draft[tab].lastStatus = draft.lastStatus;
+  draft[tab].tokenUsage = draft.tokenUsage;
+  draft[tab].activeTokenUsage = draft.activeTokenUsage;
+  draft[tab].pendingInput = draft.pendingInput;   // line 112
+  draft[tab].planMode = draft.planMode;
+  draft[tab].pendingQuestion = draft.pendingQuestion;
+  draft[tab].title = draft.title;
+  draft[tab].titleSource = draft.titleSource;
+  draft[tab].inputDraft = draft.inputDraft;
+}
+```
+
+### Where `pendingInput` is used/set in store actions
+
+| Action | Line(s) | What happens with `pendingInput` |
+|---|---|---|
+| `sendMessage` | 356–357 | Sets `tab.pendingInput = { content, model: currentModel }` via `produce` |
+| `retryLastMessage` | 367, 392 | Reads `pendingInput` from flat state, uses `pendingInput.content` and `pendingInput.model` to resend |
+| `sendNextQueued` | 691 | Sets `tab.pendingInput = { content: next.content, model: next.model }` via `produce` |
+| `rollbackInput` | 601 | Sets `tab.pendingInput = { content, model: currentModel }` via `produce` |
+| `loadSession` | 469 | Resets active tab to `createEmptyTabState()` (so `pendingInput = null`) |
+| `startNewConversation` | 525 | Resets active tab to `createEmptyTabState()` (so `pendingInput = null`) |
+| `createEmptyTabState` | 77 | Initial value: `pendingInput: null` |
