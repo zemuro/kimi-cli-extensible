@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "approval": {
+    "yolo": false,
+    "afk": false,
+    "auto_approve_actions": []
+  },
+  "additional_dirs": [],
+  "custom_title": "hey",
+  "title_generated": false,
+  "title_generate_attempts": 0,
+  "plan_mode": false,
+  "plan_session_id": null,
+  "plan_slug": null,
+  "wire_mtime": null,
+  "archived": false,
+  "archived_at": null,
+  "auto_archive_exempt": false,
+  "todos": [
+    {
+      "title": "Investigate why no messages appear when loading Do sessions from History",
+      "status": "done"
+    },
+    {
+      "title": "Fix SDK paths.ts to use workspace-local path format",
+      "status": "in_progress"
+    },
+    {
+      "title": "Repackage extension",
+      "status": "pending"
+    }
+  ],
+  "paired_session_id": null
+}

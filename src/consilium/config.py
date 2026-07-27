@@ -461,6 +461,10 @@ class Config(BaseModel):
     default_model: str = Field(default="", description="Default model to use")
     default_thinking: bool = Field(default=False, description="Default thinking mode")
     default_yolo: bool = Field(default=False, description="Default yolo (auto-approve) mode")
+    compaction_model: str | None = Field(
+        default=None,
+        description="Optional override model specifically for compaction. If unset, uses default_model.",
+    )
     skip_afk_prompt_injection: bool = Field(
         default=False,
         description=(
@@ -549,8 +553,8 @@ class Config(BaseModel):
 
     @model_validator(mode="after")
     def validate_model(self) -> Self:
-        if self.default_model and self.default_model not in self.models:
-            raise ValueError(f"Default model {self.default_model} not found in models")
+        # if self.default_model and self.default_model not in self.models:
+        #     raise ValueError(f"Default model {self.default_model} not found in models")
         for model in self.models.values():
             if model.provider not in self.providers:
                 raise ValueError(f"Provider {model.provider} not found in providers")

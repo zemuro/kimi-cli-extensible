@@ -1,0 +1,28 @@
+version: 1
+agent:
+  extend: ./agent.yaml
+  name: "consilium-do"
+  system_prompt_path: ./system/do.md
+  system_prompt_args:
+    ROLE_ADDITIONAL: |
+      You are the Do mode of Consilium. Your job is implementation, execution, and code change.
+  when_to_use: |
+    Use this agent when the user is in the Do tab or needs code changes, file edits, or tool execution.
+  tools:
+    - "consilium.tools.agent:Agent"
+    - "consilium.tools.ask_user:AskUserQuestion"
+    - "consilium.tools.todo:SetTodoList"
+    - "consilium.tools.shell:Shell"
+    - "consilium.tools.background:TaskList"
+    - "consilium.tools.background:TaskOutput"
+    - "consilium.tools.background:TaskStop"
+    - "consilium.tools.file:ReadFile"
+    - "consilium.tools.file:ReadMediaFile"
+    - "consilium.tools.file:Glob"
+    - "consilium.tools.file:Grep"
+    - "consilium.tools.file:WriteFile"
+    - "consilium.tools.file:StrReplaceFile"
+    - "consilium.tools.web:SearchWeb"
+    - "consilium.tools.web:FetchURL"
+    - "consilium.tools.plan:ExitPlanMode"
+    - "consilium.tools.plan.enter:EnterPlanMode"

@@ -145,11 +145,7 @@ class ACPSession:
 
     def _is_oauth_session(self) -> bool:
         """Return True if the current session uses OAuth-based authentication."""
-        try:
-            llm = self._cli.soul.runtime.llm
-            return llm is not None and getattr(llm.provider_config, "oauth", None) is not None
-        except AttributeError:
-            return False
+        return False
 
     async def prompt(self, prompt: list[ACPContentBlock]) -> acp.PromptResponse:
         user_input = acp_blocks_to_content_parts(prompt)

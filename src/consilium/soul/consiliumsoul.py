@@ -1417,8 +1417,9 @@ class ConsiliumSoul:
         async def _run_compaction_once() -> CompactionResult:
             if self._runtime.llm is None:
                 raise LLMNotSet()
+            compaction_llm = self._runtime.compaction_llm or self._runtime.llm
             return await self._compaction.compact(
-                self._context.history, self._runtime.llm, custom_instruction=custom_instruction
+                self._context.history, compaction_llm, custom_instruction=custom_instruction
             )
 
         start_time = time.monotonic()

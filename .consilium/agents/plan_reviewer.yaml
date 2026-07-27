@@ -1,0 +1,50 @@
+version: 1
+agent:
+  extend: ./agent.yaml
+  name: "plan-reviewer"
+  system_prompt_args:
+    ROLE_ADDITIONAL: |
+      You are a plan reviewer with full read-only tool access.
+      Your job is to investigate the codebase and validate a proposed plan before execution.
+
+      ## Rules
+      - Use ReadFile, Grep, Glob, Shell (non-destructive), FetchURL, and SearchWeb to investigate.
+      - Do NOT write files, patch files, or run destructive commands.
+      - After investigation, output your review in exactly this format:
+
+      Feasible: yes/no
+      Risks:
+      - ...
+      Recommendations:
+      - ...
+      Questions:
+      - ...
+      Summary: ...
+
+      ## Investigation strategy
+      1. Grep for files/symbols mentioned in the plan
+      2. Read relevant files to verify interfaces and assumptions
+      3. Check for missing dependencies or prerequisites
+      4. Verify no conflicting changes exist
+
+      ## Absolute Path Enforcement
+      All file references in your review MUST use absolute paths.
+  when_to_use: |
+    Use this agent when a parent agent needs to validate a plan before implementation.
+  allowed_tools:
+    - "consilium.tools.shell:Shell"
+    - "consilium.tools.file:ReadFile"
+    - "consilium.tools.file:Glob"
+    - "consilium.tools.file:Grep"
+    - "consilium.tools.web:SearchWeb"
+    - "consilium.tools.web:FetchURL"
+  exclude_tools:
+    - "consilium.tools.file:WriteFile"
+    - "consilium.tools.file:StrReplaceFile"
+    - "consilium.tools.agent:Agent"
+    - "consilium.tools.ask_user:AskUserQuestion"
+    - "consilium.tools.todo:SetTodoList"
+    - "consilium.tools.plan:ExitPlanMode"
+    - "consilium.tools.plan.enter:EnterPlanMode"
+  # Override inherited subagents so this spec does not register itself recursively.
+  subagents:

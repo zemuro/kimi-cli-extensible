@@ -1,0 +1,291 @@
+Create a new document at: `C:\Users\zemuro\Antigravity\kimi_extension_mod\plan\archive\reports\phase-07-fix-proposal-updated.md`
+
+This is an UPDATED fix proposal for Phase 07 (Why Only Think Sessions Show in History), now accounting for Phase 09's changes.
+
+Write the following content as a markdown file:
+
+---
+
+# Phase 07 — Updated Fix Proposal (Post-Phase 09)
+
+**Date:** 2025-07-17  
+**Status:** Draft  
+**Author:** Consilium Think Mode  
+**Target:** `kimi_extension_mod/src/handlers/session.handler.ts`  
+**Based on:** Original fix proposal at `kimi_extension_mod/plan/archive/reports/phase-07-fix-proposal.md`  
+**Context:** Phase 09 moved Do session storage from `~/.consilium/do_sessions/` (global) to `{workDir}/.consilium/sessions/do/` (workspace-local) in the Python CLI codebase (`kimi_cli_mod`). The extension fix must account for both old and new paths.
+
+---
+
+## Root Cause (Unchanged)
+
+`GetAllConsiliumSessions()` handler (lines 96–135 in `session.handler.ts`) has exactly two scan paths:
+
+1. **SDK `listSessions()`** — iterates all registered work dirs, queries CLI for sessions
+2. **`listThinkSessions()`** — scans `~/.consilium/think_sessions/{uuid}.jsonl` locally
+
+There is **no scan path for Do sessions** (either local or CLI-based). The `SessionInfo` type already has `isThinking: boolean` so the UI can distinguish Do sessions; only the scan is missing.
+
+---
+
+## Updated Storage Layout (After Phase 09)
+
+| Session Type | Old Path (Pre-Phase 09) | New Path (Post-Phase 09) |
+|---|---|---|
+| **Think** | `~/.consilium/think_sessions/{uuid}.jsonl` | `{workDir}/.consilium/sessions/think/{uuid}.jsonl` |
+| **Do** | `~/.consilium/do_sessions/{uuid}/journal.jsonl` | `{workDir}/.consilium/sessions/do/{uuid}/journal.jsonl` |
+| **Regular** | `~/.consilium/sessions/{hash}/wire.jsonl` | `{workDir}/.consilium/sessions/regular/{hash or uuid}/wire.jsonl` |
+
+**Important:** Sessions created before Phase 09 may still exist at the old global paths. The fix must scan **both** old and new locations for backward compatibility.
+
+---
+
+## Proposed Changes
+
+### Change 1: Add `getDoSessionsDir()` helper
+
+Insert after `getThinkDir()` (line 47):
+
+```typescript
+function getDoSessionsDir(): string {
+  return path.join(os.homedir(), ".consilium", "do_sessions");
+}
+```
+
+### Change 2: Add `getWorkspaceThinkDir()` and `getWorkspaceDoDir()` helpers
+
+These resolve to the new Phase 09 workspace-local paths:
+
+```typescript
+function getWorkspaceThinkDir(workDir: string): string {
+  return path.join(workDir, ".consilium", "sessions", "think");
+}
+
+function getWorkspaceDoDir(workDir: string): string {
+  return path.join(workDir, ".consilium", "sessions", "do");
+}
+```
+
+### Change 3: Add `listDoSessions()` helper
+
+Insert after `listThinkSessions()` (after line 82). This scans **both** old global and new workspace-local paths:
+
+```typescript
+async function listDoSessions(registeredWorkDirs: string[]): Promise<SessionInfo[]> {
+  const sessions: SessionInfo[] = [];
+  const seen = new Set<string>();
+
+  // Helper: scan a directory for Do session subdirs
+  async function scanDir(baseDir: string, labelPrefix: string): Promise<void> {
+    if (!fs.existsSync(baseDir)) return;
+    const entries = await fs.promises.readdir(baseDir, { withFileTypes: true });
+    for (const e of entries) {
+      if (!e.isDirectory()) continue;
+      if (!UUID_REGEX.test(e.name)) continue;
+      if (seen.has(e.name)) continue;
+      seen.add(e.name);
+
+      const journalPath = path.join(baseDir, e.name, "journal.jsonl");
+      if (!fs.existsSync(journalPath)) continue;
+
+      try {
+        const st = await fs.promises.stat(journalPath);
+        const brief = await getFirstWorkDirFromDoJournal(journalPath);
+        sessions.push({
+          id: e.name,
+          workDir: brief ? `[Do] ${path.basename(brief)}` : `${labelPrefix}${e.name}`,
+          updatedAt: st.mtimeMs || st.mtime.getTime(),
+          contextFile: journalPath,
+          brief: brief || DEFAULT_FALLBACK_TITLE,
+          isThinking: false,
+        });
+      } catch {
+        // skip corrupted sessions
+      }
+    }
+  }
+
+  // 1. Scan old global path (legacy sessions from before Phase 09)
+  await scanDir(getDoSessionsDir(), "[Do Legacy] ");
+
+  // 2. Scan new workspace-local paths for each registered work dir
+  for (const wd of registeredWorkDirs) {
+    const wdDir = getWorkspaceDoDir(wd);
+    await scanDir(wdDir, `[Do ${path.basename(wd)}] `);
+  }
+
+  return sessions.sort((a, b) => b.updatedAt - a.updatedAt);
+}
+```
+
+### Change 4: Add `getFirstWorkDirFromDoJournal()` helper
+
+Insert after `getFirstUserMessageFromThinkFile()` (after line 56):
+
+```typescript
+async function getFirstWorkDirFromDoJournal(journalPath: string): Promise<string | null> {
+  try {
+    const content = await fs.promises.readFile(journalPath, "utf-8");
+    const firstLine = content.split("\n").find(l => l.trim().length > 0);
+    if (!firstLine) return null;
+    const entry = JSON.parse(firstLine);
+    // Do session journal entries have a `work_dir` field in the session_start event
+    if (entry.type === "session_start" && entry.work_dir) {
+      return entry.work_dir;
+    }
+    // Fallback: extract work_dir from metadata
+    return entry.work_dir || entry.metadata?.work_dir || null;
+  } catch {
+    return null;
+  }
+}
+```
+
+### Change 5: Wire `listDoSessions()` into `GetAllConsiliumSessions`
+
+In `GetAllConsiliumSessions` (at line 122, after the registered work dir loop and before the Think session scan/merge):
+
+```typescript
+// --- After the registered work dir loop (line ~121) and before Think scan (line ~123) ---
+
+// Scan Do sessions (both legacy global + new workspace-local paths)
+// registeredWorkDirs is already available from the loop above
+const doSessions = await listDoSessions(registeredWorkDirs);
+for (const ds of doSessions) {
+  if (!seen.has(ds.id)) {
+    seen.add(ds.id);
+    allSessions.push(ds);
+  }
+}
+```
+
+### Change 6: Also scan new workspace-local Think path
+
+Currently, `listThinkSessions()` only scans the old global `~/.consilium/think_sessions/`. After Phase 09, Think sessions may also exist at `{workDir}/.consilium/sessions/think/`. Update the Think scan to also check workspace-local paths.
+
+Modify the Think session block in `GetAllConsiliumSessions` (lines 123-127) to also iterate registered work dirs:
+
+```typescript
+// Scan Think sessions (legacy global + new workspace-local paths)
+for (const ts of await listThinkSessions()) {
+  if (!seen.has(ts.id)) {
+    seen.add(ts.id);
+    allSessions.push(ts);
+  }
+}
+// Also scan workspace-local Think dirs
+for (const wd of registeredWorkDirs) {
+  const thinkDir = getWorkspaceThinkDir(wd);
+  if (!fs.existsSync(thinkDir)) continue;
+  const entries = await fs.promises.readdir(thinkDir, { withFileTypes: true });
+  for (const e of entries) {
+    if (!e.isDirectory() && e.name.endsWith(".jsonl")) {
+      const id = e.name.slice(0, -".jsonl".length);
+      if (!UUID_REGEX.test(id) || seen.has(id)) continue;
+      seen.add(id);
+      const filePath = path.join(thinkDir, e.name);
+      const st = await fs.promises.stat(filePath);
+      const brief = (await getFirstUserMessageFromThinkFile(filePath)) || DEFAULT_FALLBACK_TITLE;
+      allSessions.push({
+        id,
+        workDir: `[Think] ${path.basename(wd)}`,
+        updatedAt: st.mtimeMs || st.mtime.getTime(),
+        contextFile: filePath,
+        brief,
+        isThinking: true,
+      });
+    }
+  }
+}
+```
+
+---
+
+## Schema Check
+
+- `SessionInfo` already has `isThinking: boolean` — no type changes needed.
+- `SessionInfo` already has `workDir: string`, `brief: string`, `contextFile: string` — all compatible.
+- `GetAllConsiliumSessions` already deduplicates by session id via the `seen` set.
+- No frontend changes needed — `SessionList.tsx` already has `<ModeBadge>` for `think`/`do`/`legacy` modes.
+
+---
+
+## Edge Cases
+
+| Edge Case | Mitigation |
+|---|---|
+| `journal.jsonl` is empty | Skip silently (caught by try/catch in `scanDir`) |
+| `journal.jsonl` lacks `session_start` | Return `null` from `getFirstWorkDirFromDoJournal`, use fallback title |
+| `journal.jsonl` is corrupted JSON | Caught by try/catch, skip that session |
+| Do session directory exists but no `journal.jsonl` | Checked via `fs.existsSync(journalPath)` |
+| UUID collision between old and new paths | Deduplicated via `seen` set — first encounter wins |
+| Multiple work dirs with same Do session UUID | `seen` set prevents duplicates |
+| No `.consilium/sessions/` dir exists | `fs.existsSync` check returns early |
+| Windows MAX_PATH issues | Phase 09 already added `ensure_safe_path()` in the Python CLI, but the extension runs on Node.js which handles long paths natively on modern Windows with `\\?\` prefix |
+
+---
+
+## Effort Estimate
+
+| Task | Time |
+|---|---|
+| Add helper functions (~40 lines) | 20 min |
+| Wire into `GetAllConsiliumSessions` (~20 lines) | 15 min |
+| Update Think scan for workspace-local paths (~20 lines) | 15 min |
+| Manual testing (create Do sessions, verify visibility) | 30 min |
+| **Total** | **~1.5 hours** |
+
+---
+
+## Testing Plan
+
+1. **Pre-existing Do sessions (legacy):** Create a Do session in the old CLI (pre-Phase-09), verify it appears in the extension's session history dropdown with mode badge.
+2. **New Do sessions (post-Phase-09):** Create a Do session with the updated CLI, verify it appears in the dropdown.
+3. **Think sessions (both paths):** Verify Think sessions from both old and new paths appear correctly.
+4. **Deduplication:** Verify sessions with the same UUID from different paths appear only once.
+5. **Empty/clean workspace:** Verify no crashes when no `.consilium/` directory exists.
+6. **Corrupted sessions:** Verify graceful handling of malformed `journal.jsonl` files.
+
+---
+
+## Extension Repackaging & Reinstall
+
+After implementation and testing:
+
+```bash
+# 1. Package the extension into a .vsix file
+cd C:\Users\zemuro\Antigravity\kimi_extension_mod
+npx @vscode/vsce package
+
+# 2. This produces a file like: consilium-{version}.vsix
+# 3. Install/reinstall the extension in VS Code:
+#    - Option A: Right-click the .vsix in VS Code Explorer → "Install Extension VSIX"
+#    - Option B: code --install-extension consilium-{version}.vsix
+#    - Option C: Extensions view (Ctrl+Shift+X) → "..." → "Install from VSIX..."
+
+# 4. Reload the VS Code window (Ctrl+Shift+P → "Developer: Reload Window")
+#    to activate the updated extension
+```
+
+**Note:** The exact `.vsix` output filename depends on the version in `package.json`. Use `npx @vscode/vsce package --help` for options like `--out` to specify output path.
+
+---
+
+## Risk Assessment
+
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| Phase 09 CLI changes not yet deployed on user's machine | Medium | New Do sessions won't be found | Workspace-local scan will just return empty; legacy scan still works |
+| SDK `listSessions()` overlaps with our manual scan | Low | Duplicate sessions | Dedup via `seen` set handles this |
+| Performance impact on large workspaces | Low | Slower `GetAllConsiliumSessions` | Scans are `fs.readdir` reads; negligible for typical session counts (< 100) |
+| Windows path length issues | Low | Missing sessions | Node.js handles long paths; `\\?\` prefix is automatic on modern Node.js |
+
+---
+
+## Recommendation
+
+Implement this fix as the next extension task. The original estimate of ~1.5 hours remains valid; the additional complexity of dual-path scanning adds ~15 minutes to the original estimate but provides full backward compatibility with pre-Phase-09 sessions.
+
+---
+
+Then update the plan index file at `C:\Users\zemuro\Antigravity\kimi_extension_mod\plan\archive\index.md`. Read it first, then append a reference to the new fix proposal document under the Phase 07 section.

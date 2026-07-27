@@ -1,0 +1,15 @@
+version: 1
+agent:
+  extend: ./agent.yaml
+  name: "consilium-translator"
+  system_prompt_path: ./translator_role.md
+  when_to_use: |
+    Use this agent for translating text from English to Russian, managing the glossary/style guide, and maintaining the translation manifest.
+  tools:
+    - "consilium.tools.ask_user:AskUserQuestion"
+    - "consilium.tools.file:ReadFile"
+    - "consilium.tools.file:WriteFile"
+    - "consilium.tools.file:StrReplaceFile"
+    - "consilium.tools.file:Glob"
+    - "consilium.tools.file:Grep"
+    - "consilium.tools.shell:Shell"

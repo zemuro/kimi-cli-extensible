@@ -282,6 +282,12 @@ class Context:
         return imported
 
     async def update_token_count(self, token_count: int):
+        if token_count <= 0:
+            logger.debug("Skipping zero token count update; relying on tiktoken estimates.")
+            self._token_count += self._pending_token_estimate
+            self._pending_token_estimate = 0
+            return
+            
         logger.debug("Updating token count in context: {token_count}", token_count=token_count)
         self._token_count = token_count
         self._pending_token_estimate = 0

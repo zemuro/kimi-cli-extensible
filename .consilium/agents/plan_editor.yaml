@@ -1,0 +1,26 @@
+version: 1
+agent:
+  extend: ./agent.yaml
+  system_prompt_args_files:
+    ROLE_ADDITIONAL: "./plan_editor_role.md"
+  system_prompt_args:
+    ACTION: ""
+    DOCUMENT_TYPE: ""
+    TARGET_PATH: ""
+    plan_editor_conventions: ""
+  when_to_use_file: "./plan_editor_when_to_use.md"
+  min_summary_length: 0
+  allowed_tools:
+    - "consilium.tools.shell:Shell"
+    - "consilium.tools.file:ReadFile"
+    - "consilium.tools.file:Glob"
+    - "consilium.tools.file:Grep"
+    - "consilium.tools.file:WriteFile"
+    - "consilium.tools.file:StrReplaceFile"
+  exclude_tools:
+    - "consilium.tools.agent:Agent"
+    - "consilium.tools.ask_user:AskUserQuestion"
+    - "consilium.tools.todo:SetTodoList"
+    - "consilium.tools.plan:ExitPlanMode"
+    - "consilium.tools.plan.enter:EnterPlanMode"
+  subagents:

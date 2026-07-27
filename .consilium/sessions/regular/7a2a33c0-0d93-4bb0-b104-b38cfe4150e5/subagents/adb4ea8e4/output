@@ -1,0 +1,571 @@
+[stage] runner_started
+[stage] agent_built
+[stage] context_restored
+[stage] context_ready
+[stage] run_soul_start
+[tool] ReadFile
+[tool] ReadFile
+[tool_result] error: File not found
+[tool] ReadFile
+[tool_result] error: File not found
+[tool] Shell
+[tool_result] success
+[tool] Shell
+[tool_result] error: Failed with exit code: 2
+[tool_result] error: Failed with exit code: 2
+[tool] Shell
+[tool] Shell
+[tool_result] success
+[tool_result] success
+[tool] ReadFile
+[tool] ReadFile
+[tool_result] success
+[tool_result] success
+Here are the three files I found and read in full:
+
+---
+
+## File 1: `plan/reports/phase-07-implementation.md`
+
+**Note:** The file `plan/reports/phase-07-report.md` does not exist. The correct filename is `phase-07-implementation.md`.
+
+```markdown
+---
+document_type: implementation_report
+phase: 07
+title: Investigate Why Only Think Sessions Show in History
+author: Kimi Code
+completion_date: 2026-07-27
+---
+
+# Phase 07 — Investigate Why Only Think Sessions Show in History
+
+## Executive Summary
+
+Investigated the full data flow from frontend (`SessionList.tsx`) through handler (`session.handler.ts`) into SDK (`storage.ts`) and storage (`~/.consilium/do_sessions/`). Root cause is a single missing scan path: `GetAllConsiliumSessions()` never calls a `listDoSessions()` function. Fix proposal filed with ~15 lines of new code.
+
+## Files Changed
+
+| File | Change |
+|------|--------|
+| `C:/Users/zemuro/Antigravity/kimi_cli_mod/plan/phase-07.md` | Added root cause analysis (Section 6); updated risks table; added storage comparison table |
+| `C:/Users/zemuro/Antigravity/kimi_cli_mod/plan/index.md` | Updated Phase 07 status from `research` to `completed` |
+| `C:/Users/zemuro/Antigravity/kimi_cli_mod/plan/reviews/phase-07-review.md` | Created review document with 🟢 verdict |
+| `C:/Users/zemuro/Antigravity/kimi_cli_mod/plan/reports/phase-07-fix-proposal.md` | New fix proposal with before/after code snippets, edge cases, and effort estimate |
+
+## Code Traced
+
+### Layer 1: Frontend
+
+- `kimi_extension_mod/webview-ui/src/components/SessionList.tsx` — React component, already has `<ModeBadge>` for `think`/`do`/`legacy` modes. No frontend changes needed.
+
+### Layer 2: Handler
+
+- `kimi_extension_mod/src/handlers/session.handler.ts` — `GetAllConsiliumSessions` (lines 96-135) performs exactly two scans: SDK `listSessions()` + local `listThinkSessions()`. No `listDoSessions()` call.
+- `listThinkSessions()` (lines 58-82) — scans `~/.consilium/think_sessions/*.jsonl`.
+- Confirmed: no mention of `do_sessions` or `journal.jsonl` in this file beyond the LLM title generator.
+
+### Layer 3: SDK
+
+- `agent_sdk/storage.ts` — `listSessions(workDir)` (line 148) scans `~/.consilium/sessions/{md5(workDir)}/wire.jsonl`. No awareness of `do_sessions/`.
+- `listThinkSessions(workspaceRoot)` (line 89) — scans `~/.consilium/think_sessions/*.jsonl`.
+- `ConsiliumPaths` in `paths.ts` — has `sessionsDir()` and `sessionDir()` but no `doSessionsDir()`.
+
+### Layer 4: Storage (on disk)
+
+| Aspect | Do sessions | Think sessions |
+|--------|-------------|----------------|
+| Root | `~/.consilium/do_sessions/` | `~/.consilium/think_sessions/` |
+| Per-session | UUID subdirectory | Flat `{uuid}.jsonl` file |
+| Data | `{uuid}/journal.jsonl` | `{uuid}.jsonl` |
+| Title source | `work_dir` from first `session_start` entry | First `role:"user"` content |
+
+## Root Cause (one sentence)
+
+`GetAllConsiliumSessions()` in `session.handler.ts` scans `~/.consilium/think_sessions/` and `~/.consilium/sessions/{hash}/` but never scans `~/.consilium/do_sessions/`, making Do mode sessions invisible in the history dropdown.
+
+## Acceptance Criteria
+
+- [x] All code paths in `getAllConsiliumSessions()` traced from frontend to storage
+- [x] Do session storage format and location documented and compared against Think sessions
+- [x] Exact code changes identified (file, line, function) with before/after snippets
+- [x] Root cause document written with clear one-sentence bug description
+- [x] Fix proposal filed with effort estimate, edge cases, and risks
+
+## Delta from Spec
+
+| Spec Item | Actual | Notes |
+|-----------|--------|-------|
+| Files under `kimi_cli_mod/web/src/` | Actually in `kimi_extension_mod/` | Spec had wrong repo path; actual code found in extension repo |
+| SDK in `sdks/consilium-sdk/` | Actually in `agent_sdk/` under extension repo | SDK source found at `kimi_extension_mod/agent_sdk/storage.ts` |
+| `listThinkSessions()` in SDK | Actually in `session.handler.ts` AND in `agent_sdk/storage.ts` | Two separate implementations found: one in the handler (extension) and one in the SDK; extension's handler calls its own local version, not the SDK's |
+
+## Conclusion
+
+Investigation complete. The fix is straightforward (~15 lines in `session.handler.ts`). Recommend implementing it next — either fold into Phase 07 or make it Phase 08.
+
+Implementation complete. Review: `C:/Users/zemuro/Antigravity/kimi_cli_mod/plan/reports/phase-07-implementation.md`
+Switch to Think tab to approve or revise.
+Next: implement the fix (add `listDoSessions()` to `session.handler.ts` and wire it into `GetAllConsiliumSessions`).
+```
+
+---
+
+## File 2: `plan/reports/phase-09-implementation-report.md`
+
+**Note:** The file `plan/reports/phase-09-report.md` does not exist. The correct filename is `phase-09-implementation-report.md`.
+
+```markdown
+---
+document_type: implementation_report
+phase: 09
+title: Implementation Report — Move Session Archive to Workspace-Specific Directory
+author: Consilium
+completion_date: 2026-07-26
+---
+
+# Implementation Report — Phase 09: Move Session Archive to Workspace-Specific Directory
+
+## Executive Summary
+
+All session storage (Think, Do, and regular CLI sessions) was relocated from the global `~/.consilium/` directory to per-workspace paths under `{workDir}/.consilium/sessions/`. The implementation followed the 🟡 (Feasible with Corrections) review verdict, which eliminated the originally planned migration script, added a `ensure_safe_path()` MAX_PATH mitigation for Windows, and expanded the file scope to include `session.py` and `cli/__init__.py`. Old global path constants (`THINK_DIR`, `JOURNAL_DIR`, `DO_LOGS_DIR`, `THINK_LOGS_DIR`) are retained as read-only fallbacks with deprecation comments. No migration was performed — old global sessions are left in place. All 161 affected tests pass.
+
+## Files Changed
+
+### Source Code Changes
+
+| File | Change |
+|------|--------|
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\utils\path.py` | Added `ensure_safe_path()` — prepends `\\?\` prefix on Windows when path exceeds 200 chars to bypass MAX_PATH limit |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\think\storage.py` | Added `_think_dir(work_dir)`, `_think_logs_dir(work_dir)` path builders; all functions (`think_path`, `_checkpoint_dir`, `_think_log_path`, `list_sessions`, checkpoint load/save) accept optional `work_dir`; old `THINK_DIR`/`THINK_LOGS_DIR` kept as read-only fallbacks with deprecation comments |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\do\journal.py` | Added `_journal_dir(work_dir, session_id)`, `_journal_file_path(work_dir, session_id)`, `_diffs_dir_path(work_dir, session_id)`, `_do_logs_dir(work_dir)` path builders; `ChangeJournal.__init__()` accepts `work_dir`; `archive_old_journals()` accepts `work_dir`; old `JOURNAL_DIR`/`DO_LOGS_DIR` kept as read-only fallbacks |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\metadata.py` | `WorkDirMeta.sessions_dir` now returns `{workDir}/.consilium/sessions/regular/` (removed MD5 hash, removed `get_share_dir()` dependency); uses `ensure_safe_path()` |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\session.py` | `is_empty()`, `refresh()`, and `_try_import_session()` now pass `work_dir` to `think_path()`; removed hardcoded `Path.home() / ".consilium" / "think_sessions"` path |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\think\history.py` | `HistoryManager` accepts `work_dir`; all `save_session()` calls pass it through |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\think\slash.py` | `slash_checkpoint`, `slash_load` accept optional `work_dir` |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\think\__init__.py` | `ThinkSoul` passes `work_dir` to `HistoryManager`; slash dispatch passes `work_dir` |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\app.py` | Auto-migration and seed-from-think paths pass `work_dir` to `think_path()` |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\cli\__init__.py` | `_print_resume_hint()`, `_post_run()` pass `work_dir` to `think_path()` |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\do\session.py` | `DoSession.start()` passes `work_dir` to `ChangeJournal` and `archive_old_journals` |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\web\store\sessions.py` | Session index building now uses `wd.sessions_dir` (resolves to workspace-local path) |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\vis\api\sessions.py` | Added `_list_new_style_sessions()` to scan workspace-local directories; `_list_sessions_sync()` scans both legacy and new paths; `_find_session_dir()` supports workspace-path-based lookups |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\vis\api\statistics.py` | Added `_process_one_session()` helper for per-session processing; scans both legacy and new workspace-local sessions |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\cli\export.py` | Fallback comment updated in `_find_session_by_id()` |
+
+### Test Changes
+
+| File | Change |
+|------|--------|
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\tests\test_think.py` | All storage tests pass `work_dir` to functions instead of monkeypatching `THINK_DIR` |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\tests\core\test_timestamp_unification.py` | Tests pass `work_dir` instead of monkeypatching `THINK_DIR` |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\tests\core\test_journal.py` | Fixture uses `work_dir` instead of `JOURNAL_DIR` monkeypatch |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\tests\core\test_journal_and_binary.py` | `archive_old_journals` tests use `work_dir`; binary/text diff tests no longer monkeypatch |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\tests\core\test_do_session.py` | Fixture no longer monkeypatches `JOURNAL_DIR`; plan context tests don't need monkeypatch |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\tests\core\test_wire_events.py` | Fixture no longer monkeypatches `JOURNAL_DIR` |
+
+## Tests
+
+| Test file | Count | Status |
+|-----------|-------|--------|
+| `tests/test_think.py` | 16 | ✅ All pass |
+| `tests/core/test_timestamp_unification.py` | 24 | ✅ All pass |
+| `tests/core/test_journal.py` | 5 | ✅ All pass |
+| `tests/core/test_journal_and_binary.py` | 8 | ✅ All pass |
+| `tests/core/test_do_session.py` | 22 | ✅ All pass |
+| `tests/core/test_wire_events.py` | 1 | ✅ All pass |
+| `tests/core/test_session.py` | 34 | ✅ All pass |
+| `tests/core/test_session_fork.py` | 29 | ✅ All pass |
+| `tests/ui_and_conv/test_shell_slash_commands.py` | 22 | ✅ All pass |
+| **Directly affected** | **76** | **✅ All pass** |
+| **Session tests (regression)** | **85** | **✅ All pass** |
+| **Total** | **161** | **✅ All pass** |
+
+## Verification Steps
+
+1. **Path resolution:** `think_path(session_id, work_dir=tmp_dir)` writes to `{tmp_dir}/.consilium/sessions/think/{session_id}.jsonl` instead of `~/.consilium/think_sessions/`.
+2. **ChangeJournal isolation:** `ChangeJournal(session_id, work_dir=tmp_dir)` creates journal files under `{tmp_dir}/.consilium/sessions/do/{session_id}/`.
+3. **WorkDirMeta:** `WorkDirMeta(path=str(tmp_dir)).sessions_dir` returns `{tmp_dir}/.consilium/sessions/regular/` without MD5 hash.
+4. **MAX_PATH on Windows:** `ensure_safe_path()` prepends `\\?\` for absolute paths exceeding 200 characters.
+5. **Backward compat:** `list_sessions()` called without `work_dir` still scans the legacy global `~/.consilium/think_sessions/` directory.
+
+## Delta from Spec
+
+| Spec Item | Actual Implementation | Notes |
+|-----------|----------------------|-------|
+| **Migration script** (`migration.py`) | **Not implemented** — per user directive ("We will not copy the existing global history anywhere, that's insane") | Removed entirely; old global sessions left in place |
+| **Old constants removal** | Old constants kept as read-only fallbacks with deprecation comments, not removed | Per review correction: kept for one release cycle, no `__getattr__` deprecation warning added (comments only) |
+| **MAX_PATH mitigation** | Added as `ensure_safe_path()` in `src/consilium/utils/path.py` | New addition per review; called from `_think_dir()`, `_journal_dir()`, `WorkDirMeta.sessions_dir` |
+| **`session.py` refactoring** | Completed — `is_empty()`, `refresh()`, `_try_import_session()` all pass `work_dir` | Per review correction (Correction 3 — Expand File Scope) |
+| **`cli/__init__.py` refactoring** | Completed — `_print_resume_hint()`, `_post_run()` pass `work_dir` | Per review correction |
+| **`vis/api/sessions.py`** | Added `_list_new_style_sessions()`; `_list_sessions_sync()` scans both legacy and new paths | Per review correction |
+| **`vis/api/statistics.py`** | Added `_process_one_session()`; scans both legacy and new paths | Per review correction |
+| **Workspace init** | No sentinel-file-based init; session directories are created lazily by the path builders (`mkdir(parents=True, exist_ok=True)`) | Simpler approach than spec's Task 7 |
+| **Test isolation tests** | No new integration test file for workspace A/B isolation | Existing unit tests cover path isolation; full integration left for follow-up |
+| **Backward-compat test** | No dedicated backward-compat test | Old constants remain as read-only fallbacks; no migration to test |
+```
+
+---
+
+## File 3: `plan/reviews/phase-07-review.md`
+
+```markdown
+---
+document_type: review
+phase: 07
+title: Phase 07 Review — Investigate Why Only Think Sessions Show in History
+reviewer: Kimi Code
+review_date: 2026-07-27
+verdict: 🟢
+---
+
+# Phase 07 Review — Investigate Why Only Think Sessions Show in History
+
+## Verdict
+
+🟢 **Feasible and investigation is complete** — all five acceptance criteria can be met.
+
+## Actual Code Trace Results
+
+### Layer 1: Handler (`kimi_extension_mod/src/handlers/session.handler.ts`)
+
+`GetAllConsiliumSessions` (line 96) performs exactly two scans:
+
+1. **`listSessions(dir)`** (SDK) — scans `~/.consilium/sessions/{hash}/` for UUID-named subdirectories containing `wire.jsonl`. These are regular/legacy CLI sessions.
+2. **`listThinkSessions()`** (local, lines 58-82) — scans `~/.consilium/think_sessions/*.jsonl`. These are Think-mode sessions.
+
+**No scan of `~/.consilium/do_sessions/` exists.** This is the root cause.
+
+### Layer 2: SDK (`agent_sdk/storage.ts`)
+
+`listSessions(workDir)` (line 148):
+- Resolves `sessionsDir = ~/.consilium/sessions/{md5(workDir)}/`
+- Iterates UUID-named subdirectories
+- Looks for `wire.jsonl` inside each
+- Reads `metadata.json` or first `TurnBegin` user message for title
+
+`listThinkSessions(workspaceRoot)` (line 89):
+- Scans `~/.consilium/think_sessions/*.jsonl`
+- Reads first `role: "user"` message for title
+
+**No `listDoSessions()` function exists anywhere in the codebase.**
+
+### Layer 3: Storage (on disk)
+
+| Aspect | Do sessions | Think sessions |
+|--------|-------------|----------------|
+| Root dir | `~/.consilium/do_sessions/` | `~/.consilium/think_sessions/` |
+| Per-session format | UUID-named subdirectory | Flat `{uuid}.jsonl` file |
+| Data file | `{uuid}/journal.jsonl` | `{uuid}.jsonl` |
+| Extra dirs | `{uuid}/diffs/` | None |
+| File format | JSONL, `{"id","timestamp","type","session_id","work_dir","initial_git_head"}` | JSONL, `{"role","content"}` |
+| Title source | Not embedded — must come from metadata or workDir | First `role: "user"` content |
+
+### Frontend (`kimi_extension_mod/webview-ui/src/components/SessionList.tsx`)
+
+Already has `<ModeBadge>` for `think`/`do`/`legacy` modes — no frontend changes needed.
+
+## Risks/Mitigations
+
+| Risk | Status | Mitigation |
+|------|--------|------------|
+| SDK source hard to find | ✅ Resolved | Found at `agent_sdk/storage.ts` in the extension repo |
+| Format incompatibility | 🟢 Low risk | Both use JSONL; Do sessions are in subdirectories but that's easy to scan |
+| Sessions without titles skipped | ⚠️ Medium | Do journal.jsonl doesn't embed a user message; need to derive title from `work_dir` or CLI-side metadata |
+
+## Acceptance Criteria Status
+
+- [x] All code paths in `getAllConsiliumSessions()` traced from frontend to storage
+- [x] Do session storage format and location documented and compared against Think sessions
+- [x] Exact code changes identified (see fix proposal)
+- [ ] Root cause document written
+- [ ] Fix proposal filed
+
+**Items remaining:** Root cause + fix proposal (Tasks 3 & 4).
+```
+
+---
+
+**Summary of findings:**
+
+| Requested Path | Status | Actual Path Found |
+|---|---|---|
+| `plan/reports/phase-07-report.md` | ❌ Not found | ✅ Read `plan/reports/phase-07-implementation.md` instead |
+| `plan/reports/phase-09-report.md` | ❌ Not found | ✅ Read `plan/reports/phase-09-implementation-report.md` instead |
+| `plan/reviews/phase-07-review.md` | ✅ Found & read | Exact match |
+
+All three files have been returned verbatim above.[stage] run_soul_finished
+
+[summary]
+Here are the three files I found and read in full:
+
+---
+
+## File 1: `plan/reports/phase-07-implementation.md`
+
+**Note:** The file `plan/reports/phase-07-report.md` does not exist. The correct filename is `phase-07-implementation.md`.
+
+```markdown
+---
+document_type: implementation_report
+phase: 07
+title: Investigate Why Only Think Sessions Show in History
+author: Kimi Code
+completion_date: 2026-07-27
+---
+
+# Phase 07 — Investigate Why Only Think Sessions Show in History
+
+## Executive Summary
+
+Investigated the full data flow from frontend (`SessionList.tsx`) through handler (`session.handler.ts`) into SDK (`storage.ts`) and storage (`~/.consilium/do_sessions/`). Root cause is a single missing scan path: `GetAllConsiliumSessions()` never calls a `listDoSessions()` function. Fix proposal filed with ~15 lines of new code.
+
+## Files Changed
+
+| File | Change |
+|------|--------|
+| `C:/Users/zemuro/Antigravity/kimi_cli_mod/plan/phase-07.md` | Added root cause analysis (Section 6); updated risks table; added storage comparison table |
+| `C:/Users/zemuro/Antigravity/kimi_cli_mod/plan/index.md` | Updated Phase 07 status from `research` to `completed` |
+| `C:/Users/zemuro/Antigravity/kimi_cli_mod/plan/reviews/phase-07-review.md` | Created review document with 🟢 verdict |
+| `C:/Users/zemuro/Antigravity/kimi_cli_mod/plan/reports/phase-07-fix-proposal.md` | New fix proposal with before/after code snippets, edge cases, and effort estimate |
+
+## Code Traced
+
+### Layer 1: Frontend
+
+- `kimi_extension_mod/webview-ui/src/components/SessionList.tsx` — React component, already has `<ModeBadge>` for `think`/`do`/`legacy` modes. No frontend changes needed.
+
+### Layer 2: Handler
+
+- `kimi_extension_mod/src/handlers/session.handler.ts` — `GetAllConsiliumSessions` (lines 96-135) performs exactly two scans: SDK `listSessions()` + local `listThinkSessions()`. No `listDoSessions()` call.
+- `listThinkSessions()` (lines 58-82) — scans `~/.consilium/think_sessions/*.jsonl`.
+- Confirmed: no mention of `do_sessions` or `journal.jsonl` in this file beyond the LLM title generator.
+
+### Layer 3: SDK
+
+- `agent_sdk/storage.ts` — `listSessions(workDir)` (line 148) scans `~/.consilium/sessions/{md5(workDir)}/wire.jsonl`. No awareness of `do_sessions/`.
+- `listThinkSessions(workspaceRoot)` (line 89) — scans `~/.consilium/think_sessions/*.jsonl`.
+- `ConsiliumPaths` in `paths.ts` — has `sessionsDir()` and `sessionDir()` but no `doSessionsDir()`.
+
+### Layer 4: Storage (on disk)
+
+| Aspect | Do sessions | Think sessions |
+|--------|-------------|----------------|
+| Root | `~/.consilium/do_sessions/` | `~/.consilium/think_sessions/` |
+| Per-session | UUID subdirectory | Flat `{uuid}.jsonl` file |
+| Data | `{uuid}/journal.jsonl` | `{uuid}.jsonl` |
+| Title source | `work_dir` from first `session_start` entry | First `role:"user"` content |
+
+## Root Cause (one sentence)
+
+`GetAllConsiliumSessions()` in `session.handler.ts` scans `~/.consilium/think_sessions/` and `~/.consilium/sessions/{hash}/` but never scans `~/.consilium/do_sessions/`, making Do mode sessions invisible in the history dropdown.
+
+## Acceptance Criteria
+
+- [x] All code paths in `getAllConsiliumSessions()` traced from frontend to storage
+- [x] Do session storage format and location documented and compared against Think sessions
+- [x] Exact code changes identified (file, line, function) with before/after snippets
+- [x] Root cause document written with clear one-sentence bug description
+- [x] Fix proposal filed with effort estimate, edge cases, and risks
+
+## Delta from Spec
+
+| Spec Item | Actual | Notes |
+|-----------|--------|-------|
+| Files under `kimi_cli_mod/web/src/` | Actually in `kimi_extension_mod/` | Spec had wrong repo path; actual code found in extension repo |
+| SDK in `sdks/consilium-sdk/` | Actually in `agent_sdk/` under extension repo | SDK source found at `kimi_extension_mod/agent_sdk/storage.ts` |
+| `listThinkSessions()` in SDK | Actually in `session.handler.ts` AND in `agent_sdk/storage.ts` | Two separate implementations found: one in the handler (extension) and one in the SDK; extension's handler calls its own local version, not the SDK's |
+
+## Conclusion
+
+Investigation complete. The fix is straightforward (~15 lines in `session.handler.ts`). Recommend implementing it next — either fold into Phase 07 or make it Phase 08.
+
+Implementation complete. Review: `C:/Users/zemuro/Antigravity/kimi_cli_mod/plan/reports/phase-07-implementation.md`
+Switch to Think tab to approve or revise.
+Next: implement the fix (add `listDoSessions()` to `session.handler.ts` and wire it into `GetAllConsiliumSessions`).
+```
+
+---
+
+## File 2: `plan/reports/phase-09-implementation-report.md`
+
+**Note:** The file `plan/reports/phase-09-report.md` does not exist. The correct filename is `phase-09-implementation-report.md`.
+
+```markdown
+---
+document_type: implementation_report
+phase: 09
+title: Implementation Report — Move Session Archive to Workspace-Specific Directory
+author: Consilium
+completion_date: 2026-07-26
+---
+
+# Implementation Report — Phase 09: Move Session Archive to Workspace-Specific Directory
+
+## Executive Summary
+
+All session storage (Think, Do, and regular CLI sessions) was relocated from the global `~/.consilium/` directory to per-workspace paths under `{workDir}/.consilium/sessions/`. The implementation followed the 🟡 (Feasible with Corrections) review verdict, which eliminated the originally planned migration script, added a `ensure_safe_path()` MAX_PATH mitigation for Windows, and expanded the file scope to include `session.py` and `cli/__init__.py`. Old global path constants (`THINK_DIR`, `JOURNAL_DIR`, `DO_LOGS_DIR`, `THINK_LOGS_DIR`) are retained as read-only fallbacks with deprecation comments. No migration was performed — old global sessions are left in place. All 161 affected tests pass.
+
+## Files Changed
+
+### Source Code Changes
+
+| File | Change |
+|------|--------|
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\utils\path.py` | Added `ensure_safe_path()` — prepends `\\?\` prefix on Windows when path exceeds 200 chars to bypass MAX_PATH limit |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\think\storage.py` | Added `_think_dir(work_dir)`, `_think_logs_dir(work_dir)` path builders; all functions (`think_path`, `_checkpoint_dir`, `_think_log_path`, `list_sessions`, checkpoint load/save) accept optional `work_dir`; old `THINK_DIR`/`THINK_LOGS_DIR` kept as read-only fallbacks with deprecation comments |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\do\journal.py` | Added `_journal_dir(work_dir, session_id)`, `_journal_file_path(work_dir, session_id)`, `_diffs_dir_path(work_dir, session_id)`, `_do_logs_dir(work_dir)` path builders; `ChangeJournal.__init__()` accepts `work_dir`; `archive_old_journals()` accepts `work_dir`; old `JOURNAL_DIR`/`DO_LOGS_DIR` kept as read-only fallbacks |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\metadata.py` | `WorkDirMeta.sessions_dir` now returns `{workDir}/.consilium/sessions/regular/` (removed MD5 hash, removed `get_share_dir()` dependency); uses `ensure_safe_path()` |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\session.py` | `is_empty()`, `refresh()`, and `_try_import_session()` now pass `work_dir` to `think_path()`; removed hardcoded `Path.home() / ".consilium" / "think_sessions"` path |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\think\history.py` | `HistoryManager` accepts `work_dir`; all `save_session()` calls pass it through |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\think\slash.py` | `slash_checkpoint`, `slash_load` accept optional `work_dir` |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\think\__init__.py` | `ThinkSoul` passes `work_dir` to `HistoryManager`; slash dispatch passes `work_dir` |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\app.py` | Auto-migration and seed-from-think paths pass `work_dir` to `think_path()` |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\cli\__init__.py` | `_print_resume_hint()`, `_post_run()` pass `work_dir` to `think_path()` |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\do\session.py` | `DoSession.start()` passes `work_dir` to `ChangeJournal` and `archive_old_journals` |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\web\store\sessions.py` | Session index building now uses `wd.sessions_dir` (resolves to workspace-local path) |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\vis\api\sessions.py` | Added `_list_new_style_sessions()` to scan workspace-local directories; `_list_sessions_sync()` scans both legacy and new paths; `_find_session_dir()` supports workspace-path-based lookups |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\vis\api\statistics.py` | Added `_process_one_session()` helper for per-session processing; scans both legacy and new workspace-local sessions |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\cli\export.py` | Fallback comment updated in `_find_session_by_id()` |
+
+### Test Changes
+
+| File | Change |
+|------|--------|
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\tests\test_think.py` | All storage tests pass `work_dir` to functions instead of monkeypatching `THINK_DIR` |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\tests\core\test_timestamp_unification.py` | Tests pass `work_dir` instead of monkeypatching `THINK_DIR` |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\tests\core\test_journal.py` | Fixture uses `work_dir` instead of `JOURNAL_DIR` monkeypatch |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\tests\core\test_journal_and_binary.py` | `archive_old_journals` tests use `work_dir`; binary/text diff tests no longer monkeypatch |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\tests\core\test_do_session.py` | Fixture no longer monkeypatches `JOURNAL_DIR`; plan context tests don't need monkeypatch |
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\tests\core\test_wire_events.py` | Fixture no longer monkeypatches `JOURNAL_DIR` |
+
+## Tests
+
+| Test file | Count | Status |
+|-----------|-------|--------|
+| `tests/test_think.py` | 16 | ✅ All pass |
+| `tests/core/test_timestamp_unification.py` | 24 | ✅ All pass |
+| `tests/core/test_journal.py` | 5 | ✅ All pass |
+| `tests/core/test_journal_and_binary.py` | 8 | ✅ All pass |
+| `tests/core/test_do_session.py` | 22 | ✅ All pass |
+| `tests/core/test_wire_events.py` | 1 | ✅ All pass |
+| `tests/core/test_session.py` | 34 | ✅ All pass |
+| `tests/core/test_session_fork.py` | 29 | ✅ All pass |
+| `tests/ui_and_conv/test_shell_slash_commands.py` | 22 | ✅ All pass |
+| **Directly affected** | **76** | **✅ All pass** |
+| **Session tests (regression)** | **85** | **✅ All pass** |
+| **Total** | **161** | **✅ All pass** |
+
+## Verification Steps
+
+1. **Path resolution:** `think_path(session_id, work_dir=tmp_dir)` writes to `{tmp_dir}/.consilium/sessions/think/{session_id}.jsonl` instead of `~/.consilium/think_sessions/`.
+2. **ChangeJournal isolation:** `ChangeJournal(session_id, work_dir=tmp_dir)` creates journal files under `{tmp_dir}/.consilium/sessions/do/{session_id}/`.
+3. **WorkDirMeta:** `WorkDirMeta(path=str(tmp_dir)).sessions_dir` returns `{tmp_dir}/.consilium/sessions/regular/` without MD5 hash.
+4. **MAX_PATH on Windows:** `ensure_safe_path()` prepends `\\?\` for absolute paths exceeding 200 characters.
+5. **Backward compat:** `list_sessions()` called without `work_dir` still scans the legacy global `~/.consilium/think_sessions/` directory.
+
+## Delta from Spec
+
+| Spec Item | Actual Implementation | Notes |
+|-----------|----------------------|-------|
+| **Migration script** (`migration.py`) | **Not implemented** — per user directive ("We will not copy the existing global history anywhere, that's insane") | Removed entirely; old global sessions left in place |
+| **Old constants removal** | Old constants kept as read-only fallbacks with deprecation comments, not removed | Per review correction: kept for one release cycle, no `__getattr__` deprecation warning added (comments only) |
+| **MAX_PATH mitigation** | Added as `ensure_safe_path()` in `src/consilium/utils/path.py` | New addition per review; called from `_think_dir()`, `_journal_dir()`, `WorkDirMeta.sessions_dir` |
+| **`session.py` refactoring** | Completed — `is_empty()`, `refresh()`, `_try_import_session()` all pass `work_dir` | Per review correction (Correction 3 — Expand File Scope) |
+| **`cli/__init__.py` refactoring** | Completed — `_print_resume_hint()`, `_post_run()` pass `work_dir` | Per review correction |
+| **`vis/api/sessions.py`** | Added `_list_new_style_sessions()`; `_list_sessions_sync()` scans both legacy and new paths | Per review correction |
+| **`vis/api/statistics.py`** | Added `_process_one_session()`; scans both legacy and new paths | Per review correction |
+| **Workspace init** | No sentinel-file-based init; session directories are created lazily by the path builders (`mkdir(parents=True, exist_ok=True)`) | Simpler approach than spec's Task 7 |
+| **Test isolation tests** | No new integration test file for workspace A/B isolation | Existing unit tests cover path isolation; full integration left for follow-up |
+| **Backward-compat test** | No dedicated backward-compat test | Old constants remain as read-only fallbacks; no migration to test |
+```
+
+---
+
+## File 3: `plan/reviews/phase-07-review.md`
+
+```markdown
+---
+document_type: review
+phase: 07
+title: Phase 07 Review — Investigate Why Only Think Sessions Show in History
+reviewer: Kimi Code
+review_date: 2026-07-27
+verdict: 🟢
+---
+
+# Phase 07 Review — Investigate Why Only Think Sessions Show in History
+
+## Verdict
+
+🟢 **Feasible and investigation is complete** — all five acceptance criteria can be met.
+
+## Actual Code Trace Results
+
+### Layer 1: Handler (`kimi_extension_mod/src/handlers/session.handler.ts`)
+
+`GetAllConsiliumSessions` (line 96) performs exactly two scans:
+
+1. **`listSessions(dir)`** (SDK) — scans `~/.consilium/sessions/{hash}/` for UUID-named subdirectories containing `wire.jsonl`. These are regular/legacy CLI sessions.
+2. **`listThinkSessions()`** (local, lines 58-82) — scans `~/.consilium/think_sessions/*.jsonl`. These are Think-mode sessions.
+
+**No scan of `~/.consilium/do_sessions/` exists.** This is the root cause.
+
+### Layer 2: SDK (`agent_sdk/storage.ts`)
+
+`listSessions(workDir)` (line 148):
+- Resolves `sessionsDir = ~/.consilium/sessions/{md5(workDir)}/`
+- Iterates UUID-named subdirectories
+- Looks for `wire.jsonl` inside each
+- Reads `metadata.json` or first `TurnBegin` user message for title
+
+`listThinkSessions(workspaceRoot)` (line 89):
+- Scans `~/.consilium/think_sessions/*.jsonl`
+- Reads first `role: "user"` message for title
+
+**No `listDoSessions()` function exists anywhere in the codebase.**
+
+### Layer 3: Storage (on disk)
+
+| Aspect | Do sessions | Think sessions |
+|--------|-------------|----------------|
+| Root dir | `~/.consilium/do_sessions/` | `~/.consilium/think_sessions/` |
+| Per-session format | UUID-named subdirectory | Flat `{uuid}.jsonl` file |
+| Data file | `{uuid}/journal.jsonl` | `{uuid}.jsonl` |
+| Extra dirs | `{uuid}/diffs/` | None |
+| File format | JSONL, `{"id","timestamp","type","session_id","work_dir","initial_git_head"}` | JSONL, `{"role","content"}` |
+| Title source | Not embedded — must come from metadata or workDir | First `role: "user"` content |
+
+### Frontend (`kimi_extension_mod/webview-ui/src/components/SessionList.tsx`)
+
+Already has `<ModeBadge>` for `think`/`do`/`legacy` modes — no frontend changes needed.
+
+## Risks/Mitigations
+
+| Risk | Status | Mitigation |
+|------|--------|------------|
+| SDK source hard to find | ✅ Resolved | Found at `agent_sdk/storage.ts` in the extension repo |
+| Format incompatibility | 🟢 Low risk | Both use JSONL; Do sessions are in subdirectories but that's easy to scan |
+| Sessions without titles skipped | ⚠️ Medium | Do journal.jsonl doesn't embed a user message; need to derive title from `work_dir` or CLI-side metadata |
+
+## Acceptance Criteria Status
+
+- [x] All code paths in `getAllConsiliumSessions()` traced from frontend to storage
+- [x] Do session storage format and location documented and compared against Think sessions
+- [x] Exact code changes identified (see fix proposal)
+- [ ] Root cause document written
+- [ ] Fix proposal filed
+
+**Items remaining:** Root cause + fix proposal (Tasks 3 & 4).
+```
+
+---
+
+**Summary of findings:**
+
+| Requested Path | Status | Actual Path Found |
+|---|---|---|
+| `plan/reports/phase-07-report.md` | ❌ Not found | ✅ Read `plan/reports/phase-07-implementation.md` instead |
+| `plan/reports/phase-09-report.md` | ❌ Not found | ✅ Read `plan/reports/phase-09-implementation-report.md` instead |
+| `plan/reviews/phase-07-review.md` | ✅ Found & read | Exact match |
+
+All three files have been returned verbatim above.

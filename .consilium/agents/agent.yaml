@@ -1,0 +1,48 @@
+version: 1
+agent:
+  name: ""
+  system_prompt_path: ./system.md
+  system_prompt_args:
+    ROLE_ADDITIONAL: ""
+  tools:
+    - "consilium.tools.agent:Agent"
+    # - "consilium.tools.dmail:SendDMail"
+    # - "consilium.tools.think:Think"
+    - "consilium.tools.ask_user:AskUserQuestion"
+    - "consilium.tools.todo:SetTodoList"
+    - "consilium.tools.shell:Shell"
+    - "consilium.tools.background:TaskList"
+    - "consilium.tools.background:TaskOutput"
+    - "consilium.tools.background:TaskStop"
+    - "consilium.tools.file:ReadFile"
+    - "consilium.tools.file:ReadMediaFile"
+    - "consilium.tools.file:Glob"
+    - "consilium.tools.file:Grep"
+    - "consilium.tools.file:WriteFile"
+    - "consilium.tools.file:StrReplaceFile"
+    - "consilium.tools.web:SearchWeb"
+    - "consilium.tools.web:FetchURL"
+    - "consilium.tools.plan:ExitPlanMode"
+    - "consilium.tools.plan.enter:EnterPlanMode"
+  subagents:
+    coder:
+      path: ./coder.yaml
+      description: "Good at general software engineering tasks."
+    explore:
+      path: ./explore.yaml
+      description: "Fast codebase exploration with prompt-enforced read-only behavior."
+    plan:
+      path: ./plan.yaml
+      description: "Read-only implementation planning and architecture design."
+    plan_editor:
+      path: ./plan_editor.yaml
+      description: "Planning documentation specialist that creates and edits project plans in the plan/ directory."
+    plan_reviewer:
+      path: ./plan_reviewer.yaml
+      description: "Pre-implementation plan review and validation."
+    translator:
+      path: ./translator.yaml
+      description: "Specialized English-to-Russian translator. Use for all translation tasks."
+    translation_reviewer:
+      path: ./translation_reviewer.yaml
+      description: "Specialized reviewer for English-to-Russian translation quality. Use for all translation review tasks."

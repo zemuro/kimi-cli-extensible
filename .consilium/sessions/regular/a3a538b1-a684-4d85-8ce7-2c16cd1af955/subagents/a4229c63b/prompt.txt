@@ -1,0 +1,56 @@
+Write an implementation report to the file `c:\Users\zemuro\Antigravity\kimi_cli_mod\plan\reports\phase-09-fix-implementation.md`
+
+Use the following information:
+
+## Context
+
+Phase 09 moved session storage from global `~/.consilium/` to workspace-local `{workDir}/.consilium/sessions/`. After implementation, two bugs were discovered:
+
+### Bug 1: Think session loads wrong/old content (CLI-side)
+In `app.py:190`, `load_think_session(session.id)` was called **without** `work_dir`, so it fell back to the legacy global path `~/.consilium/think_sessions/`. But Think session saves (via `HistoryManager`) go to workspace-local `{workDir}/.consilium/sessions/think/`. Every time a user loaded a Think session, it read from the old global file instead of the workspace-local one.
+
+**Fix:** Added `work_dir = Path(session.work_dir.unsafe_to_local_path()) if session.work_dir else None` and passed it to `load_think_session(session.id, work_dir=work_dir)`.
+
+### Bug 2: Do sessions appear duplicated/numerous (Extension-side)
+The extension's `listDoSessions()` in `session.handler.ts` scanned **both** the legacy global `~/.consilium/do_sessions/` AND workspace-local `{workDir}/.consilium/sessions/do/` paths. Since Phase 09 did not migrate old sessions, all pre-migration Do sessions appeared alongside new workspace sessions (the `seen` set deduplicates, but the count was correct — just both old and new were visible).
+
+**Initial (over-aggressive) fix:** Removed the legacy global scan entirely, which broke backward compatibility — all pre-Phase 09 Do sessions disappeared.
+
+**Corrected fix:** Restored the legacy global scan. The `seen` set already deduplicates by UUID, so dual scanning is correct backward-compatible behavior.
+
+### Additional fixes in the extension:
+
+3. **`LoadConsiliumSessionHistory` handler** — was checking legacy global Think path FIRST, then workspace-local. Reversed priority: workspace-local first, legacy global as fallback. This prevents loading old Think sessions when a workspace-local one exists.
+
+4. **`session-storage.ts`** — Think metadata functions (`readThinkSessionTitle`, `writeThinkSessionTitle`) were hardcoded to legacy global `~/.consilium/think_sessions/`. Updated to accept optional `workDir` parameter, using workspace-local paths when available, with legacy global fallback for reads only.
+
+5. **`bridge-handler.ts`** — Updated `setSessionMetadata()` and `getSessionMetadata()` to pass `workDir` to the Think session title functions.
+
+## Files Modified
+
+| File | Change |
+|------|--------|
+| `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\consilium\app.py` | Pass `work_dir` to `load_think_session()` |
+| `c:\Users\zemuro\Antigravity\kimi_extension_mod\src\handlers\session.handler.ts` | Think session loading: workspace-local first, legacy fallback. Do session listing: kept both legacy and workspace-local scans. Removed `getDoSessionsDir()` and restored it. |
+| `c:\Users\zemuro\Antigravity\kimi_extension_mod\src\lib\session-storage.ts` | Think metadata functions accept `workDir`, write to workspace-local, read with legacy fallback |
+| `c:\Users\zemuro\Antigravity\kimi_extension_mod\src\bridge-handler.ts` | Pass `workDir` to Think session title functions |
+
+## Root Cause
+
+The original Phase 09 implementation correctly updated the Python CLI code to use workspace-local paths, but **missed passing `work_dir` in one critical call site** (`app.py:190` `load_think_session(session.id)`). The extension code in `kimi_extension_mod/` was **not updated at all** during Phase 09 — it continued to use hardcoded legacy global paths for Think session metadata and Do session listing.
+
+## Verification
+
+Extension was packaged successfully with `npx @vscode/vsce package` (build: clean, no errors).
+
+## Format
+
+Use the same format as `c:\Users\zemuro\Antigravity\kimi_cli_mod\plan\reports\phase-09-implementation-report.md`:
+
+- Frontmatter with `document_type: implementation_report`, `phase: 09-fix`, title, author, completion_date
+- Executive Summary section
+- Files Changed table
+- Detailed sections for each bug
+- Root Cause Analysis
+- Testing / Verification status
+- Lessons Learned (optional)

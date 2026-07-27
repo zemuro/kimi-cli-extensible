@@ -79,15 +79,7 @@ STDIO_BUFFER_LIMIT = 100 * 1024 * 1024
 
 def _is_oauth_session(runtime: Any) -> bool:
     """Return True if the current session uses OAuth-based authentication."""
-    if runtime is None:
-        return False
-    llm = getattr(runtime, "llm", None)
-    if llm is None:
-        return False
-    provider_config = getattr(llm, "provider_config", None)
-    if provider_config is None:
-        return False
-    return getattr(provider_config, "oauth", None) is not None
+    return False
 
 
 class WireServer:

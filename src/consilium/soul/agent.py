@@ -175,6 +175,7 @@ class Runtime:
     config: Config
     oauth: OAuthManager
     llm: LLM | None  # we do not freeze the `Runtime` dataclass because LLM can be changed
+    compaction_llm: LLM | None = None
     session: Session
     builtin_args: BuiltinSystemPromptArgs
     denwa_renji: DenwaRenji
@@ -215,6 +216,7 @@ class Runtime:
         config: Config,
         oauth: OAuthManager,
         llm: LLM | None,
+        compaction_llm: LLM | None,
         session: Session,
         yolo: bool,
         afk: bool = False,

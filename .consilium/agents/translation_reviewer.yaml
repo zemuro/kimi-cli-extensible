@@ -1,0 +1,15 @@
+version: 1
+agent:
+  extend: ./agent.yaml
+  name: "consilium-translation-reviewer"
+  system_prompt_path: ./translation_reviewer_role.md
+  when_to_use: |
+    Use this agent for quality review of Russian translations: back-translation checks, terminology consistency, style compliance, and comparison against the original English.
+  tools:
+    - "consilium.tools.ask_user:AskUserQuestion"
+    - "consilium.tools.file:ReadFile"
+    - "consilium.tools.file:WriteFile"
+    - "consilium.tools.file:StrReplaceFile"
+    - "consilium.tools.file:Glob"
+    - "consilium.tools.file:Grep"
+    - "consilium.tools.shell:Shell"

@@ -1,0 +1,50 @@
+<git-context>
+Working directory: c:\Users\zemuro\Antigravity\kimi_cli_mod
+Remote: https://github.com/zemuro/consilium.git
+Project: zemuro/consilium
+Branch: main
+Dirty files (26):
+  M plan/reports/phase-03-implementation-report.md
+   M pyproject.toml
+   M src/consilium/acp/session.py
+   M src/consilium/config.py
+   M src/consilium/llm.py
+   M src/consilium/prompts/compact.md
+   M src/consilium/prompts/compaction_system.md
+   M src/consilium/soul/agent.py
+   M src/consilium/soul/compaction.py
+   M src/consilium/soul/consiliumsoul.py
+   M src/consilium/soul/context.py
+   M src/consilium/wire/server.py
+   M uv.lock
+  ?? .consilium/
+  ?? plan/phase-06.md
+  ?? plan/phase-07.md
+  ?? plan/phase-08.md
+  ?? plan/project-agnostic-prompts-plan.md
+  ?? plan/refactor-system-prompts-plan.md
+  ?? plan/reports/phase-06-implementation-report.md
+  ... and 6 more
+Recent commits:
+  ce71eb7f feat(sessions): move session archive to workspace-specific directory (Phase 09)
+  070f7be0 refactor(decouple): decouple from Kimi and rename system to Consilium (Phases 3-5)
+  fea2b10c docs(plan): archive old plans and add Kimi decoupling phases
+</git-context>
+
+Explore the codebase to understand the session history saving and recall system. I need to understand:
+
+1. How Think and Do sessions are stored and loaded
+2. Where workspace-based session storage is implemented
+3. Where legacy global session storage might still be in use
+4. The session selector UI for Think sessions
+5. The History dropdown for Do sessions
+
+Search for:
+- Session storage paths, both workspace-based and legacy/global
+- Session loading logic for both Think and Do
+- Any code that might be loading from both workspace AND legacy sources
+- The session selector component
+
+Focus on `c:\Users\zemuro\Antigravity\kimi_cli_mod\src\` and `c:\Users\zemuro\Antigravity\kimi_extension_mod\resources\` directories.
+
+Be thorough - check multiple naming conventions like "session", "history", "storage", "workspace", "global".

@@ -41,16 +41,24 @@ class CompactionResult(NamedTuple):
         return estimate_text_tokens(self.messages)
 
 
+import tiktoken
+_tokenizer = None
+
+def get_tokenizer():
+    global _tokenizer
+    if _tokenizer is None:
+        _tokenizer = tiktoken.get_encoding("cl100k_base")
+    return _tokenizer
+
 def estimate_text_tokens(messages: Sequence[Message]) -> int:
-    """Estimate tokens from message text content using a character-based heuristic."""
-    total_chars = 0
+    """Estimate tokens from message text content using tiktoken."""
+    total_tokens = 0
+    enc = get_tokenizer()
     for msg in messages:
         for part in msg.content:
             if isinstance(part, TextPart):
-                total_chars += len(part.text)
-    # ~4 chars per token for English; somewhat underestimates for CJK text,
-    # but this is a temporary estimate that gets corrected on the next LLM call.
-    return total_chars // 4
+                total_tokens += len(enc.encode(part.text))
+    return total_tokens
 
 
 def should_auto_compact(

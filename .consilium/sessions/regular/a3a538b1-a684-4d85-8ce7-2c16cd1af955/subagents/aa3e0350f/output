@@ -1,0 +1,533 @@
+[stage] runner_started
+[stage] agent_built
+[stage] context_restored
+[stage] context_ready
+[stage] run_soul_start
+I'll conduct a thorough exploration of the session history saving and recall system. Let me start with broad searches across multiple patterns simultaneously.
+
+[tool] Grep
+[tool] Grep
+[tool_result] success
+[tool] Grep
+[tool_result] success
+[tool] Glob
+[tool_result] success
+[tool] Glob
+[tool_result] success
+[tool_result] success
+Good, I found the key files. Let me read them all in parallel:
+
+[tool] ReadFile
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool_result] success
+Now let me explore the metadata, journal, session picker UI, and other key files[tool] ReadFile
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool] ReadFile
+[tool] Glob
+[tool_result] success
+[tool_result] success
+[tool_result] success
+[tool_result] error: Unsafe pattern
+[tool] ReadFile
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] Grep
+[tool_result] success
+[tool_result] success
+[tool] ReadFile
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool] Grep
+[tool_result] success
+[tool] ReadFile
+[tool_result] success
+[tool_result] success
+Let me check a few more relevant files:
+
+[tool] Grep
+[tool] Grep
+[tool_result] success
+[tool] Grep
+[tool_result] success
+[tool] Grep
+[tool_result] success
+[tool_result] success
+Connect timeout, please try again later.Here is a comprehensive technical analysis of the session history saving and recall system.
+
+---
+
+## Comprehensive Session History Storage & Recall Analysis
+
+### 1. OVERALL ARCHITECTURE
+
+The system has three distinct session storage systems, each with **workspace-local** (new) and **legacy global** (deprecated, read-only fallback) paths:
+
+| System | Workspace-Local Path | Legacy Global Path |
+|---|---|---|
+| **Regular (wire) sessions** | `{workDir}/.consilium/sessions/regular/{session_id}/` | `~/.consilium/` (via metadata.json) |
+| **Think sessions** | `{workDir}/.consilium/sessions/think/{session_id}.jsonl` | `~/.consilium/think_sessions/{session_id}.jsonl` |
+| **Do sessions** | `{workDir}/.consilium/sessions/do/{session_id}/` | `~/.consilium/do_sessions/{session_id}/` |
+
+---
+
+### 2. REGULAR SESSION STORAGE (`src/consilium/session.py`)
+
+**`Session` class** (`src/consilium/session.py`):
+- Created via `Session.create(work_dir, session_id?)` or `Session.find(work_dir, session_id)`
+- Listed via `Session.list(work_dir)` or `Session.list_all()`
+- **Session directory**: `work_dir_meta.sessions_dir / session_id` where `sessions_dir = {workDir}/.consilium/sessions/regular/`
+- Files inside a session directory:
+  - `context.jsonl` — conversation history (message objects)
+  - `wire.jsonl` — wire protocol event log
+  - `state.json` — `SessionState` model (approval settings, plan mode, title, archive status, etc.)
+  - `subagents/` — subagent instance metadata (context.jsonl, wire.jsonl, meta.json, etc.)
+  - `uploads/` — uploaded media files
+
+**`WorkDirMeta`** (`src/consilium/metadata.py`):
+- Tracks each work directory's metadata in `~/.consilium/kimi.json`
+- `sessions_dir` property returns `{workDir}/.consilium/sessions/regular/`
+- Stores `last_session_id` for the "continue last session" feature
+
+**Session state** (`src/consilium/session_state.py`):
+- `SessionState` model stored in `state.json` within each session directory
+- Contains: `approval`, `custom_title`, `title_generated`, `plan_mode`, `archived`, `archived_at`, `auto_archive_exempt`, `todos`, `paired_session_id`, etc.
+- Legacy migration from `metadata.json` format is handled in `load_session_state()`
+
+**Session import** (`session.py:_try_import_session`):
+- When a session directory is not found, the system attempts to import from:
+  1. Think sessions (workspace-local first, then global fallback) — copies think JSONL to `wire.jsonl`
+  2. Other workspaces (legacy or different tabs) — copies wire.jsonl, context.jsonl, state.json
+
+**Migration** (`session.py:_migrate_session_context_file`):
+- Automatically migrates from flat `{session_id}.jsonl` format to `{session_id}/context.jsonl` directory format
+- Backfills `wire.jsonl` from legacy `context.jsonl` for backward compatibility
+
+---
+
+### 3. THINK SESSION STORAGE (`src/consilium/think/storage.py`)
+
+**Path constants:**
+- Legacy (global): `~/.consilium/think_sessions/` and `~/.consilium/think_logs/`
+- Workspace-local: `{workDir}/.consilium/sessions/think/`
+
+**Functions:**
+- `think_path(session_id, work_dir)` — returns JSONL path for a session
+- `save_session(session, work_dir)` — writes all messages as JSONL, also writes to persistent log
+- `load_session(session_id, work_dir)` — reads JSONL and returns `ThinkSession` or `None`
+- `list_sessions(work_dir)` — returns `[(session_id, modified_time)]` sorted by recency
+- `save_checkpoint(session, name, work_dir)` — saves full snapshot as JSON in `checkpoints/` subdirectory
+- `load_checkpoint(session_id, name, work_dir)` — loads from checkpoint
+- `list_checkpoints(session_id, work_dir)` — lists available checkpoint names
+
+**Key design:**
+- `_think_dir(work_dir)` returns workspace path when `work_dir` is provided, otherwise falls back to legacy global `THINK_DIR`
+- The legacy global path is explicitly documented as **"deprecated, read-only fallback"** and **"kept for read-only backward compat"**
+- **When `work_dir` is `None`, it uses the legacy global path** — this is important for any code that calls these functions without passing `work_dir`
+
+**HistoryManager** (`src/consilium/think/history.py`):
+- Wraps `ThinkSession` with CRUD operations
+- Uses `save_session()` after every mutation
+- Supports: add_message, edit_message, delete_message, compact, prune_after, fork_from
+- Stores `work_dir` for passing to storage functions
+
+**ThinkSoul** (`src/consilium/think/__init__.py`):
+- Creates `HistoryManager` with `work_dir=Path(session.work_dir.unsafe_to_local_path())` — this ensures workspace-local storage
+- Loads Think session via `load_think_session(session.id)` — **this call does NOT pass `work_dir`!**
+
+---
+
+### 4. CRITICAL BUG: Think Session Loading Without `work_dir`
+
+In `src/consilium/app.py`, line 190:
+```python
+think_session = load_think_session(session.id)
+```
+
+This calls `think/storage.py:load_session(session_id, work_dir=None)`, which means:
+- **It first checks the workspace-local path**: `{workDir}/.consilium/sessions/think/{session_id}.jsonl`
+- **If not found, it falls back to the legacy global path**: `~/.consilium/think_sessions/{session_id}.jsonl`
+
+However, `save_session()` is called from `HistoryManager` which DOES have `work_dir` set. So **saves go to workspace-local, but loads might read from global if the workspace file doesn't exist yet**. This is intentional for backward compatibility but could cause confusion if a session exists in both locations.
+
+---
+
+### 5. DO SESSION STORAGE (`src/consilium/do/journal.py`)
+
+**Path constants:**
+- Legacy (global): `~/.consilium/do_sessions/` and `~/.consilium/do_logs/`
+- Workspace-local: `{workDir}/.consilium/sessions/do/`
+
+**ChangeJournal structure per session:**
+```
+{workDir}/.consilium/sessions/do/{session_id}/
+├── journal.jsonl      # Append-only metadata entries
+├── diffs/
+│   └── {turn:04d}-{step:04d}-{hash}.patch  # Unified diff files
+└── logs/              # Persistent log (Phase 6a)
+    └── {session_id}.jsonl
+```
+
+**Functions:**
+- `_journal_dir(work_dir, session_id)` — workspace path when `work_dir` is provided, global fallback otherwise
+- `record_session_start()`, `record_diff()`, `record_checkpoint()`, `record_session_end()`, etc.
+- `record_diff()` stores baseline and post content in **blob store** (content-addressed), and unified diff in separate `.patch` files
+- `archive_old_journals(max_age_days, work_dir)` — moves old journals to `.archive/` subdirectory
+
+**DoSession** (`src/consilium/do/session.py`):
+- Wraps `ConsiliumSoul` with git snapshotting and change journaling
+- Created in `app.py` line 701-704:
+  ```python
+  do_session = DoSession(
+      soul, work_dir=session.work_dir.unsafe_to_local_path(), ...
+  )
+  ```
+- Journal is created with `ChangeJournal(session_id, work_dir=work_dir_path)` — workspace-local
+- Registers pre/post tool hooks for baseline capture and diff recording
+
+---
+
+### 6. LEGACY GLOBAL STORAGE STILL IN USE
+
+The following modules still reference legacy global paths:
+
+| File | Legacy Path | Usage |
+|---|---|---|
+| `think/storage.py` | `~/.consilium/think_sessions/`, `~/.consilium/think_logs/` | Fallback when `work_dir=None` |
+| `do/journal.py` | `~/.consilium/do_sessions/`, `~/.consilium/do_logs/` | Fallback when `work_dir=None` |
+| `metadata.py` | `~/.consilium/kimi.json` | Global metadata file (still only in share dir) |
+| `share.py` | `~/.consilium/` | Share dir for config, logs, metadata |
+
+**The legacy `~/.consilium/think_sessions/` and `~/.consilium/do_sessions/` paths are still used as fallbacks** when their respective functions are called without `work_dir`. This is intentional for backward compatibility but means if a session was created with the old global storage, it will still be found.
+
+---
+
+### 7. SESSION SELECTOR UI (Think Sessions)
+
+**`SessionPickerApp`** (`src/consilium/ui/shell/session_picker.py`):
+- Full-screen `prompt_toolkit` Application for browsing sessions
+- `SessionScope` = `"current"` (current work dir) or `"all"` (all known directories)
+- Toggle with `Ctrl+A`
+- Lists sessions via `Session.list(work_dir)` or `Session.list_all()`
+- Shows: title, relative time, short ID, work dir (in "all" mode)
+- **This uses the regular session system (`Session` class), NOT Think's `list_sessions()`**
+
+**How sessions are listed for the picker:**
+1. `Session.list(work_dir)` → `Metadata.load()` → iterates `work_dir_meta.sessions_dir` → loads each `Session` from `{session_id}/context.jsonl`
+2. `Session.list_all()` → iterates all known work directories from metadata
+3. Sessions with empty context files are filtered out
+
+---
+
+### 8. HISTORY DROPDOWN FOR DO SESSIONS
+
+There is **no separate "History dropdown" for Do sessions** in the Python CLI. Do sessions are:
+
+1. **Journal-based**: `ChangeJournal` stores diff metadata in `journal.jsonl` under the Do session directory
+2. **Listed through the common session picker**: Do sessions use the same `Session` class as regular sessions, so they appear in the session picker
+3. **Git-based**: The `GitSnapshot` class handles git operations (stash, commit, revert)
+
+For the VS Code extension side (`kimi_extension_mod`), there is:
+- `webview-ui/src/components/SessionList.tsx` — UI component for listing sessions
+- `src/lib/session-storage.ts` — session storage management in the extension
+- `src/handlers/session.handler.ts` — session-related handler
+
+---
+
+### 9. WEB API SESSION STORAGE
+
+**`web/store/sessions.py`**:
+- `JointSession` extends `Session` with `consilium_session` (full `ConsiliumCLISession` object)
+- `SessionIndexEntry` — cached index built from disk scan
+- `_iter_session_dirs(wd)` — iterates both new `*/context.jsonl` format and legacy `*.jsonl` format
+- `_build_sessions_index()` — builds index from all work directories
+- `load_sessions_page()` — paginated, filtered, cached session listing
+- `load_session_by_id()` — direct lookup by UUID
+- `run_auto_archive()` — auto-archives sessions older than 15 days
+
+**`web/api/sessions.py`**:
+- REST API endpoints for CRUD operations on sessions
+- WebSocket streaming of wire history
+- Fork endpoint using `session_fork.py`
+- Title generation endpoint using AI
+
+---
+
+### 10. SUBAGENT STORAGE
+
+**`SubagentStore`** (`src/consilium/subagents/store.py`):
+- Stored under `session.dir / "subagents/"` → `{workDir}/.consilium/sessions/regular/{session_id}/subagents/`
+- Each subagent instance has its own directory with:
+  - `meta.json` — instance metadata (status, type, timestamps)
+  - `context.jsonl` — subagent conversation
+  - `wire.jsonl` — subagent wire protocol log
+  - `prompt.txt` — the prompt given to the subagent
+  - `output` — the subagent's output
+
+---
+
+### 11. SUMMARY OF KEY FINDINGS
+
+**Workspace-local storage is implemented** across all three systems (regular, Think, Do) with the pattern:
+- `{workDir}/.consilium/sessions/{type}/{session_id}/`
+
+**Legacy global paths are still present** as fallbacks:
+- `~/.consilium/think_sessions/` (Think)
+- `~/.consilium/do_sessions/` (Do)
+- `~/.consilium/kimi.json` (metadata — still the primary location)
+
+**Critical call without `work_dir`**: `app.py` line 190 calls `load_think_session(session.id)` without `work_dir`, which means it first checks workspace-local, then falls back to global. This could be problematic if the same session ID exists in both locations.
+
+**The session picker only shows regular sessions**, not Think or Do sessions directly. Think sessions are visible through the `Session` class when they have been imported via `_try_import_session()`.
+
+**Do sessions are not independently listed** — they use the same `Session` base class and appear in the same session list. The Do-specific data (journal, diffs) is only accessible through the `DoSession`/`ChangeJournal` objects.[stage] run_soul_finished
+
+[summary]
+Here is a comprehensive technical analysis of the session history saving and recall system.
+
+---
+
+## Comprehensive Session History Storage & Recall Analysis
+
+### 1. OVERALL ARCHITECTURE
+
+The system has three distinct session storage systems, each with **workspace-local** (new) and **legacy global** (deprecated, read-only fallback) paths:
+
+| System | Workspace-Local Path | Legacy Global Path |
+|---|---|---|
+| **Regular (wire) sessions** | `{workDir}/.consilium/sessions/regular/{session_id}/` | `~/.consilium/` (via metadata.json) |
+| **Think sessions** | `{workDir}/.consilium/sessions/think/{session_id}.jsonl` | `~/.consilium/think_sessions/{session_id}.jsonl` |
+| **Do sessions** | `{workDir}/.consilium/sessions/do/{session_id}/` | `~/.consilium/do_sessions/{session_id}/` |
+
+---
+
+### 2. REGULAR SESSION STORAGE (`src/consilium/session.py`)
+
+**`Session` class** (`src/consilium/session.py`):
+- Created via `Session.create(work_dir, session_id?)` or `Session.find(work_dir, session_id)`
+- Listed via `Session.list(work_dir)` or `Session.list_all()`
+- **Session directory**: `work_dir_meta.sessions_dir / session_id` where `sessions_dir = {workDir}/.consilium/sessions/regular/`
+- Files inside a session directory:
+  - `context.jsonl` — conversation history (message objects)
+  - `wire.jsonl` — wire protocol event log
+  - `state.json` — `SessionState` model (approval settings, plan mode, title, archive status, etc.)
+  - `subagents/` — subagent instance metadata (context.jsonl, wire.jsonl, meta.json, etc.)
+  - `uploads/` — uploaded media files
+
+**`WorkDirMeta`** (`src/consilium/metadata.py`):
+- Tracks each work directory's metadata in `~/.consilium/kimi.json`
+- `sessions_dir` property returns `{workDir}/.consilium/sessions/regular/`
+- Stores `last_session_id` for the "continue last session" feature
+
+**Session state** (`src/consilium/session_state.py`):
+- `SessionState` model stored in `state.json` within each session directory
+- Contains: `approval`, `custom_title`, `title_generated`, `plan_mode`, `archived`, `archived_at`, `auto_archive_exempt`, `todos`, `paired_session_id`, etc.
+- Legacy migration from `metadata.json` format is handled in `load_session_state()`
+
+**Session import** (`session.py:_try_import_session`):
+- When a session directory is not found, the system attempts to import from:
+  1. Think sessions (workspace-local first, then global fallback) — copies think JSONL to `wire.jsonl`
+  2. Other workspaces (legacy or different tabs) — copies wire.jsonl, context.jsonl, state.json
+
+**Migration** (`session.py:_migrate_session_context_file`):
+- Automatically migrates from flat `{session_id}.jsonl` format to `{session_id}/context.jsonl` directory format
+- Backfills `wire.jsonl` from legacy `context.jsonl` for backward compatibility
+
+---
+
+### 3. THINK SESSION STORAGE (`src/consilium/think/storage.py`)
+
+**Path constants:**
+- Legacy (global): `~/.consilium/think_sessions/` and `~/.consilium/think_logs/`
+- Workspace-local: `{workDir}/.consilium/sessions/think/`
+
+**Functions:**
+- `think_path(session_id, work_dir)` — returns JSONL path for a session
+- `save_session(session, work_dir)` — writes all messages as JSONL, also writes to persistent log
+- `load_session(session_id, work_dir)` — reads JSONL and returns `ThinkSession` or `None`
+- `list_sessions(work_dir)` — returns `[(session_id, modified_time)]` sorted by recency
+- `save_checkpoint(session, name, work_dir)` — saves full snapshot as JSON in `checkpoints/` subdirectory
+- `load_checkpoint(session_id, name, work_dir)` — loads from checkpoint
+- `list_checkpoints(session_id, work_dir)` — lists available checkpoint names
+
+**Key design:**
+- `_think_dir(work_dir)` returns workspace path when `work_dir` is provided, otherwise falls back to legacy global `THINK_DIR`
+- The legacy global path is explicitly documented as **"deprecated, read-only fallback"** and **"kept for read-only backward compat"**
+- **When `work_dir` is `None`, it uses the legacy global path** — this is important for any code that calls these functions without passing `work_dir`
+
+**HistoryManager** (`src/consilium/think/history.py`):
+- Wraps `ThinkSession` with CRUD operations
+- Uses `save_session()` after every mutation
+- Supports: add_message, edit_message, delete_message, compact, prune_after, fork_from
+- Stores `work_dir` for passing to storage functions
+
+**ThinkSoul** (`src/consilium/think/__init__.py`):
+- Creates `HistoryManager` with `work_dir=Path(session.work_dir.unsafe_to_local_path())` — this ensures workspace-local storage
+- Loads Think session via `load_think_session(session.id)` — **this call does NOT pass `work_dir`!**
+
+---
+
+### 4. CRITICAL BUG: Think Session Loading Without `work_dir`
+
+In `src/consilium/app.py`, line 190:
+```python
+think_session = load_think_session(session.id)
+```
+
+This calls `think/storage.py:load_session(session_id, work_dir=None)`, which means:
+- **It first checks the workspace-local path**: `{workDir}/.consilium/sessions/think/{session_id}.jsonl`
+- **If not found, it falls back to the legacy global path**: `~/.consilium/think_sessions/{session_id}.jsonl`
+
+However, `save_session()` is called from `HistoryManager` which DOES have `work_dir` set. So **saves go to workspace-local, but loads might read from global if the workspace file doesn't exist yet**. This is intentional for backward compatibility but could cause confusion if a session exists in both locations.
+
+---
+
+### 5. DO SESSION STORAGE (`src/consilium/do/journal.py`)
+
+**Path constants:**
+- Legacy (global): `~/.consilium/do_sessions/` and `~/.consilium/do_logs/`
+- Workspace-local: `{workDir}/.consilium/sessions/do/`
+
+**ChangeJournal structure per session:**
+```
+{workDir}/.consilium/sessions/do/{session_id}/
+├── journal.jsonl      # Append-only metadata entries
+├── diffs/
+│   └── {turn:04d}-{step:04d}-{hash}.patch  # Unified diff files
+└── logs/              # Persistent log (Phase 6a)
+    └── {session_id}.jsonl
+```
+
+**Functions:**
+- `_journal_dir(work_dir, session_id)` — workspace path when `work_dir` is provided, global fallback otherwise
+- `record_session_start()`, `record_diff()`, `record_checkpoint()`, `record_session_end()`, etc.
+- `record_diff()` stores baseline and post content in **blob store** (content-addressed), and unified diff in separate `.patch` files
+- `archive_old_journals(max_age_days, work_dir)` — moves old journals to `.archive/` subdirectory
+
+**DoSession** (`src/consilium/do/session.py`):
+- Wraps `ConsiliumSoul` with git snapshotting and change journaling
+- Created in `app.py` line 701-704:
+  ```python
+  do_session = DoSession(
+      soul, work_dir=session.work_dir.unsafe_to_local_path(), ...
+  )
+  ```
+- Journal is created with `ChangeJournal(session_id, work_dir=work_dir_path)` — workspace-local
+- Registers pre/post tool hooks for baseline capture and diff recording
+
+---
+
+### 6. LEGACY GLOBAL STORAGE STILL IN USE
+
+The following modules still reference legacy global paths:
+
+| File | Legacy Path | Usage |
+|---|---|---|
+| `think/storage.py` | `~/.consilium/think_sessions/`, `~/.consilium/think_logs/` | Fallback when `work_dir=None` |
+| `do/journal.py` | `~/.consilium/do_sessions/`, `~/.consilium/do_logs/` | Fallback when `work_dir=None` |
+| `metadata.py` | `~/.consilium/kimi.json` | Global metadata file (still only in share dir) |
+| `share.py` | `~/.consilium/` | Share dir for config, logs, metadata |
+
+**The legacy `~/.consilium/think_sessions/` and `~/.consilium/do_sessions/` paths are still used as fallbacks** when their respective functions are called without `work_dir`. This is intentional for backward compatibility but means if a session was created with the old global storage, it will still be found.
+
+---
+
+### 7. SESSION SELECTOR UI (Think Sessions)
+
+**`SessionPickerApp`** (`src/consilium/ui/shell/session_picker.py`):
+- Full-screen `prompt_toolkit` Application for browsing sessions
+- `SessionScope` = `"current"` (current work dir) or `"all"` (all known directories)
+- Toggle with `Ctrl+A`
+- Lists sessions via `Session.list(work_dir)` or `Session.list_all()`
+- Shows: title, relative time, short ID, work dir (in "all" mode)
+- **This uses the regular session system (`Session` class), NOT Think's `list_sessions()`**
+
+**How sessions are listed for the picker:**
+1. `Session.list(work_dir)` → `Metadata.load()` → iterates `work_dir_meta.sessions_dir` → loads each `Session` from `{session_id}/context.jsonl`
+2. `Session.list_all()` → iterates all known work directories from metadata
+3. Sessions with empty context files are filtered out
+
+---
+
+### 8. HISTORY DROPDOWN FOR DO SESSIONS
+
+There is **no separate "History dropdown" for Do sessions** in the Python CLI. Do sessions are:
+
+1. **Journal-based**: `ChangeJournal` stores diff metadata in `journal.jsonl` under the Do session directory
+2. **Listed through the common session picker**: Do sessions use the same `Session` class as regular sessions, so they appear in the session picker
+3. **Git-based**: The `GitSnapshot` class handles git operations (stash, commit, revert)
+
+For the VS Code extension side (`kimi_extension_mod`), there is:
+- `webview-ui/src/components/SessionList.tsx` — UI component for listing sessions
+- `src/lib/session-storage.ts` — session storage management in the extension
+- `src/handlers/session.handler.ts` — session-related handler
+
+---
+
+### 9. WEB API SESSION STORAGE
+
+**`web/store/sessions.py`**:
+- `JointSession` extends `Session` with `consilium_session` (full `ConsiliumCLISession` object)
+- `SessionIndexEntry` — cached index built from disk scan
+- `_iter_session_dirs(wd)` — iterates both new `*/context.jsonl` format and legacy `*.jsonl` format
+- `_build_sessions_index()` — builds index from all work directories
+- `load_sessions_page()` — paginated, filtered, cached session listing
+- `load_session_by_id()` — direct lookup by UUID
+- `run_auto_archive()` — auto-archives sessions older than 15 days
+
+**`web/api/sessions.py`**:
+- REST API endpoints for CRUD operations on sessions
+- WebSocket streaming of wire history
+- Fork endpoint using `session_fork.py`
+- Title generation endpoint using AI
+
+---
+
+### 10. SUBAGENT STORAGE
+
+**`SubagentStore`** (`src/consilium/subagents/store.py`):
+- Stored under `session.dir / "subagents/"` → `{workDir}/.consilium/sessions/regular/{session_id}/subagents/`
+- Each subagent instance has its own directory with:
+  - `meta.json` — instance metadata (status, type, timestamps)
+  - `context.jsonl` — subagent conversation
+  - `wire.jsonl` — subagent wire protocol log
+  - `prompt.txt` — the prompt given to the subagent
+  - `output` — the subagent's output
+
+---
+
+### 11. SUMMARY OF KEY FINDINGS
+
+**Workspace-local storage is implemented** across all three systems (regular, Think, Do) with the pattern:
+- `{workDir}/.consilium/sessions/{type}/{session_id}/`
+
+**Legacy global paths are still present** as fallbacks:
+- `~/.consilium/think_sessions/` (Think)
+- `~/.consilium/do_sessions/` (Do)
+- `~/.consilium/kimi.json` (metadata — still the primary location)
+
+**Critical call without `work_dir`**: `app.py` line 190 calls `load_think_session(session.id)` without `work_dir`, which means it first checks workspace-local, then falls back to global. This could be problematic if the same session ID exists in both locations.
+
+**The session picker only shows regular sessions**, not Think or Do sessions directly. Think sessions are visible through the `Session` class when they have been imported via `_try_import_session()`.
+
+**Do sessions are not independently listed** — they use the same `Session` base class and appear in the same session list. The Do-specific data (journal, diffs) is only accessible through the `DoSession`/`ChangeJournal` objects.

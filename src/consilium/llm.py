@@ -64,28 +64,29 @@ def augment_provider_with_env_vars(provider: LLMProvider, model: LLMModel) -> di
     """
     applied: dict[str, str] = {}
 
+    # Generic overrides for any provider if explicitly using CONSILIUM_*
+    if base_url := os.getenv("CONSILIUM_BASE_URL"):
+        provider.base_url = base_url
+        applied["CONSILIUM_BASE_URL"] = base_url
+    if api_key := os.getenv("CONSILIUM_API_KEY"):
+        provider.api_key = SecretStr(api_key)
+        applied["CONSILIUM_API_KEY"] = "******"
+    if model_name := os.getenv("CONSILIUM_MODEL_NAME"):
+        model.model = model_name
+        applied["CONSILIUM_MODEL_NAME"] = model_name
+    if max_context_size := os.getenv("CONSILIUM_MODEL_MAX_CONTEXT_SIZE"):
+        model.max_context_size = int(max_context_size)
+        applied["CONSILIUM_MODEL_MAX_CONTEXT_SIZE"] = max_context_size
+    if capabilities := os.getenv("CONSILIUM_MODEL_CAPABILITIES"):
+        caps_lower = (cap.strip().lower() for cap in capabilities.split(",") if cap.strip())
+        model.capabilities = set(
+            cast(ModelCapability, cap)
+            for cap in caps_lower
+            if cap in get_args(ModelCapability.__value__)
+        )
+        applied["CONSILIUM_MODEL_CAPABILITIES"] = capabilities
+
     match provider.type:
-        case "kimi":
-            if base_url := os.getenv("CONSILIUM_BASE_URL"):
-                provider.base_url = base_url
-                applied["CONSILIUM_BASE_URL"] = base_url
-            if api_key := os.getenv("CONSILIUM_API_KEY"):
-                provider.api_key = SecretStr(api_key)
-                applied["CONSILIUM_API_KEY"] = "******"
-            if model_name := os.getenv("CONSILIUM_MODEL_NAME"):
-                model.model = model_name
-                applied["CONSILIUM_MODEL_NAME"] = model_name
-            if max_context_size := os.getenv("CONSILIUM_MODEL_MAX_CONTEXT_SIZE"):
-                model.max_context_size = int(max_context_size)
-                applied["CONSILIUM_MODEL_MAX_CONTEXT_SIZE"] = max_context_size
-            if capabilities := os.getenv("CONSILIUM_MODEL_CAPABILITIES"):
-                caps_lower = (cap.strip().lower() for cap in capabilities.split(",") if cap.strip())
-                model.capabilities = set(
-                    cast(ModelCapability, cap)
-                    for cap in caps_lower
-                    if cap in get_args(ModelCapability.__value__)
-                )
-                applied["CONSILIUM_MODEL_CAPABILITIES"] = capabilities
         case "openai_legacy" | "openai_responses":
             if base_url := os.getenv("OPENAI_BASE_URL"):
                 provider.base_url = base_url
@@ -93,6 +94,13 @@ def augment_provider_with_env_vars(provider: LLMProvider, model: LLMModel) -> di
                 provider.api_key = SecretStr(api_key)
         case _:
             pass
+
+    if base_url := os.getenv("CONSILIUM_BASE_URL"):
+        provider.base_url = base_url
+        applied["CONSILIUM_BASE_URL"] = base_url
+    if api_key := os.getenv("CONSILIUM_API_KEY"):
+        provider.api_key = SecretStr(api_key)
+        applied["CONSILIUM_API_KEY"] = "***"
 
     return applied
 
@@ -388,9 +396,20 @@ def clone_llm_with_model_alias(
     if model_alias is None:
         return llm
     if model_alias not in config.models:
-        raise KeyError(f"Unknown model alias: {model_alias}")
-    model = config.models[model_alias]
-    provider = config.providers[model.provider]
+        provider_type = os.getenv("CONSILIUM_PROVIDER", "kimi")
+        base_url = ""
+        api_key = SecretStr("")
+        for p in config.providers.values():
+            if p.type == provider_type and (p.base_url or p.api_key.get_secret_value()):
+                base_url = p.base_url
+                api_key = p.api_key
+                break
+        model = LLMModel(provider=provider_type, model=model_alias, max_context_size=100_000)
+        provider = LLMProvider(type=provider_type, base_url=base_url, api_key=api_key)
+        augment_provider_with_env_vars(provider, model)
+    else:
+        model = config.models[model_alias]
+        provider = config.providers[model.provider]
     thinking: bool | None = None
     if llm is not None:
         effort = getattr(llm.chat_provider, "thinking_effort", None)

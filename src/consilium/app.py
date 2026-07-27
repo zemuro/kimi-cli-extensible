@@ -187,7 +187,8 @@ async def create_think_soul(
         generation_overrides=generation_overrides,
     )
 
-    think_session = load_think_session(session.id)
+    work_dir = Path(session.work_dir.unsafe_to_local_path()) if session.work_dir else None
+    think_session = load_think_session(session.id, work_dir=work_dir)
     if think_session is None:
         think_session = ThinkSession(id=session.id)
 
