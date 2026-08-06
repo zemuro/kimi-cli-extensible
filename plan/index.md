@@ -66,6 +66,7 @@ These two unnumbered plan documents cover cross-cutting concerns that were addre
 | [07](phase-07.md) | Investigate Why Only Think Sessions Show in History | completed | ✅ | Phase 06 | Traced the session history data flow; root cause found (missing `listDoSessions()`); fix proposal filed |
 | [08](phase-08.md) | Relocate Think/Do Buttons to Header | completed | ✅ | Phase 07 | TabBar removed; Think/Do buttons + live-status dots moved into Header.tsx; App.tsx cleaned up |
 | [09](phase-09.md) | Move Session Archive to Workspace-Specific Directory | planning | ⬜ | Phase 07 | Relocate session storage to per-workspace location under `{workDir}/.consilium/sessions/` |
+| [10](phase-10.md) | Model Modality Detection & `/media` Slash Command | planning | ⬜ | Phase 03 | Auto-detect model image_in capabilities; strip image payloads on text-only models; add `/media` slash command |
 
 > **Statuses:** `planning` = spec exists, not yet approved; `ready` = spec approved, ready for implementation; `implemented` = work complete; `completed` = work complete and verified; `archived` = inactive.
 
