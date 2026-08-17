@@ -113,6 +113,12 @@ class GenerationConfig(BaseModel):
         description="Extra HTTP headers merged with provider-level custom_headers. Supported by: anthropic.",
     )
 
+    # ── Prompt Caching (OpenAI-compatible, e.g. DeepInfra) ──
+    prompt_cache_ttl: str | None = Field(
+        default=None,
+        description='Explicit prompt cache TTL, e.g. "1h" or "5m". When set, sends `prompt_cache_options` with `{"mode": "explicit", "ttl": "<value>"}`. Supported by: openai_legacy (DeepInfra).',
+    )
+
 
 class OAuthRef(BaseModel):
     """Reference to OAuth credentials stored outside the config file."""

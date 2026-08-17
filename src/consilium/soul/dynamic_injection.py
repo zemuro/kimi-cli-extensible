@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from kosong.message import Message
 
 from consilium.notifications import is_notification_message
+from consilium.soul.message import is_system_reminder_message
 
 if TYPE_CHECKING:
     from consilium.soul.consiliumsoul import ConsiliumSoul
@@ -76,6 +77,8 @@ def normalize_history(history: Sequence[Message]) -> list[Message]:
             and msg.role == "user"
             and not is_notification_message(result[-1])
             and not is_notification_message(msg)
+            and not is_system_reminder_message(result[-1])
+            and not is_system_reminder_message(msg)
         ):
             merged_content = list(result[-1].content) + list(msg.content)
             result[-1] = Message(role="user", content=merged_content)

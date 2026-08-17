@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast, get_args
 
+import httpx
 from kosong.chat_provider import ChatProvider
 from pydantic import SecretStr
 
@@ -29,7 +30,13 @@ type ProviderType = Literal[
     "_chaos",
 ]
 
-type ModelCapability = Literal["image_in", "video_in", "thinking", "always_thinking"]
+type ModelCapability = Literal[
+    "image_in",
+    "video_in",
+    "thinking",
+    "always_thinking",
+    "explicit_caching",
+]
 ALL_MODEL_CAPABILITIES: set[ModelCapability] = set(get_args(ModelCapability.__value__))
 
 
@@ -219,6 +226,7 @@ def create_llm(
     session_id: str | None = None,
     oauth: OAuthManager | None = None,
     generation_overrides: dict[str, Any] | None = None,
+    subagent_id: str | None = None,
 ) -> LLM | None:
     if provider.type not in {"_echo", "_scripted_echo"} and (
         not provider.base_url or not model.model
@@ -333,10 +341,26 @@ def create_llm(
     # ── Apply generation kwargs from config ──
     gen_kwargs = _generation_kwargs_for_provider(model.generation, provider.type)
 
+    # Resolve capabilities early — needed for explicit_caching check and LLM object
+    capabilities = resolve_model_capabilities(model, provider)
+
+    # ── Prompt caching (OpenAI-compatible, e.g. DeepInfra, Kimi) ──
+    # Always send the cache key for compatible providers (implicit prefix caching).
+    # Only send explicit TTL options when the model declares `explicit_caching`
+    # capability — otherwise providers like DeepInfra may 404 on unsupported models.
+    if session_id and provider.type in ("kimi", "openai_legacy"):
+        if subagent_id:
+            gen_kwargs["prompt_cache_key"] = f"subagent-{subagent_id}"
+            if "explicit_caching" in capabilities:
+                gen_kwargs["prompt_cache_options"] = {"mode": "explicit", "ttl": "5m"}
+        else:
+            gen_kwargs["prompt_cache_key"] = session_id
+            if "explicit_caching" in capabilities:
+                ttl = model.generation.prompt_cache_ttl if model.generation and model.generation.prompt_cache_ttl else "1h"
+                gen_kwargs["prompt_cache_options"] = {"mode": "explicit", "ttl": ttl}
+
     # Kimi-specific env var overrides (backward compatibility)
     if provider.type == "kimi":
-        if session_id:
-            gen_kwargs["prompt_cache_key"] = session_id
         if temperature := os.getenv("CONSILIUM_MODEL_TEMPERATURE"):
             gen_kwargs["temperature"] = float(temperature)
         if top_p := os.getenv("CONSILIUM_MODEL_TOP_P"):
@@ -352,8 +376,6 @@ def create_llm(
 
     if gen_kwargs:
         chat_provider = chat_provider.with_generation_kwargs(**gen_kwargs)
-
-    capabilities = derive_model_capabilities(model)
 
     # Apply thinking if specified or if model always requires thinking
     thinking_on = "always_thinking" in capabilities or (
@@ -392,6 +414,7 @@ def clone_llm_with_model_alias(
     *,
     session_id: str,
     oauth: OAuthManager | None,
+    subagent_id: str | None = None,
 ) -> LLM | None:
     if model_alias is None:
         return llm
@@ -421,6 +444,7 @@ def clone_llm_with_model_alias(
         thinking=thinking,
         session_id=session_id,
         oauth=oauth,
+        subagent_id=subagent_id,
     )
 
 
@@ -430,10 +454,82 @@ def derive_model_capabilities(model: LLMModel) -> set[ModelCapability]:
     # Models with "thinking" or "reason" in their name are always-thinking models
     if "thinking" in model_lower or "reason" in model_lower:
         capabilities.update(("thinking", "always_thinking"))
-    # Standard coding models support thinking, image_in, video_in
+    # Standard coding models support thinking (not necessarily vision)
     if "code" in model_lower or "coder" in model_lower:
-        capabilities.update(("thinking", "image_in", "video_in"))
+        capabilities.add("thinking")
+    # Vision-capable model patterns (heuristic fallback when API fetch unavailable)
+    if any(
+        pattern in model_lower
+        for pattern in ("vision", "pixtral")
+    ) or ("qwen" in model_lower and "vl" in model_lower):
+        capabilities.add("image_in")
+    if "vision" in model_lower:
+        capabilities.add("video_in")
+    if (("claude" in model_lower and "3" in model_lower)  # Claude 3+
+            or "gemini" in model_lower
+            or "gpt-4" in model_lower
+            or "gpt-4o" in model_lower
+            or "llama-3.2" in model_lower
+            or "llama-4" in model_lower
+            or "qwen2.5-vl" in model_lower
+            or "qwen2.5vl" in model_lower):
+        capabilities.add("image_in")
     return capabilities
+
+
+_MODALITY_CACHE: dict[str, set[str]] | None = None
+
+
+def fetch_openrouter_modalities(model_id: str, base_url: str | None) -> set[ModelCapability] | None:
+    """Return capabilities from OpenRouter metadata, or None if unavailable.
+
+    Fetches the OpenRouter `/api/v1/models` endpoint once per CLI session and
+    caches the result in memory. Maps ``input_modalities`` ("image", "video")
+    to Consilium capabilities ("image_in", "video_in"). Returns None on any
+    error so the caller falls back to heuristic / explicit config.
+    """
+    global _MODALITY_CACHE
+    if not base_url or "openrouter" not in base_url.lower():
+        return None
+    if _MODALITY_CACHE is None:
+        try:
+            resp = httpx.get("https://openrouter.ai/api/v1/models", timeout=5)
+            resp.raise_for_status()
+            cache: dict[str, set[str]] = {}
+            for model in resp.json().get("data", []):
+                arch = model.get("architecture", {})
+                mods = arch.get("input_modalities", ["text"])
+                caps: set[str] = set()
+                if "image" in mods:
+                    caps.add("image_in")
+                if "video" in mods:
+                    caps.add("video_in")
+                cache[model["id"]] = caps
+            _MODALITY_CACHE = cache
+        except Exception:
+            logger.warning("Failed to fetch OpenRouter model capabilities; using heuristics")
+            return None
+    return _MODALITY_CACHE.get(model_id)
+
+
+def resolve_model_capabilities(
+    model: LLMModel,
+    provider: LLMProvider | None = None,
+) -> set[ModelCapability]:
+    """Resolve the effective capabilities for a model.
+
+    Resolution order:
+      1. Explicit ``capabilities`` in config.toml (highest priority)
+      2. OpenRouter API metadata fetch (cached, session-scoped)
+      3. Name-based heuristic (lowest priority)
+    """
+    if model.capabilities is not None:
+        return set(model.capabilities) | derive_model_capabilities(model)
+    if provider is not None:
+        api_caps = fetch_openrouter_modalities(model.model, provider.base_url)
+        if api_caps is not None:
+            return set(api_caps) | derive_model_capabilities(model)
+    return derive_model_capabilities(model)
 
 
 def _load_scripted_echo_scripts() -> list[str]:
