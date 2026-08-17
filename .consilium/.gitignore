@@ -1,0 +1,5 @@
+# Runtime session data — never commit
+# Sessions are regenerated per workdir/session and contain prompt history,
+# wire logs, subagent transcripts, and file baselines. They are local
+# runtime state, not project source.
+sessions/
