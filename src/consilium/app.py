@@ -441,33 +441,10 @@ class ConsiliumCLI:
         model: LLMModel | None = None
         provider: LLMProvider | None = None
 
-        # try to use config file
-        if not model_name and config.default_model:
-            # no --model specified && default model is set in config
-            model = config.models[config.default_model]
-            provider = config.providers[model.provider]
-        if model_name and model_name in config.models:
-            # --model specified && model is set in config
-            model = config.models[model_name]
-            provider = config.providers[model.provider]
-
-        if not model:
-            from consilium.config import OAuthRef
-            from consilium.auth.oauth import CONSILIUM_CODE_OAUTH_KEY
-
-            model = LLMModel(
-                provider="kimi", model=model_name or "kimi-for-coding", max_context_size=128_000
-            )
-            provider = LLMProvider(
-                type="kimi",
-                base_url="https://api.moonshot.cn/v1",
-                api_key=SecretStr(""),
-                oauth=OAuthRef(storage="file", key=CONSILIUM_CODE_OAUTH_KEY),
-            )
+        # try to use config file, falling back to env-var-only provider (never OAuth)
+        model, provider = _resolve_model_and_provider(config, model_name)
 
         # try overwrite with environment variables
-        assert provider is not None
-        assert model is not None
         env_overrides = augment_provider_with_env_vars(provider, model)
 
         # determine thinking mode

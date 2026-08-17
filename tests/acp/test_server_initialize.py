@@ -33,7 +33,18 @@ async def test_initialize_argv_handling(
     """initialize() should not crash regardless of sys.argv content."""
     server = ACPServer()
 
-    with patch("consilium.acp.server.sys") as mock_sys:
+    with patch("consilium.acp.server.sys") as mock_sys, patch(
+        "consilium.acp.server.load_config"
+    ) as mock_load_config:
+        # Make load_config return a config that has managed:kimi-code configured
+        # (independent of the developer's real config.toml) so the terminal-auth
+        # method is built.
+        from consilium.config import Config
+
+        mock_config = Config()
+        mock_config.providers["managed:kimi-code"] = type("P", (), {})()
+        mock_load_config.return_value = mock_config
+
         mock_sys.argv = argv
         resp = await server.initialize(protocol_version=1)
 

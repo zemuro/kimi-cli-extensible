@@ -73,27 +73,33 @@ class ACPServer:
         # Build terminal auth data for error response
         terminal_args = args + ["login"]
 
-        # Build and cache auth methods for reuse in AUTH_REQUIRED errors
-        self._auth_methods = [
-            acp.schema.AuthMethod(
-                id="login",
-                name="Login with Kimi account",
-                description=(
-                    "Run `kimi login` command in the terminal, "
-                    "then follow the instructions to finish login."
+        # Build and cache auth methods for reuse in AUTH_REQUIRED errors.
+        # Only expose a token login flow when the managed:kimi-code platform
+        # is actually configured (kimi-code unplugged => empty list).
+        config = load_config()
+        if "managed:kimi-code" in config.providers:
+            self._auth_methods = [
+                acp.schema.AuthMethod(
+                    id="login",
+                    name="Login with Consilium account",
+                    description=(
+                        "Run `consilium login` command in the terminal, "
+                        "then follow the instructions to finish login."
+                    ),
+                    # Store auth data in field_meta for building AUTH_REQUIRED error
+                    field_meta={
+                        "terminal-auth": {
+                            "command": command,
+                            "args": terminal_args,
+                            "label": "Consilium Login",
+                            "env": {},
+                            "type": "terminal",
+                        }
+                    },
                 ),
-                # Store auth data in field_meta for building AUTH_REQUIRED error
-                field_meta={
-                    "terminal-auth": {
-                        "command": command,
-                        "args": terminal_args,
-                        "label": "Consilium Login",
-                        "env": {},
-                        "type": "terminal",
-                    }
-                },
-            ),
-        ]
+            ]
+        else:
+            self._auth_methods = []
 
         return acp.InitializeResponse(
             protocol_version=self.negotiated_version.protocol_version,
@@ -112,10 +118,18 @@ class ACPServer:
             agent_info=acp.schema.Implementation(name=NAME, version=VERSION),
         )
 
-    @staticmethod
-    def _check_token_usable() -> str | None:
-        """Return ``None`` if the persisted OAuth token is usable, else a reason string."""
-        ref = OAuthRef(storage="file", key=CONSILIUM_CODE_OAUTH_KEY)
+    def _check_token_usable(self) -> str | None:
+        """Return ``None`` if no kimi-code auth is required or the token is usable.
+
+        If the ``managed:kimi-code`` provider is not configured (kimi-code
+        unplugged), no authentication is required and this always returns ``None``.
+        """
+        config = load_config()
+        provider = config.providers.get("managed:kimi-code")
+        if provider is None:
+            # kimi-code unplugged — no managed-platform auth gate.
+            return None
+        ref = provider.oauth or OAuthRef(storage="file", key=CONSILIUM_CODE_OAUTH_KEY)
         token = load_tokens(ref)
 
         if token is None or not token.access_token:
