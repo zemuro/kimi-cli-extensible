@@ -492,3 +492,48 @@ async def inject(soul: ConsiliumSoul, args: str) -> None:
     from kosong.message import Message, TextPart
     await soul.context.append_message(Message(role=role, content=[TextPart(text=content)]))
     wire_send(TextPart(text=f"Injected {role} message into context."))
+
+
+@registry.command(name="media", aliases=["vision"])
+async def media(soul: ConsiliumSoul, args: str):
+    """Control media/image handling. Usage: /media status|on|off|clear"""
+    subcmd = args.strip().lower()
+
+    if subcmd == "status":
+        llm = soul._runtime.llm
+        caps = llm.capabilities if llm else set()
+        media_enabled = getattr(soul._runtime, "_media_enabled", True)
+        lines = [
+            f"Model: {llm.model_name if llm else 'N/A'}",
+            f"Image input: {'✅' if 'image_in' in caps else '❌'}",
+            f"Video input: {'✅' if 'video_in' in caps else '❌'}",
+            f"Media sending: {'✅ Enabled' if media_enabled else '❌ Disabled'}",
+        ]
+        wire_send(TextPart(text="\n".join(lines)))
+        return
+
+    if subcmd in ("off", "disable"):
+        soul._runtime._media_enabled = False
+        wire_send(TextPart(text="Media sending disabled. Images will be stripped from all turns."))
+        return
+
+    if subcmd in ("on", "enable"):
+        soul._runtime._media_enabled = True
+        wire_send(TextPart(text="Media sending enabled."))
+        return
+
+    if subcmd == "clear":
+        from kosong.message import ImageURLPart, VideoURLPart
+
+        removed = 0
+        for msg in soul.context.history:
+            if hasattr(msg, "content") and isinstance(msg.content, list):
+                old_len = len(msg.content)
+                msg.content = [
+                    p for p in msg.content if not isinstance(p, (ImageURLPart, VideoURLPart))
+                ]
+                removed += old_len - len(msg.content)
+        wire_send(TextPart(text=f"Cleared {removed} media attachment(s) from session history."))
+        return
+
+    wire_send(TextPart(text="Usage: /media [status|on|off|clear]"))

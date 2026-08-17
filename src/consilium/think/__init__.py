@@ -353,6 +353,17 @@ class ThinkSoul(Soul):
         # Use subagent tool only when runtime is available
         tools: list[Tool] = [_SPAWN_SUBAGENT_TOOL] if self._runtime is not None else []
 
+        # Strip unsupported media from the context before sending
+        caps = self._llm.capabilities if self._llm else set()
+        media_enabled = getattr(self._runtime, "_media_enabled", True) if self._runtime else True
+        if not media_enabled or "image_in" not in caps or "video_in" not in caps:
+            from consilium.soul.message import strip_unsupported_media
+            stripped_ctx: list[Message] = []
+            for msg in context:
+                stripped_msg, _modified = strip_unsupported_media(msg, caps)
+                stripped_ctx.append(stripped_msg)
+            context = stripped_ctx
+
         _debug(f"_call_llm: tools_count={len(tools)}")
 
         result = await generate(

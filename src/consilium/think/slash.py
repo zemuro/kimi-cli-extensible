@@ -487,3 +487,49 @@ def slash_inbox(history: HistoryManager, session: ThinkSession, args: str) -> st
 
 def get_think_slash_commands() -> list[SlashCommand[Any]]:
     return list(think_registry.list_commands())
+
+
+@think_registry.command(name="media", aliases=["vision"])
+async def slash_media(history: HistoryManager, session: ThinkSession, args: str) -> str:
+    """Control media/image handling. Usage: /media status|on|off|clear"""
+    from consilium.think import get_think_soul
+
+    soul = get_think_soul(session.id)
+    if soul is None:
+        return "ThinkSoul not found in registry."
+
+    subcmd = args.strip().lower()
+
+    if subcmd == "status":
+        llm = soul._llm if hasattr(soul, '_llm') else None
+        caps = llm.capabilities if llm else set()
+        media_enabled = getattr(soul._runtime, "_media_enabled", True) if hasattr(soul, '_runtime') else True
+        return (
+            f"Model: {llm.model_name if llm else 'N/A'}\n"
+            f"Image input: {'✅' if 'image_in' in caps else '❌'}\n"
+            f"Video input: {'✅' if 'video_in' in caps else '❌'}\n"
+            f"Media sending: {'✅ Enabled' if media_enabled else '❌ Disabled'}"
+        )
+
+    if subcmd in ("off", "disable"):
+        soul._runtime._media_enabled = False
+        return "Media sending disabled."
+
+    if subcmd in ("on", "enable"):
+        soul._runtime._media_enabled = True
+        return "Media sending enabled."
+
+    if subcmd == "clear":
+        from kosong.message import ImageURLPart, VideoURLPart
+
+        removed = 0
+        for msg in session.messages:
+            if hasattr(msg, "content") and isinstance(msg.content, list):
+                old_len = len(msg.content)
+                msg.content = [
+                    p for p in msg.content if not isinstance(p, (ImageURLPart, VideoURLPart))
+                ]
+                removed += old_len - len(msg.content)
+        return f"Cleared {removed} media attachment(s) from session history."
+
+    return "Usage: /media [status|on|off|clear]"

@@ -623,9 +623,10 @@ class ConsiliumSoul:
         message = Message(role="user", content=parts)
         if self._runtime.llm is None:
             raise LLMNotSet()
-        if missing_caps := check_message(message, self._runtime.llm.capabilities):
-            raise LLMNotSupported(self._runtime.llm, list(missing_caps))
-        await self._context.append_message(message)
+        # Strip unsupported media instead of raising LLMNotSupported
+        from consilium.soul.message import strip_unsupported_media
+        stripped_msg, _modified = strip_unsupported_media(message, self._runtime.llm.capabilities)
+        await self._context.append_message(stripped_msg)
 
     @property
     def available_slash_commands(self) -> list[SlashCommand[Any]]:
@@ -789,8 +790,9 @@ class ConsiliumSoul:
         if self._runtime.llm is None:
             raise LLMNotSet()
 
-        if missing_caps := check_message(user_message, self._runtime.llm.capabilities):
-            raise LLMNotSupported(self._runtime.llm, list(missing_caps))
+        # Strip unsupported media from the user message instead of raising LLMNotSupported
+        from consilium.soul.message import strip_unsupported_media
+        user_message, _modified = strip_unsupported_media(user_message, self._runtime.llm.capabilities)
 
         # Budget check before calling LLM
         if self._runtime.config.budget_tokens:
@@ -1177,6 +1179,26 @@ class ConsiliumSoul:
         # 2e.3. HISTORY NORMALIZATION
         # ═══════════════════════════════════════════════════════════════════════
         effective_history = normalize_history(self._context.history)
+
+        # ── 2e.3.1. STRIP UNSUPPORTED MEDIA ─────────────────────────────
+        # Remove image/video content blocks that the current model does not
+        # support, replacing them with a system note. This prevents API
+        # rejection (e.g. OpenRouter 404) when text-only models receive media.
+        caps = self._runtime.llm.capabilities if self._runtime.llm else set()
+        media_enabled = getattr(self._runtime, "_media_enabled", True)
+        if not media_enabled or "image_in" not in caps or "video_in" not in caps:
+            from consilium.soul.message import strip_unsupported_media
+            stripped_hist: list[Message] = []
+            total_stripped = 0
+            for msg in effective_history:
+                stripped_msg, modified = strip_unsupported_media(msg, caps)
+                stripped_hist.append(stripped_msg)
+                if modified:
+                    total_stripped += 1
+            if total_stripped:
+                import sys
+                print(f"[MEDIA STRIP] Stripped media from {total_stripped} message(s) in history", file=sys.stderr)
+            effective_history = stripped_hist
 
         # ═══════════════════════════════════════════════════════════════════════
         # 2e.4. LLM CALL WITH RETRY
