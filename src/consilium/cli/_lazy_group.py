@@ -18,6 +18,7 @@ class LazySubcommandGroup(typer.core.TyperGroup):
         "export": ("consilium.cli.export", "cli", "Export session data."),
         "mcp": ("consilium.cli.mcp", "cli", "Manage MCP server configurations."),
         "plugin": ("consilium.cli.plugin", "cli", "Manage plugins."),
+        "slash-commands": ("consilium.cli.slash_commands", "cli", "List available slash commands."),
         "vis": ("consilium.cli.vis", "cli", "Run Kimi Agent Tracing Visualizer."),
         "web": ("consilium.cli.web", "cli", "Run Consilium CLI web interface."),
     }
@@ -26,6 +27,7 @@ class LazySubcommandGroup(typer.core.TyperGroup):
         "export",
         "mcp",
         "plugin",
+        "slash-commands",
         "vis",
         "web",
     )
