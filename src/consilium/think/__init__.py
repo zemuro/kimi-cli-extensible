@@ -287,8 +287,10 @@ class ThinkSoul(Soul):
             self._history.add_message("user", text_input)
 
             # Refresh OAuth tokens on each turn to avoid idle-time expirations.
+            # Bounded: never let a stale token / unreachable auth host delay the
+            # first TurnBegin (see OAuthManager.ensure_fresh_bounded).
             if self._runtime and hasattr(self._runtime, "oauth") and self._runtime.oauth:
-                await self._runtime.oauth.ensure_fresh(self._runtime)
+                await self._runtime.oauth.ensure_fresh_bounded(self._runtime)
 
             # Build context and call LLM
             context = assemble_context(self._think_session, self._system_prompt)

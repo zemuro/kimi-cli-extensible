@@ -647,7 +647,11 @@ class ConsiliumSoul:
             approval_source_token = set_current_approval_source(created_approval_source)
         try:
             # Refresh OAuth tokens on each turn to avoid idle-time expirations.
-            await self._runtime.oauth.ensure_fresh(self._runtime)
+            # Bounded: a stale token with an unreachable auth host must not
+            # delay TurnBegin (it used to block ~40s, blowing past the client's
+            # handshake timeout and making every first prompt time out). Stale
+            # tokens are refreshed lazily via the 401-triggered path instead.
+            await self._runtime.oauth.ensure_fresh_bounded(self._runtime)
 
             # Set session_id ContextVar for toolset hooks
             from consilium.soul.toolset import set_session_id

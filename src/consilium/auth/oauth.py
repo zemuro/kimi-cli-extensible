@@ -909,6 +909,29 @@ class OAuthManager:
                 self._apply_access_token(runtime, token.access_token)
         await self._refresh_tokens(ref, token, runtime, force=force)
 
+    async def ensure_fresh_bounded(self, runtime: Runtime | None = None, *, force: bool = False) -> None:
+        """Like ``ensure_fresh`` but never blocks the caller for long.
+
+        Waits at most ``INITIAL_REFRESH_GRACE_SECONDS`` for the refresh and
+        swallows failures.  Used on per-turn startup paths (wire/ACP ``run``)
+        where a stale token must not delay TurnBegin — a stale token is
+        handled lazily by the 401-triggered refresh path instead.
+        """
+        try:
+            await asyncio.wait_for(
+                self.ensure_fresh(runtime, force=force),
+                timeout=INITIAL_REFRESH_GRACE_SECONDS,
+            )
+        except asyncio.TimeoutError:
+            logger.debug(
+                "Bounded OAuth refresh exceeded {timeout}s; continuing without it",
+                timeout=INITIAL_REFRESH_GRACE_SECONDS,
+            )
+        except Exception:
+            # ensure_fresh already logs refresh failures; swallow to never
+            # block the turn on auth housekeeping.
+            pass
+
     @asynccontextmanager
     async def refreshing(self, runtime: Runtime) -> AsyncIterator[None]:
         stop_event = asyncio.Event()
