@@ -52,6 +52,11 @@ CONSILIUM_CODE_OAUTH_KEY = "oauth/kimi-code"
 DEFAULT_OAUTH_HOST = "https://auth.consilium.com"
 KEYRING_SERVICE = "kimi-code"
 REFRESH_INTERVAL_SECONDS = 60
+# How long refreshing() waits for the initial token refresh before yielding
+# anyway. Keeps CLI startup fast when the auth host is unreachable; the refresh
+# continues in the background and the 401-triggered lazy path covers stale
+# tokens.
+INITIAL_REFRESH_GRACE_SECONDS = 5
 MIN_REFRESH_THRESHOLD_SECONDS = 300
 REFRESH_THRESHOLD_RATIO = 0.5
 UNAUTHORIZED_REFRESH_RETRY_COOLDOWN_SECONDS = 300
@@ -908,6 +913,16 @@ class OAuthManager:
     async def refreshing(self, runtime: Runtime) -> AsyncIterator[None]:
         stop_event = asyncio.Event()
 
+        # Initial refresh is best-effort and bounded so CLI startup is never
+        # gated on auth network calls. With a stale token and an unreachable
+        # auth host this used to block for ~40s (3 retries x connect timeout)
+        # before the wire server could start — blowing past the client's
+        # handshake timeout. Yield as soon as the initial refresh finishes or
+        # the grace period elapses; the runner above continues refreshing in
+        # the background (and the 401-triggered lazy refresh path still covers
+        # stale-token LLM calls).
+        initial_done = asyncio.Event()
+
         async def _runner() -> None:
             try:
                 # Run immediately on startup
@@ -915,7 +930,9 @@ class OAuthManager:
                     await self.ensure_fresh(runtime)
                 except Exception as exc:
                     logger.warning("Initial OAuth token refresh check failed: {error}", error=exc)
-                
+                finally:
+                    initial_done.set()
+
                 while True:
                     wall_before = time.time()
                     try:
@@ -944,9 +961,16 @@ class OAuthManager:
             except asyncio.CancelledError:
                 pass
 
-        await self.ensure_fresh(runtime)
         refresh_task = asyncio.create_task(_runner())
         try:
+            try:
+                await asyncio.wait_for(initial_done.wait(), timeout=INITIAL_REFRESH_GRACE_SECONDS)
+            except asyncio.TimeoutError:
+                logger.debug(
+                    "Initial OAuth refresh still in progress after {timeout}s; "
+                    "yielding without it",
+                    timeout=INITIAL_REFRESH_GRACE_SECONDS,
+                )
             yield
         finally:
             stop_event.set()
