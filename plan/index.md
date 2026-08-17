@@ -2,9 +2,9 @@
 document_type: master_index
 title: Consilium CLI — Plan Master Index
 created: 2026-07-26
-last_updated: 2026-07-26
+last_updated: 2026-07-27
 author: Consilium
-current_phase: 09
+current_phase: 10
 overall_status: 5 completed, 1 implemented, 1 research, 2 planning, 0 failed
 ---
 
@@ -91,13 +91,13 @@ All phases form a linear dependency chain. No parallel tracks exist in the curre
 
 ## Current Phase
 
-**Phase 09 — Move Session Archive to Workspace-Specific Directory** is the current phase.
+**Phase 10 — Model Modality Capability Detection & Graceful Media Degradation** is the current phase.
 
 - **Status:** `planning` (spec complete, awaiting approval)
-- **Spec file:** `c:\Users\zemuro\Antigravity\kimi_cli_mod\plan\phase-09.md`
-- **Goal:** Relocate session storage to be per-workspace under `{workDir}/.consilium/sessions/`, isolating sessions between workspaces.
+- **Spec file:** `c:\Users\zemuro\Antigravity\kimi_cli_mod\plan\phase-10.md`
+- **Goal:** Graceful degradation when non-vision models receive image/video content; /media slash command; improved capability detection.
 
-All numbered phases (01–09) are now **completed**, **implemented**, in **research**, or in **planning**.
+All numbered phases (01–10) are now **completed**, **implemented**, in **research**, or in **planning**.
 
 ---
 
@@ -118,6 +118,7 @@ All numbered phases (01–09) are now **completed**, **implemented**, in **resea
 | Review | Phase | Verdict | File |
 |--------|-------|---------|------|
 | Pre-Implementation Review — Phase 03 | 03 | 🟢 Feasible | `c:\Users\zemuro\Antigravity\kimi_cli_mod\plan\reviews\phase-03-review.md` |
+| Phase 10 Review | 10 | 🟢 Feasible | `c:\Users\zemuro\Antigravity\kimi_cli_mod\plan\reviews\phase-10-review.md` |
 
 ---
 
