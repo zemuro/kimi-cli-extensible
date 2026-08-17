@@ -25,7 +25,7 @@ from consilium.llm import augment_provider_with_env_vars, create_llm, model_disp
 from consilium.session import Session
 from consilium.share import get_share_dir
 from consilium.soul import RunCancelled, run_soul
-from consilium.soul.agent import Runtime, _load_system_prompt, load_agent
+from consilium.soul.agent import Runtime, _load_system_prompt, _parent_has_image_capability, load_agent
 from consilium.soul.context import Context
 from consilium.soul.consiliumsoul import ConsiliumSoul
 from consilium.utils.aioqueue import QueueShutDown
@@ -278,6 +278,13 @@ async def create_think_soul(
     def _register_subagents_from_spec(agent_spec_path: Path, source: str) -> None:
         spec = load_agent_spec(agent_spec_path)
         for subagent_name, subagent_spec in spec.subagents.items():
+            # The core vision subagent is redundant when the parent model
+            # already supports image input.
+            if subagent_name == "vision" and _parent_has_image_capability(runtime):
+                logger.debug(
+                    "Skipping vision subagent: parent model already supports image input"
+                )
+                continue
             try:
                 builtin_spec = load_agent_spec(subagent_spec.path)
                 tool_policy = (
@@ -321,6 +328,12 @@ async def create_think_soul(
     workspace_agent_file = find_workspace_agent_file(Path(str(session.work_dir)))
     if workspace_agent_file is not None:
         _register_subagents_from_spec(workspace_agent_file, "workspace")
+    # Auto-discover declarable project subagents in the project override folder.
+    from consilium.agentspec import discover_project_subagent_files
+    from consilium.soul.agent import _register_discovered_subagents
+
+    workspace_agents_dir = Path(str(session.work_dir)) / ".consilium" / "agents"
+    _register_discovered_subagents(runtime, workspace_agents_dir, source="workspace")
 
     # Load custom system prompt from agent file if provided.
     system_prompt: str | None = None

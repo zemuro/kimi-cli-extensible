@@ -68,31 +68,51 @@ def _load_system_prompt() -> str:
     return "You are a helpful assistant."
 
 
-# Tool definition for spawning subagents from Think mode
-_SPAWN_SUBAGENT_TOOL = Tool(
-    name="spawn_subagent",
-    description="Spawn a subagent to read files, explore code, or edit plan documents.",
-    parameters={
-        "type": "object",
-        "properties": {
-            "subagent_type": {
-                "type": "string",
-                "enum": ["explore", "plan_editor", "investigate"],
-                "description": "Type of subagent to spawn: explore (read-only research), plan_editor (edit plan/), or investigate (parallel research).",
+# Tool definition for spawning subagents from Think mode.
+# The allowed subagent types are the fixed core set plus any registered custom
+# types (e.g. a project-declared "vision" subagent), so the enum is built
+# dynamically from the runtime's LaborMarket at call time.
+_CORE_SPAWN_TYPES = ("explore", "plan_editor", "investigate")
+
+
+def _make_spawn_subagent_tool(runtime: Any | None) -> Tool:
+    subagent_types = list(_CORE_SPAWN_TYPES)
+    if runtime is not None:
+        market = getattr(runtime, "labor_market", None)
+        if market is not None:
+            for name in market.builtin_types:
+                if name not in subagent_types:
+                    subagent_types.append(name)
+    description = (
+        "Spawn a subagent to read files, explore code, edit plan documents, or "
+        "perform a task-specific role. Available types: "
+        + ", ".join(subagent_types)
+        + "."
+    )
+    return Tool(
+        name="spawn_subagent",
+        description=description,
+        parameters={
+            "type": "object",
+            "properties": {
+                "subagent_type": {
+                    "type": "string",
+                    "enum": subagent_types,
+                    "description": "Type of subagent to spawn: " + ", ".join(subagent_types),
+                },
+                "prompt": {
+                    "type": "string",
+                    "description": "Specific task description for the subagent.",
+                },
+                "angles": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional investigation angles; use only with subagent_type='investigate'.",
+                },
             },
-            "prompt": {
-                "type": "string",
-                "description": "Specific task description for the subagent.",
-            },
-            "angles": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "Optional investigation angles; use only with subagent_type='investigate'.",
-            },
+            "required": ["subagent_type", "prompt"],
         },
-        "required": ["subagent_type", "prompt"],
-    },
-)
+    )
 
 
 # The model is currently conditioned to emit subagent calls as plain-text
@@ -242,6 +262,20 @@ class ThinkSoul(Soul):
         result = await self._spawner.investigate(question, angles)
         return result.report
 
+    async def _spawn_custom_subagent(self, subagent_type: str, prompt: str) -> str:
+        """Spawn a foreground task-specific subagent (e.g. vision) and return its summary."""
+        if self._spawner is None:
+            if self._runtime is None:
+                raise RuntimeError("Runtime not configured — subagents require a Runtime")
+            from consilium.think.subagent_spawner import ThinkSubagentSpawner
+
+            self._spawner = ThinkSubagentSpawner(self._runtime)
+        return await self._spawner.spawn(
+            subagent_type,
+            prompt,
+            description=f"Think {subagent_type}",
+        )
+
     # ── Public API ───────────────────────────────────────────────────────
 
     @property
@@ -353,7 +387,7 @@ class ThinkSoul(Soul):
             wire_send(WireToolCall(id=tool_call.id, function=tool_call.function))
 
         # Use subagent tool only when runtime is available
-        tools: list[Tool] = [_SPAWN_SUBAGENT_TOOL] if self._runtime is not None else []
+        tools: list[Tool] = [_make_spawn_subagent_tool(self._runtime)] if self._runtime is not None else []
 
         # Strip unsupported media from the context before sending
         caps = self._llm.capabilities if self._llm else set()
@@ -492,6 +526,14 @@ class ThinkSoul(Soul):
                 elif subagent_type == "investigate":
                     result = await self.run_investigate(prompt, angles)
                     output = result
+                elif subagent_type in (
+                    getattr(self._runtime, "labor_market", None).builtin_types
+                    if getattr(self._runtime, "labor_market", None) is not None
+                    else ()
+                ):
+                    # Task-specific/custom subagent types (e.g. vision) go
+                    # through the generic foreground runner.
+                    output = await self._spawn_custom_subagent(subagent_type, prompt)
                 else:
                     raise ValueError(f"Unknown subagent type: {subagent_type}")
 

@@ -59,7 +59,10 @@ def test_load_default_agent_spec():
             "plan": ("plan.yaml", "Read-only implementation planning and architecture design."), "plan_editor": (
     "plan_editor.yaml",
     "Planning documentation specialist that creates and edits project plans in the plan/ directory.",
-), "plan_reviewer": ("plan_reviewer.yaml", "Pre-implementation plan review and validation.")}
+), "plan_reviewer": ("plan_reviewer.yaml", "Pre-implementation plan review and validation."), "vision": (
+    "vision.yaml",
+    "Vision analysis specialist that reads and describes images, screenshots, and diagrams for text-only models.",
+)}
     )
 
     subagent_specs = {name: load_agent_spec(spec.path) for name, spec in spec.subagents.items()}

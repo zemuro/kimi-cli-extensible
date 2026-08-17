@@ -40,3 +40,6 @@ agent:
     plan_reviewer:
       path: ./plan_reviewer.yaml
       description: "Pre-implementation plan review and validation."
+    vision:
+      path: ./vision.yaml
+      description: "Vision analysis specialist that reads and describes images, screenshots, and diagrams for text-only models."

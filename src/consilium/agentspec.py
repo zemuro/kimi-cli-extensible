@@ -30,6 +30,43 @@ def find_workspace_agent_file(work_dir: Path) -> Path | None:
     return None
 
 
+# Files that define the *main* agent (or assembled system prompt) rather than a
+# subagent. These are never auto-discovered as subagent types.
+MAIN_AGENT_FILES = {"agent.yaml", "do.yaml", "think.yaml", "system.yaml", "system.md"}
+
+
+def discover_project_subagent_files(agent_dir: Path) -> dict[str, Path]:
+    """Scan an agent override directory for declarable subagent YAML files.
+
+    Any ``*.yaml`` in the directory (except main-agent files such as
+    ``agent.yaml``/``do.yaml``/``think.yaml``) is treated as a subagent spec
+    whose type name is the file stem (e.g. ``vision.yaml`` -> ``vision``).
+    This lets a project declare task-specific subagents simply by dropping a
+    YAML file into ``.consilium/agents/`` — no need to hand-list them in the
+    ``subagents:`` block of ``agent.yaml``.
+
+    Explicit ``subagents:`` entries take precedence at registration time
+    (they are registered first), so an explicit block can override a
+    discovered file of the same name.
+
+    Returns:
+        Mapping of subagent type name -> spec file path, sorted for
+        deterministic registration order.
+    """
+    result: dict[str, Path] = {}
+    if agent_dir is None or not agent_dir.is_dir():
+        return result
+    for candidate in sorted(agent_dir.iterdir()):
+        if not candidate.is_file():
+            continue
+        if candidate.suffix.lower() != ".yaml":
+            continue
+        if candidate.name in MAIN_AGENT_FILES:
+            continue
+        result[candidate.stem] = candidate
+    return result
+
+
 class Inherit(NamedTuple):
     """Marker class for inheritance in agent spec."""
 

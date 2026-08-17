@@ -391,6 +391,81 @@ class Agent:
     """Each agent has its own runtime, which should be derived from its main agent."""
 
 
+def _parent_has_image_capability(runtime: Runtime) -> bool:
+    """Return True when the parent model can already see images.
+
+    The core ``vision`` subagent exists to give text-only models an eyes. When
+    the parent model itself supports ``image_in``, the subagent is redundant
+    and should not be advertised.
+    """
+    llm = getattr(runtime, "llm", None)
+    if llm is None:
+        return False
+    caps = getattr(llm, "capabilities", None)
+    return bool(caps) and "image_in" in caps
+
+
+def _register_discovered_subagents(
+    runtime: Runtime,
+    agent_dir: Path,
+    *,
+    source: str,
+) -> None:
+    """Register declarable subagent YAML files found next to an agent file.
+
+    Any ``*.yaml`` in the agent directory (other than main-agent files such as
+    ``agent.yaml``/``do.yaml``/``think.yaml``) becomes an invocable subagent
+    type named after the file stem. Explicit ``subagents:`` entries are
+    registered before this runs, so they win on name conflicts.
+    """
+    from consilium.agentspec import discover_project_subagent_files
+
+    discovered = discover_project_subagent_files(agent_dir)
+    for subagent_name, spec_path in discovered.items():
+        if runtime.labor_market.get_builtin_type(subagent_name) is not None:
+            logger.debug(
+                "Skipping discovered subagent {name}: already registered (explicit/builtin wins)",
+                name=subagent_name,
+            )
+            continue
+        try:
+            builtin_spec = load_agent_spec(spec_path)
+            tool_policy = (
+                ToolPolicy(mode="allowlist", tools=tuple(builtin_spec.allowed_tools))
+                if builtin_spec.allowed_tools is not None
+                else ToolPolicy(mode="inherit")
+            )
+            runtime.labor_market.add_builtin_type(
+                AgentTypeDefinition(
+                    name=subagent_name,
+                    description=builtin_spec.when_to_use or subagent_name,
+                    agent_file=spec_path,
+                    when_to_use=builtin_spec.when_to_use,
+                    default_model=builtin_spec.model,
+                    tool_policy=tool_policy,
+                    min_summary_length=(
+                        builtin_spec.min_summary_length
+                        if builtin_spec.min_summary_length is not None
+                        else 200
+                    ),
+                )
+            )
+            logger.debug(
+                "Registered {source} discovered subagent type: {name} ({path})",
+                source=source,
+                name=subagent_name,
+                path=spec_path,
+            )
+        except Exception as e:
+            logger.warning(
+                "Failed to register {source} discovered subagent {name} from {path}: {e}",
+                source=source,
+                name=subagent_name,
+                path=spec_path,
+                e=e,
+            )
+
+
 async def load_agent(
     agent_file: Path,
     runtime: Runtime,
@@ -442,6 +517,13 @@ async def load_agent(
     # Register built-in subagent types before loading tools because some tools render
     # descriptions from the labor market on initialization.
     for subagent_name, subagent_spec in agent_spec.subagents.items():
+        # The core vision subagent is redundant when the parent model already
+        # supports image input — hide it so the model doesn't waste calls on it.
+        if subagent_name == "vision" and _parent_has_image_capability(runtime):
+            logger.debug(
+                "Skipping vision subagent: parent model already supports image input"
+            )
+            continue
         logger.debug(
             "Registering builtin subagent type: {subagent_name}", subagent_name=subagent_name
         )
@@ -466,6 +548,11 @@ async def load_agent(
                 ),
             )
         )
+
+    # Auto-discover declarable project subagents: any *.yaml next to the loaded
+    # agent file (other than main-agent files) becomes an invocable subagent
+    # type. Explicit subagents: entries above win on name conflicts.
+    _register_discovered_subagents(runtime, agent_file.parent, source="project")
 
     toolset = ConsiliumToolset()
     tool_deps = {
