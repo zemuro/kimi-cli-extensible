@@ -32,6 +32,7 @@ from openai.types.shared_params.responses_model import ResponsesModel
 
 from kosong.chat_provider import (
     ChatProvider,
+    ChatProviderError,
     RetryableChatProvider,
     StreamedMessagePart,
     ThinkingEffort,
@@ -243,7 +244,13 @@ class OpenAIResponses:
 
         # tool role → function_call_output (return value from a prior tool call)
         if role == "tool":
-            call_id = message.tool_call_id or ""
+            if not message.tool_call_id:
+                raise ChatProviderError(
+                    "Tool message is missing `tool_call_id`. "
+                    "The assistant tool call that produced this result is not linked "
+                    "in the conversation history."
+                )
+            call_id = message.tool_call_id
             if self._tool_message_conversion == "extract_text":
                 content = message.extract_text(sep="\n")
             else:

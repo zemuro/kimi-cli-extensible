@@ -16,6 +16,7 @@ from typing_extensions import TypedDict
 
 from kosong.chat_provider import (
     ChatProvider,
+    ChatProviderError,
     RetryableChatProvider,
     StreamedMessagePart,
     ThinkingEffort,
@@ -67,6 +68,7 @@ class OpenAILegacy:
         frequency_penalty: float | None
         stop: str | list[str] | None
         prompt_cache_key: str | None
+        prompt_cache_options: dict[str, Any] | None
 
     def __init__(
         self,
@@ -212,6 +214,17 @@ class OpenAILegacy:
             message.content = [TextPart(text=message.extract_text(sep="\n"))]
         else:
             message.content = content
+        # Tool messages must carry the ID of the assistant's original tool call.
+        # Sending a tool message without `tool_call_id` violates the OpenAI schema
+        # and strict providers (e.g. GMICloud via OpenRouter) reject it with
+        # "missing field 'tool_call_id'". Fail loudly instead of letting the API
+        # return an opaque 400.
+        if message.role == "tool" and not message.tool_call_id:
+            raise ChatProviderError(
+                "Tool message is missing `tool_call_id`. "
+                "The assistant tool call that produced this result is not linked "
+                "in the conversation history."
+            )
         dumped_message = message.model_dump(exclude_none=True)
         if reasoning_content and self._reasoning_key:
             dumped_message[self._reasoning_key] = reasoning_content

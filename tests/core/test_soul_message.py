@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 from inline_snapshot import snapshot
-from kosong.message import Message
+from kosong.message import Message, ToolCall
 from kosong.tooling import ToolError, ToolOk
 
 from consilium.llm import ModelCapability
-from consilium.soul.message import check_message, system, tool_result_to_message
+from consilium.soul.message import (
+    check_message,
+    strip_unsupported_media,
+    system,
+    tool_result_to_message,
+)
 from consilium.wire.types import (
     AudioURLPart,
     ImageURLPart,
@@ -331,3 +336,59 @@ def test_check_message_with_text_only():
     missing_capabilities = check_message(message, model_capabilities)
 
     assert missing_capabilities == set()
+
+
+def test_strip_unsupported_media_preserves_tool_call_id():
+    """Stripping media from a tool message must preserve tool_call_id.
+
+    Regression test: tool messages containing media (e.g. screenshots) were
+    rebuilt without ``tool_call_id``, breaking the OpenAI schema requirement
+    that every ``role: tool`` message links back to the assistant's tool call.
+    """
+    image_part = ImageURLPart(image_url=ImageURLPart.ImageURL(url="https://example.com/x.png"))
+    tool_ok = ToolOk(output=[TextPart(text="Here is the screenshot:"), image_part])
+    tool_result = ToolResult(tool_call_id="call_img123", return_value=tool_ok)
+    message = tool_result_to_message(tool_result)
+
+    stripped, modified = strip_unsupported_media(message, set())
+
+    assert modified is True
+    assert stripped.role == "tool"
+    assert stripped.tool_call_id == "call_img123"
+    # Media removed, note injected, no image part remains
+    assert not any(isinstance(p, ImageURLPart) for p in stripped.content)
+
+
+def test_strip_unsupported_media_preserves_assistant_tool_calls():
+    """Stripping media from an assistant message must preserve tool_calls.
+
+    The assistant's tool-call ids must survive so the matching tool result
+    messages (which reference those ids) stay paired for the API.
+    """
+    image_part = ImageURLPart(image_url=ImageURLPart.ImageURL(url="https://example.com/x.png"))
+    tool_call = ToolCall(
+        id="call_1",
+        function=ToolCall.FunctionBody(name="ReadFile", arguments="{}"),
+    )
+    message = Message(
+        role="assistant",
+        content=[TextPart(text="Let me look."), image_part],
+        tool_calls=[tool_call],
+    )
+
+    stripped, modified = strip_unsupported_media(message, set())
+
+    assert modified is True
+    assert stripped.tool_calls is not None
+    assert stripped.tool_calls[0].id == "call_1"
+
+
+def test_strip_unsupported_media_fast_path_returns_original():
+    """When the model supports both image and video, the original message is returned."""
+    image_part = ImageURLPart(image_url=ImageURLPart.ImageURL(url="https://example.com/x.png"))
+    message = Message(role="user", content=[image_part])
+
+    stripped, modified = strip_unsupported_media(message, {"image_in", "video_in"})
+
+    assert modified is False
+    assert stripped is message

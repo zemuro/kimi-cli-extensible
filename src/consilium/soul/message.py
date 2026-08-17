@@ -90,3 +90,51 @@ def check_message(
         elif isinstance(part, ThinkPart):
             capabilities_needed.add("thinking")
     return capabilities_needed - model_capabilities
+
+
+def strip_unsupported_media(
+    message: Message,
+    model_capabilities: set[ModelCapability],
+) -> tuple[Message, bool]:
+    """Strip media parts not supported by the model.
+
+    Returns ``(stripped_message, was_modified)``. If stripping leaves an empty
+    content array, a placeholder text part is injected so the API does not
+    reject the message with a 400 Bad Request.
+    """
+    if "image_in" in model_capabilities and "video_in" in model_capabilities:
+        return message, False  # fast path: no stripping needed
+
+    new_content: list[ContentPart] = []
+    stripped: list[str] = []
+    for part in message.content:
+        if isinstance(part, ImageURLPart) and "image_in" not in model_capabilities:
+            stripped.append("image")
+        elif isinstance(part, VideoURLPart) and "video_in" not in model_capabilities:
+            stripped.append("video")
+        else:
+            new_content.append(part)
+
+    if not stripped:
+        return message, False
+
+    if not new_content:
+        new_content = [
+            TextPart(text="[System: An unsupported media file was removed from this message]")
+        ]
+    else:
+        kinds = sorted(set(stripped))
+        note = TextPart(
+            text=f"[System: Removed {len(stripped)} media attachment(s) - current model does not support {', '.join(kinds)} input.]"
+        )
+        new_content.insert(0, note)
+
+    return (
+        Message(
+            role=message.role,
+            content=new_content,
+            tool_call_id=message.tool_call_id,
+            tool_calls=message.tool_calls,
+        ),
+        True,
+    )
