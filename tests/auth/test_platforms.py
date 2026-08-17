@@ -346,3 +346,160 @@ async def test_refresh_managed_models_401_tries_static_api_key_after_refreshed_o
     assert len(ensure_fresh_mock.await_args_list) == 2
     assert ensure_fresh_mock.await_args_list[0].kwargs == {}
     assert ensure_fresh_mock.await_args_list[1].kwargs == {"force": True}
+
+
+# ── user-api (OpenRouter) metadata refresh ───────────────────────────
+
+
+def _make_user_api_config(*, is_default: bool = True) -> Config:
+    provider = LLMProvider(
+        type="openai_responses",
+        base_url="https://openrouter.ai/api/v1",
+        api_key=SecretStr("sk-or-test"),
+    )
+    model = LLMModel(
+        provider="user-api",
+        model="deepseek/deepseek-v4-flash",
+        # Bogus values that the extension used to hardcode:
+        max_context_size=200_000,
+        capabilities={"image_in", "video_in", "thinking"},
+        display_name="deepseek/deepseek-v4-flash",
+    )
+    config = Config(
+        default_model="deepseek/deepseek-v4-flash",
+        providers={"user-api": provider},
+        models={"deepseek/deepseek-v4-flash": model},
+        services=Services(),
+    )
+    config.is_from_default_location = is_default
+    return config
+
+
+_OPENROUTER_PAYLOAD = {
+    "data": [
+        {
+            "id": "deepseek/deepseek-v4-flash",
+            "name": "DeepSeek V4 Flash",
+            "context_length": 1_048_576,
+            "architecture": {
+                "modality": "text->text",
+                "input_modalities": ["text"],
+                "output_modalities": ["text"],
+            },
+            "supported_parameters": ["reasoning", "tools"],
+        },
+        {
+            "id": "deepseek/deepseek-chat",
+            "name": "DeepSeek Chat",
+            "context_length": 163_840,
+            "architecture": {
+                "modality": "text->text",
+                "input_modalities": ["text"],
+                "output_modalities": ["text"],
+            },
+            "supported_parameters": ["tools"],
+        },
+    ]
+}
+
+
+@pytest.mark.asyncio
+async def test__list_user_api_models_maps_openrouter_fields():
+    """OpenRouter /models response maps to ModelInfo: context, thinking via
+    supported_parameters, modalities via architecture.input_modalities."""
+    from consilium.auth.platforms import _list_user_api_models
+
+    mock_response = MagicMock()
+    mock_response.json = AsyncMock(return_value=_OPENROUTER_PAYLOAD)
+
+    class FakeCM:
+        async def __aenter__(self):
+            return mock_response
+
+        async def __aexit__(self, *args):
+            pass
+
+    session = MagicMock()
+    session.get = MagicMock(return_value=FakeCM())
+
+    info = await _list_user_api_models(session, base_url="https://openrouter.ai/api/v1", api_key="k")
+
+    flash = info["deepseek/deepseek-v4-flash"]
+    assert flash.context_length == 1_048_576
+    assert flash.supports_reasoning is True
+    assert flash.supports_image_in is False
+    assert flash.supports_video_in is False
+    assert "thinking" in flash.capabilities
+    assert "image_in" not in flash.capabilities
+    assert "video_in" not in flash.capabilities
+
+    chat = info["deepseek/deepseek-chat"]
+    assert chat.context_length == 163_840
+    assert chat.supports_reasoning is False
+    assert chat.capabilities == set()
+
+
+@pytest.mark.asyncio
+async def test_refresh_user_api_models_updates_in_place():
+    """refresh_user_api_models overwrites bogus hardcoded values with the real
+    API metadata without creating/deleting unrelated models."""
+    from consilium.auth.platforms import refresh_user_api_models
+
+    config = _make_user_api_config()
+    # The save path re-reads the on-disk config; isolate from the real user
+    # config by patching both load_config and save_config.
+    fresh = _make_user_api_config()
+    saved: list[Config] = []
+
+    async def fake_fetch(provider_key, base_url, api_key) -> dict:
+        return {
+            "deepseek/deepseek-v4-flash": ModelInfo(
+                id="deepseek/deepseek-v4-flash",
+                context_length=1_048_576,
+                supports_reasoning=True,
+                supports_image_in=False,
+                supports_video_in=False,
+                display_name="DeepSeek V4 Flash",
+            ),
+        }
+
+    with patch(
+        "consilium.auth.platforms.refresh_user_api_models_for_provider", new=fake_fetch
+    ), patch("consilium.auth.platforms.load_config", return_value=fresh) as load_mock, patch(
+        "consilium.auth.platforms.save_config",
+        side_effect=lambda cfg: saved.append(cfg),
+    ) as save_mock:
+        changed = await refresh_user_api_models(config)
+
+    assert changed is True
+    model = config.models["deepseek/deepseek-v4-flash"]
+    assert model.max_context_size == 1_048_576
+    assert model.capabilities == {"thinking"}
+    assert model.display_name == "DeepSeek V4 Flash"
+    load_mock.assert_called_once()
+    assert save_mock.call_count == 1
+    saved_model = saved[0].models["deepseek/deepseek-v4-flash"]
+    assert saved_model.max_context_size == 1_048_576
+    assert saved_model.capabilities == {"thinking"}
+
+
+@pytest.mark.asyncio
+async def test_refresh_user_api_skips_non_user_providers():
+    """Providers without a key are skipped and no save occurs."""
+    from consilium.auth.platforms import refresh_user_api_models
+
+    config = _make_config_with_model(api_key="")  # managed:kimi-code, no key
+    config.is_from_default_location = True
+
+    fetched: list[str] = []
+
+    async def fake_fetch(provider_key, base_url, api_key) -> dict:
+        fetched.append(provider_key)
+        return {}
+
+    with patch("consilium.auth.platforms.refresh_user_api_models_for_provider", new=fake_fetch):
+        changed = await refresh_user_api_models(config)
+
+    assert changed is False
+    assert fetched == []  # managed providers are never user-api-fetched
+

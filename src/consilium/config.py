@@ -743,6 +743,19 @@ def save_config(config: Config, config_file: Path | None = None):
         config_file (Path | None): Path to the configuration file. If None, use default path.
     """
     config_file = config_file or get_config_file()
+    # Refuse to persist an inconsistent config: a model that references a
+    # missing provider would corrupt the file and break every subsequent
+    # CLI start with "Provider X not found in providers". The Config model
+    # validator raises on load, but save_config would happily write it back
+    # from an in-memory object that bypassed validation (e.g. a stale copy
+    # that kept a model after its provider was removed). Guard here so the
+    # broken state can never be written to disk.
+    for model_key, model in config.models.items():
+        if model.provider not in config.providers:
+            raise ValueError(
+                f"Refusing to save config: model {model_key!r} references "
+                f"provider {model.provider!r} which is not in providers"
+            )
     logger.debug("Saving config to file: {file}", file=config_file)
     config_file.parent.mkdir(parents=True, exist_ok=True)
     config_data = config.model_dump(mode="json", exclude_none=True)

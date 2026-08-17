@@ -5,9 +5,12 @@ from inline_snapshot import snapshot
 
 from consilium.config import (
     Config,
+    LLMModel,
+    LLMProvider,
     get_default_config,
     load_config,
     load_config_from_string,
+    save_config,
 )
 from consilium.exception import ConfigError
 
@@ -185,3 +188,49 @@ def test_load_config_compaction_trigger_ratio_too_low():
 def test_load_config_compaction_trigger_ratio_too_high():
     with pytest.raises(ConfigError, match="compaction_trigger_ratio"):
         load_config_from_string('{"loop_control": {"compaction_trigger_ratio": 1.0}}')
+
+
+def test_save_config_refuses_missing_provider(tmp_path):
+    """save_config must refuse to persist a model whose provider is absent.
+
+    This is the exact corrupt state the user kept hitting: a
+    [models."kimi-code/kimi-for-coding"] block referencing
+    "managed:kimi-code" with no matching provider block. The Config model
+    validator raises on load, but an in-memory Config that bypassed
+    validation (e.g. a stale copy) would previously be written back to
+    disk, re-corrupting the file for every subsequent CLI start.
+    """
+    config = get_default_config()
+    config.models["kimi-code/kimi-for-coding"] = LLMModel(
+        provider="managed:kimi-code",
+        model="kimi-for-coding",
+        max_context_size=10000,
+    )
+    # Provider block deliberately absent — the corrupt signature.
+    config_file = tmp_path / "config.toml"
+    with pytest.raises(ValueError, match="Refusing to save config"):
+        save_config(config, config_file)
+    # No file must be written.
+    assert not config_file.exists()
+
+
+def test_save_config_allows_consistent_config(tmp_path):
+    """save_config persists a config whose models all have providers."""
+    config = get_default_config()
+    config.providers["user-api"] = LLMProvider(
+        type="openai_responses",
+        base_url="https://openrouter.ai/api/v1",
+        api_key="sk-test",
+    )
+    config.models["deepseek/deepseek-v4-flash"] = LLMModel(
+        provider="user-api",
+        model="deepseek-v4-flash",
+        max_context_size=200000,
+    )
+    config_file = tmp_path / "config.toml"
+    save_config(config, config_file)
+    assert config_file.exists()
+    # Round-trip: the saved file must validate cleanly.
+    loaded = load_config(config_file)
+    assert "deepseek/deepseek-v4-flash" in loaded.models
+

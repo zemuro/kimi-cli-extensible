@@ -91,12 +91,16 @@ def _write_original_stderr(text: str) -> None:
 
 
 async def _refresh_managed_models_silent(config: Config) -> None:
-    from consilium.auth.platforms import refresh_managed_models
+    from consilium.auth.platforms import (
+        refresh_managed_models,
+        refresh_user_api_models,
+    )
 
     try:
         await refresh_managed_models(config)
+        await refresh_user_api_models(config)
     except Exception as exc:
-        logger.warning("Background managed-model refresh failed: {error}", error=exc)
+        logger.warning("Background model-metadata refresh failed: {error}", error=exc)
 
 
 def _cleanup_stale_foreground_subagents(runtime: Runtime) -> None:

@@ -264,6 +264,181 @@ async def list_models(platform: Platform, api_key: str) -> list[ModelInfo]:
     return [model for model in models if model.id.startswith(prefixes)]
 
 
+_OPENROUTER_RESPONSE_TYPES = {"openai_responses", "openai_legacy"}
+"""Provider types whose /models response follows the OpenAI/OpenRouter shape
+(``data[].id``, ``context_length``, ``supported_parameters``,
+``architecture.input_modalities``).
+"""
+
+
+async def _list_user_api_models(
+    session: aiohttp.ClientSession,
+    *,
+    base_url: str,
+    api_key: str,
+) -> dict[str, ModelInfo]:
+    """Fetch model metadata for a user-supplied API provider.
+
+    Handles both the OpenAI-shape response (``{data: [...]}``) used by
+    OpenRouter and a bare list. Only well-known fields are mapped; models
+    whose metadata cannot be parsed are skipped. This is intentionally
+    lenient: user providers may be any OpenAI-compatible gateway.
+    """
+    models_url = f"{base_url.rstrip('/')}/models"
+    async with session.get(
+        models_url,
+        headers={"Authorization": f"Bearer {api_key}", "Accept": "application/json"},
+        raise_for_status=True,
+    ) as response:
+        resp_json = await response.json()
+
+    data = resp_json.get("data") if isinstance(resp_json, dict) else None
+    if not isinstance(data, list):
+        if isinstance(resp_json, list):
+            data = resp_json
+        else:
+            raise ValueError(f"Unexpected models response for {base_url}")
+
+    result: dict[str, ModelInfo] = {}
+    for item in cast(list[dict[str, Any]], data):
+        model_id = item.get("id")
+        if not model_id:
+            continue
+        model_id = str(model_id)
+
+        context_length = int(item.get("context_length") or 0)
+        if context_length <= 0:
+            continue
+
+        # OpenRouter exposes reasoning support via supported_parameters.
+        supported_parameters = item.get("supported_parameters") or []
+        supports_reasoning = bool(
+            isinstance(supported_parameters, list)
+            and any(p in supported_parameters for p in ("reasoning", "include_reasoning"))
+        )
+
+        # Modalities live under architecture.input_modalities (a simple list on
+        # OpenRouter), or directly on the item for some gateways.
+        architecture = item.get("architecture") if isinstance(item.get("architecture"), dict) else {}
+        input_modalities = architecture.get("input_modalities")
+        if not isinstance(input_modalities, list):
+            input_modalities = item.get("input_modalities")
+        input_modalities = input_modalities if isinstance(input_modalities, list) else []
+        supports_image_in = "image" in input_modalities
+        supports_video_in = "video" in input_modalities
+
+        raw_display_name = item.get("display_name") or item.get("name")
+        display_name = str(raw_display_name) if raw_display_name else None
+
+        result[model_id] = ModelInfo(
+            id=model_id,
+            context_length=context_length,
+            supports_reasoning=supports_reasoning,
+            supports_image_in=supports_image_in,
+            supports_video_in=supports_video_in,
+            display_name=display_name,
+        )
+    return result
+
+
+def _apply_user_api_context_info(
+    config: Config,
+    provider_key: str,
+    model_info: dict[str, ModelInfo],
+) -> bool:
+    """Update existing config models of a user-api provider with real metadata.
+
+    Unlike the managed-provider path (which creates/deletes models to mirror
+    the API), this only *enriches* models the user already configured — the
+    explicitly selected user-api models must keep their identity.
+    """
+    changed = False
+    for model_key, model in config.models.items():
+        if model.provider != provider_key:
+            continue
+        info = model_info.get(model.model or model_key)
+        if info is None:
+            continue
+        capabilities = info.capabilities or None  # empty set -> None
+        if model.max_context_size != info.context_length:
+            model.max_context_size = info.context_length
+            changed = True
+        if model.capabilities != capabilities:
+            model.capabilities = capabilities
+            changed = True
+        if model.display_name != info.display_name:
+            model.display_name = info.display_name
+            changed = True
+    return changed
+
+
+async def refresh_user_api_models(config: Config) -> bool:
+    """Refresh metadata for user-supplied API providers (e.g. OpenRouter).
+
+    The managed-provider refresh (``refresh_managed_models``) only handles
+    known platforms. User providers (``user-api`` with an OpenAI-compatible
+    gateway) were never API-fetched, so their models kept whatever bogus
+    ``max_context_size``/``capabilities`` the extension hardcoded. This
+    fetches ``/models`` and updates existing model entries in place.
+    """
+    if not config.is_from_default_location:
+        return False
+
+    changed = False
+    for provider_key, provider in config.providers.items():
+        if is_managed_provider_key(provider_key):
+            continue
+        if provider.type not in _OPENROUTER_RESPONSE_TYPES:
+            continue
+        base_url = (provider.base_url or "").strip()
+        api_key = provider.api_key.get_secret_value().strip()
+        if not base_url or not api_key:
+            continue
+        try:
+            model_info = await refresh_user_api_models_for_provider(provider_key, base_url, api_key)
+        except Exception as exc:
+            logger.error(
+                "Failed to refresh models for provider {provider}: {error}",
+                provider=provider_key,
+                error=exc,
+            )
+            continue
+        if _apply_user_api_context_info(config, provider_key, model_info):
+            changed = True
+
+    if changed:
+        config_for_save = load_config()
+        save_changed = False
+        for provider_key, provider in config_for_save.providers.items():
+            if is_managed_provider_key(provider_key):
+                continue
+            if provider.type not in _OPENROUTER_RESPONSE_TYPES:
+                continue
+            base_url = (provider.base_url or "").strip()
+            api_key = provider.api_key.get_secret_value().strip()
+            if not base_url or not api_key:
+                continue
+            model_info = await refresh_user_api_models_for_provider(provider_key, base_url, api_key)
+            if _apply_user_api_context_info(config_for_save, provider_key, model_info):
+                save_changed = True
+        if save_changed:
+            save_config(config_for_save)
+    return changed
+
+
+async def refresh_user_api_models_for_provider(
+    provider_key: str,
+    base_url: str,
+    api_key: str,
+) -> dict[str, ModelInfo]:
+    async with new_client_session() as session:
+        return await _list_user_api_models(
+            session,
+            base_url=base_url,
+            api_key=api_key,
+        )
+
+
 async def _list_models(
     session: aiohttp.ClientSession,
     *,
