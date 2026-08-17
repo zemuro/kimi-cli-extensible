@@ -225,6 +225,10 @@ async def run_soul(
                 await soul_task
             except asyncio.CancelledError:
                 raise RunCancelled from None
+            # If the soul task completed (or failed) *after* the cancel event
+            # fired — e.g. it raised an error caused by force_abort closing the
+            # HTTP client — still report the user-visible outcome as a cancel.
+            raise RunCancelled from None
         else:
             assert soul_task.done()  # either stop event is set or the run task is done
             cancel_event_task.cancel()

@@ -244,6 +244,52 @@ class NonRetryableConnectionProvider:
         return self
 
 
+class AbortedConnectionProvider:
+    """Provider whose in-flight call is killed by a user cancel (force_abort).
+
+    Mimics the real stop-button path: ``force_abort`` sets ``_aborted = True``
+    synchronously, then closes the HTTP client, which makes the in-flight
+    stream raise ``APIConnectionError``. The recovery/retry layers must NOT
+    resurrect a new LLM call when the provider is marked aborted.
+
+    With ``_aborted = False`` (a fresh turn after the server resets the flag) it
+    behaves like ``RecoveringSequenceProvider``: first call raises, recovery
+    recreates transport, second call succeeds.
+    """
+
+    name = "aborted-connection"
+
+    def __init__(self) -> None:
+        self.generate_attempts = 0
+        self.recovery_calls = 0
+
+    @property
+    def model_name(self) -> str:
+        return "aborted-connection"
+
+    @property
+    def thinking_effort(self) -> ThinkingEffort | None:
+        return None
+
+    async def generate(
+        self,
+        system_prompt: str,
+        tools: Sequence[Tool],
+        history: Sequence[Message],
+    ) -> StaticStreamedMessage:
+        self.generate_attempts += 1
+        if getattr(self, "_aborted", False) or self.generate_attempts == 1:
+            raise APIConnectionError("Connection error.")
+        return StaticStreamedMessage([TextPart(text="recovered")])
+
+    def on_retryable_error(self, error: BaseException) -> bool:
+        self.recovery_calls += 1
+        return True
+
+    def with_thinking(self, effort: ThinkingEffort) -> Self:
+        return self
+
+
 class ConnectionThen401ThenSuccessProvider:
     name = "connection-then-401-then-success"
 
@@ -365,6 +411,62 @@ async def test_step_connection_error_recovery_only_retries_once(
 
     assert provider.generate_attempts == 2
     assert provider.recovery_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_step_aborted_provider_never_recovers_or_retries(
+    runtime: Runtime, tmp_path: Path
+) -> None:
+    """A provider marked ``_aborted`` (user hit stop) must not resurrect the turn.
+
+    Regression test for the stop-button hang: force_abort closes the HTTP client
+    mid-stream, which surfaces as APIConnectionError. Before the fix, the
+    recovery layer treated that as a transient blip and re-invoked the LLM call
+    (recovery_calls would be 1 and generate_attempts would reach 2), leaving the
+    CLI streaming for minutes.
+    """
+    runtime.config.loop_control.max_retries_per_step = 5
+    provider = AbortedConnectionProvider()
+    provider._aborted = True  # simulate force_abort having run
+    llm = LLM(
+        chat_provider=provider,
+        max_context_size=1_000_000,
+        capabilities=set(),
+    )
+    soul, _ = _make_soul(runtime, llm, tmp_path)
+
+    with pytest.raises(APIConnectionError):
+        await run_soul(soul, "trigger aborted connection failure", _drain_ui_messages, asyncio.Event())
+
+    # No recovery and no retry: the cancel-induced error propagates immediately.
+    assert provider.generate_attempts == 1
+    assert provider.recovery_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_step_aborted_provider_cleared_flag_recovers_normally(
+    runtime: Runtime, tmp_path: Path
+) -> None:
+    """After a new turn clears ``_aborted``, genuine connection errors recover again.
+
+    Guards against the stale-flag regression: the server resets ``_aborted`` to
+    False at the start of each prompt, so the recovery behavior must return.
+    """
+    runtime.config.loop_control.max_retries_per_step = 2
+    provider = AbortedConnectionProvider()
+    provider._aborted = False  # new turn: flag cleared by _handle_prompt
+    llm = LLM(
+        chat_provider=provider,
+        max_context_size=1_000_000,
+        capabilities=set(),
+    )
+    soul, context = _make_soul(runtime, llm, tmp_path)
+
+    await run_soul(soul, "trigger cleared aborted recovery", _drain_ui_messages, asyncio.Event())
+
+    assert provider.generate_attempts == 2
+    assert provider.recovery_calls == 1
+    assert context.history[-1].extract_text(" ").strip() == "recovered"
 
 
 @pytest.mark.asyncio

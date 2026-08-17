@@ -93,9 +93,30 @@ def patch_chat_provider(provider: Any) -> None:
     name = type(provider).__name__
 
     if "anthropic" in module.lower() or name.lower() == "anthropic":
-        provider.force_abort = lambda: asyncio.create_task(_force_abort_anthropic(provider))  # type: ignore[method-assign]
+        provider.force_abort = _make_force_abort(provider, _force_abort_anthropic)  # type: ignore[method-assign]
     elif "openai" in module.lower() or name.lower().startswith("kimi"):
-        provider.force_abort = lambda: asyncio.create_task(_force_abort_openai_like(provider))  # type: ignore[method-assign]
+        provider.force_abort = _make_force_abort(provider, _force_abort_openai_like)  # type: ignore[method-assign]
     else:
         # Unknown provider — no-op abort
         provider.force_abort = lambda: None  # type: ignore[method-assign]
+
+
+def _make_force_abort(provider: Any, close_and_recreate: Any) -> Any:
+    """Build a bound ``force_abort`` callable that marks the provider aborted.
+
+    Sets ``provider._aborted = True`` *synchronously* (before any await or task
+    creation) so the cancel intent is visible to the recovery/retry layers the
+    moment cancel is dispatched — even before the async client-close task runs.
+    This prevents a cancel-induced ``APIConnectionError`` from being misread as
+    a transient network blip and "recovered" into a brand-new LLM call.
+    """
+
+    def _force_abort() -> Any:
+        # Synchronous mark — runs in the caller's task before any scheduling.
+        try:
+            setattr(provider, "_aborted", True)
+        except Exception:
+            pass
+        return asyncio.create_task(close_and_recreate(provider))
+
+    return _force_abort

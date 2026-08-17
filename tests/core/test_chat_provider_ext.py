@@ -28,6 +28,10 @@ class TestPatchChatProvider:
         with patch("kosong.chat_provider.openai_common.create_openai_client") as mock_create:
             mock_create.return_value = MagicMock()
             task = provider.force_abort()
+            # The abort marker must be set synchronously — BEFORE the async
+            # client-close task runs — so the recovery layer sees cancel intent
+            # even if the connection error surfaces a moment later.
+            assert provider._aborted is True
             await task
         old_client.close.assert_called_once()
 
@@ -46,6 +50,8 @@ class TestPatchChatProvider:
             patch_chat_provider(provider)
             assert hasattr(provider, "force_abort")
             task = provider.force_abort()
+            # Synchronous abort marker (same contract as the OpenAI path).
+            assert provider._aborted is True
             await task
             old_client.close.assert_called_once()
             mock_anthropic.assert_called_once()

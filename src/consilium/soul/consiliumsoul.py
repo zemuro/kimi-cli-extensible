@@ -1569,6 +1569,12 @@ class ConsiliumSoul:
 
     @staticmethod
     def _is_retryable_error(exception: BaseException) -> bool:
+        # If the active chat provider has been marked aborted (user hit stop),
+        # never retry or recover — the error was cancel-induced, and resurrecting
+        # a new LLM call would leave the turn streaming for minutes.
+        _aborted = getattr(exception, "_kimi_provider_aborted", None)
+        if _aborted is not None:
+            return not bool(_aborted)
         if isinstance(exception, (APIConnectionError, APITimeoutError)):
             return not bool(getattr(exception, "_kimi_recovery_exhausted", False))
         if isinstance(exception, APIEmptyResponseError):
@@ -1624,6 +1630,13 @@ class ConsiliumSoul:
                 _connection_retried=_connection_retried,
             )
         except (APIConnectionError, APITimeoutError) as error:
+            if getattr(chat_provider, "_aborted", False):
+                # User hit stop: force_abort closed the client, so this
+                # connection error is cancel-induced, not a transient blip.
+                # Do NOT recover/retry — let it bubble up so run_soul's cancel
+                # path (soul_task.cancel()) completes promptly.
+                error._kimi_provider_aborted = True  # type: ignore[attr-defined]
+                raise
             if _connection_retried:
                 logger.warning(
                     "Chat provider recovery exhausted for {name}: {error_type}: {error}",

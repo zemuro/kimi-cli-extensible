@@ -676,6 +676,18 @@ class WireServer:
         self._cancel_event = asyncio.Event()
         runtime = self._soul.runtime if isinstance(self._soul, ConsiliumSoul) else None
 
+        # Reset the abort marker from any previous turn so a stale flag cannot
+        # suppress recovery/retry of genuinely transient connection errors.
+        llm = getattr(self._soul, "_llm", None) or getattr(
+            getattr(self._soul, "_runtime", None), "llm", None
+        )
+        provider = getattr(llm, "chat_provider", None) if llm else None
+        if provider is not None:
+            try:
+                setattr(provider, "_aborted", False)
+            except Exception:
+                pass
+
         if self._session is not None:
             from consilium.peer_status import update_own_peer_status
             update_own_peer_status(
