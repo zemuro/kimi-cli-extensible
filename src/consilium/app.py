@@ -176,7 +176,11 @@ async def create_think_soul(
         _config.budget_tokens = budget_tokens
 
     model, provider = _resolve_model_and_provider(_config, model_name)
-    env_overrides = augment_provider_with_env_vars(provider, model)
+    # An explicit model (--model) must win over CONSILIUM_MODEL_NAME; the env
+    # var is only a fallback for env-only setups without a config model entry.
+    env_overrides = augment_provider_with_env_vars(
+        provider, model, skip_model_name=bool(model_name)
+    )
     _thinking = _config.default_thinking if thinking is None else thinking
 
     from consilium.auth.oauth import OAuthManager
@@ -248,7 +252,9 @@ async def create_think_soul(
     if _config.compaction_model:
         c_model, c_provider = _resolve_model_and_provider(_config, _config.compaction_model)
         if c_model and c_provider:
-            c_env_overrides = augment_provider_with_env_vars(c_provider, c_model)
+            c_env_overrides = augment_provider_with_env_vars(
+                c_provider, c_model, skip_model_name=True
+            )
             compaction_llm = create_llm(
                 c_provider,
                 c_model,
@@ -461,8 +467,12 @@ class ConsiliumCLI:
         # try to use config file, falling back to env-var-only provider (never OAuth)
         model, provider = _resolve_model_and_provider(config, model_name)
 
-        # try overwrite with environment variables
-        env_overrides = augment_provider_with_env_vars(provider, model)
+        # try overwrite with environment variables (but an explicit --model
+        # must win over CONSILIUM_MODEL_NAME, otherwise a stale env value can
+        # swap the model id while capabilities/display stay from config)
+        env_overrides = augment_provider_with_env_vars(
+            provider, model, skip_model_name=bool(model_name)
+        )
 
         # determine thinking mode
         thinking = config.default_thinking if thinking is None else thinking
@@ -494,7 +504,9 @@ class ConsiliumCLI:
         if config.compaction_model:
             c_model, c_provider = _resolve_model_and_provider(config, config.compaction_model)
             if c_model and c_provider:
-                c_env_overrides = augment_provider_with_env_vars(c_provider, c_model)
+                c_env_overrides = augment_provider_with_env_vars(
+                    c_provider, c_model, skip_model_name=True
+                )
                 compaction_llm = create_llm(
                     c_provider,
                     c_model,

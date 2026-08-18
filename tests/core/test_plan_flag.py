@@ -68,7 +68,7 @@ def _patch_create_deps(monkeypatch, *, session_plan_mode: bool = False):
         )
 
     monkeypatch.setattr(app_module, "load_config", lambda conf: conf)
-    monkeypatch.setattr(app_module, "augment_provider_with_env_vars", lambda p, m: {})
+    monkeypatch.setattr(app_module, "augment_provider_with_env_vars", lambda *a, **k: {})
     monkeypatch.setattr(app_module, "create_llm", lambda *a, **kw: None)
     monkeypatch.setattr(app_module.Runtime, "create", fake_runtime_create)
     monkeypatch.setattr(

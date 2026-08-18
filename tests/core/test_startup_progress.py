@@ -89,7 +89,7 @@ async def test_consilium_create_reports_startup_phases(session, config, monkeypa
     fake_context.write_system_prompt = write_system_prompt
 
     monkeypatch.setattr(app_module, "load_config", lambda conf: conf)
-    monkeypatch.setattr(app_module, "augment_provider_with_env_vars", lambda provider, model: {})
+    monkeypatch.setattr(app_module, "augment_provider_with_env_vars", lambda *a, **k: {})
     monkeypatch.setattr(app_module, "create_llm", lambda *args, **kwargs: None)
     monkeypatch.setattr(app_module.Runtime, "create", fake_runtime_create)
     monkeypatch.setattr(app_module, "load_agent", fake_load_agent)
@@ -154,7 +154,7 @@ async def test_consilium_create_cleans_stale_running_foreground_subagents(
     fake_context.write_system_prompt = write_system_prompt
 
     monkeypatch.setattr(app_module, "load_config", lambda conf: conf)
-    monkeypatch.setattr(app_module, "augment_provider_with_env_vars", lambda provider, model: {})
+    monkeypatch.setattr(app_module, "augment_provider_with_env_vars", lambda *a, **k: {})
     monkeypatch.setattr(app_module, "create_llm", lambda *args, **kwargs: None)
     monkeypatch.setattr(app_module.Runtime, "create", fake_runtime_create)
     monkeypatch.setattr(app_module, "load_agent", fake_load_agent)

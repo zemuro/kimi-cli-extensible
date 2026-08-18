@@ -48,6 +48,57 @@ def test_augment_provider_with_env_vars_kimi(monkeypatch):
     )
 
 
+def test_augment_provider_with_env_vars_skip_model_name(monkeypatch):
+    """skip_model_name keeps the resolved model id when an explicit --model was given.
+
+    Regression test for the hybrid LLMModel bug: a stale CONSILIUM_MODEL_NAME
+    env var used to overwrite model.model while capabilities/display_name stayed
+    from the resolved config object, producing e.g. a deepseek model id with
+    qwen capabilities. That mismatch routed image requests to a text-only
+    provider endpoint (OpenRouter 404 "No endpoints found that support image
+    input").
+    """
+    provider = LLMProvider(
+        type="openai_responses",
+        base_url="https://openrouter.ai/api/v1",
+        api_key=SecretStr("orig-key"),
+    )
+    model = LLMModel(
+        provider="user-api",
+        model="deepseek/deepseek-v4-flash-0731",
+        max_context_size=1310720,
+        capabilities={"thinking"},
+        display_name="DeepSeek: DeepSeek V4 Flash 0731",
+    )
+
+    monkeypatch.setenv("CONSILIUM_MODEL_NAME", "qwen/qwen3.7-flash")
+    monkeypatch.setenv("CONSILIUM_MODEL_CAPABILITIES", "image_in,video_in,thinking")
+    monkeypatch.setenv("CONSILIUM_MODEL_MAX_CONTEXT_SIZE", "1000000")
+
+    augment_provider_with_env_vars(provider, model, skip_model_name=True)
+
+    # Model id must stay the explicit one; caps/context from env may still apply.
+    assert model.model == "deepseek/deepseek-v4-flash-0731"
+
+
+def test_augment_provider_with_env_vars_no_skip_keeps_old_behavior(monkeypatch):
+    """Default (skip_model_name=False) keeps env override for env-only setups."""
+    provider = LLMProvider(
+        type="kimi",
+        base_url="https://original.test/v1",
+        api_key=SecretStr("orig-key"),
+    )
+    model = LLMModel(provider="kimi", model="kimi-base", max_context_size=4096)
+
+    monkeypatch.setenv("CONSILIUM_MODEL_NAME", "kimi-env-model")
+    monkeypatch.setenv("CONSILIUM_MODEL_MAX_CONTEXT_SIZE", "8192")
+
+    augment_provider_with_env_vars(provider, model)
+
+    assert model.model == "kimi-env-model"
+    assert model.max_context_size == 8192
+
+
 def test_create_llm_kimi_model_parameters(monkeypatch):
     provider = LLMProvider(
         type="kimi",

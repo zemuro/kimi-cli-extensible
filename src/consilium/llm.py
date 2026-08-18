@@ -63,8 +63,23 @@ def model_display_name(model_name: str | None, model: LLMModel | None = None) ->
     return model_name
 
 
-def augment_provider_with_env_vars(provider: LLMProvider, model: LLMModel) -> dict[str, str]:
+def augment_provider_with_env_vars(
+    provider: LLMProvider,
+    model: LLMModel,
+    *,
+    skip_model_name: bool = False,
+) -> dict[str, str]:
     """Override provider/model settings from environment variables.
+
+    Args:
+        skip_model_name: When True, ``CONSILIUM_MODEL_NAME`` does not
+            overwrite ``model.model``. Callers pass this when an explicit
+            model was resolved (e.g. from ``--model`` or config), so a stale
+            ``CONSILIUM_MODEL_NAME`` cannot silently change which model id is
+            sent to the provider while all other fields (capabilities,
+            display name, context size) come from the resolved object.
+            The resulting mismatch previously caused requests to be routed to
+            a different provider endpoint than the one the user selected.
 
     Returns:
         Mapping of environment variables that were applied.
@@ -78,7 +93,7 @@ def augment_provider_with_env_vars(provider: LLMProvider, model: LLMModel) -> di
     if api_key := os.getenv("CONSILIUM_API_KEY"):
         provider.api_key = SecretStr(api_key)
         applied["CONSILIUM_API_KEY"] = "******"
-    if model_name := os.getenv("CONSILIUM_MODEL_NAME"):
+    if not skip_model_name and (model_name := os.getenv("CONSILIUM_MODEL_NAME")):
         model.model = model_name
         applied["CONSILIUM_MODEL_NAME"] = model_name
     if max_context_size := os.getenv("CONSILIUM_MODEL_MAX_CONTEXT_SIZE"):
