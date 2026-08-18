@@ -794,6 +794,14 @@ class ConsiliumSoul:
         if self._runtime.llm is None:
             raise LLMNotSet()
 
+        # Option B: when the parent model is text-only, hand off pasted images
+        # to the vision subagent and feed its analysis (text) to the parent.
+        # Runs before the generic media strip so the image is not silently
+        # discarded.
+        from consilium.soul.media_handoff import handle_pasted_images_in_turn
+
+        user_message = await handle_pasted_images_in_turn(user_message, self._runtime)
+
         # Strip unsupported media from the user message instead of raising LLMNotSupported
         from consilium.soul.message import strip_unsupported_media
         user_message, _modified = strip_unsupported_media(user_message, self._runtime.llm.capabilities)
