@@ -116,8 +116,13 @@ def _save_pasted_image(data_url: str, work_dir: Path | None) -> Path | None:
 
 # ── vision subagent spawn ────────────────────────────────────────────────
 
-async def _spawn_vision_for_image(runtime: Runtime, image_path: Path) -> str | None:
-    """Run the vision subagent against one image, returning its text output."""
+async def _spawn_vision_for_image(runtime: Runtime, image_path: Path, user_prompt: str | None = None) -> str | None:
+    """Run the vision subagent against one image, returning its text output.
+
+    ``user_prompt`` is the accompanying text the user typed in the same
+    message; if present it is forwarded to the vision model so the analysis
+    is targeted at the user's actual question (not just a generic describe).
+    """
     if runtime.labor_market.get_builtin_type("vision") is None:
         logger.warning("vision subagent not registered — cannot analyze pasted image")
         return None
@@ -127,10 +132,18 @@ async def _spawn_vision_for_image(runtime: Runtime, image_path: Path) -> str | N
     prompt = (
         "A user pasted an image into the chat. The parent model is text-only "
         "and cannot see images, so you are analyzing it on its behalf.\n\n"
+    )
+    if user_prompt:
+        prompt += (
+            "The user's question about the image was:\n"
+            f"> {user_prompt}\n\n"
+            "Answer that question specifically. Be precise and thorough — the "
+            "parent agent will act on your answer alone.\n\n"
+        )
+    prompt += (
         f"Read the image at: {image_path}\n"
         "Describe in detail what the image shows: any text (quote verbatim), "
-        "UI elements, layout, colors, diagrams, or notable issues. Be precise "
-        "and thorough — the parent agent will act on your description alone."
+        "UI elements, layout, colors, diagrams, or notable issues."
     )
     try:
         runner = ForegroundSubagentRunner(runtime)
@@ -201,6 +214,14 @@ async def handle_pasted_images_in_turn(
     except Exception:
         work_dir = None
 
+    # Gather the user's accompanying text prompt (non-image parts) so the
+    # vision subagent can answer the actual question, not just describe.
+    text_prompt = " ".join(
+        getattr(part, "text", "").strip()
+        for part in message.content
+        if not isinstance(part, ImageURLPart)
+    ).strip() or None
+
     analyses: list[str] = []
     for part in image_parts:
         data_url = part.image_url.url
@@ -210,7 +231,7 @@ async def handle_pasted_images_in_turn(
         path = _save_pasted_image(data_url, work_dir)
         if path is None:
             continue
-        analysis = await _spawn_vision_for_image(runtime, path)
+        analysis = await _spawn_vision_for_image(runtime, path, text_prompt)
         if analysis:
             analyses.append(analysis)
 

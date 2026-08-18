@@ -158,6 +158,66 @@ async def test_handoff_replaces_image_with_analysis(tmp_path: Path):
 
 
 @pytest.mark.asyncio
+async def test_handoff_forwards_user_prompt_to_vision(tmp_path: Path):
+    runtime = _FakeRuntime({"thinking"}, str(tmp_path))
+    prompt = "analyze the page layout geometry and fontsetting information"
+    msg = Message(
+        role="user",
+        content=[TextPart(text=prompt), ImageURLPart(image_url=ImageURLPart.ImageURL(url=PNG_DATA_URL))],
+    )
+
+    with patch(
+        "consilium.soul.media_handoff._spawn_vision_for_image",
+        new=AsyncMock(return_value="layout: 2-column; fonts: Inter 14px body, 24px heading"),
+    ) as spawn_mock:
+        result = await handle_pasted_images_in_turn(msg, runtime)
+
+    # The vision call received the user's text prompt as its third argument.
+    assert spawn_mock.await_count == 1
+    forwarded = spawn_mock.await_args.args[2]  # type: ignore[attr-defined]
+    assert forwarded == prompt
+    # The user's text prompt ALSO reaches the parent (kept as a TextPart).
+    text_parts = [p for p in result.content if isinstance(p, TextPart)]
+    assert any(prompt in p.text for p in text_parts)
+    # The vision analysis replaces the image.
+    assert any("Vision analysis" in p.text for p in text_parts)
+    assert not any(isinstance(p, ImageURLPart) for p in result.content)
+
+
+@pytest.mark.asyncio
+async def test_spawn_vision_includes_user_prompt_in_instruction(tmp_path: Path):
+    """The vision subagent's own prompt embeds the user's question."""
+    runtime = _FakeRuntime({"thinking"}, str(tmp_path))
+    image_path = tmp_path / "paste-x.png"
+    image_path.write_bytes(b"\x89PNG\r\n\x1a\n" + b"0" * 64)
+
+    captured: dict[str, str] = {}
+
+    class FakeResult:
+        is_error = False
+        message = ""
+        output = "ok"
+
+    async def fake_run(runner, req):
+        captured["prompt"] = req.prompt
+        return FakeResult()
+
+    # Patch the runner class at its definition site (the function imports it
+    # from consilium.subagents.runner, so patching there intercepts it).
+    with patch(
+        "consilium.subagents.runner.ForegroundSubagentRunner",
+        new=lambda runtime: type("R", (), {"run": fake_run})(),
+    ):
+        from consilium.soul.media_handoff import _spawn_vision_for_image
+
+        result = await _spawn_vision_for_image(runtime, image_path, "what fonts are used?")
+
+    assert result == "ok"
+    assert "what fonts are used?" in captured["prompt"]
+    assert "The user's question about the image was:" in captured["prompt"]
+
+
+@pytest.mark.asyncio
 async def test_handoff_skips_for_vision_capable_parent(tmp_path: Path):
     runtime = _FakeRuntime({"thinking", "image_in"}, str(tmp_path))
     msg = Message(
