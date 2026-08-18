@@ -121,4 +121,10 @@ def open_original_stderr() -> Iterator[IO[bytes] | None]:
         yield stream
     finally:
         if stream is not None:
-            stream.close()
+            # Best-effort close: the underlying fd (e.g. the Wire stdio pipe)
+            # may already be closed by the time an exit-path error handler
+            # runs (e.g. _emit_fatal_error during _reload_loop teardown).
+            # Swallowing OSError here keeps the CLI's own shutdown reporting
+            # from crashing the process with a secondary error.
+            with contextlib.suppress(OSError):
+                stream.close()

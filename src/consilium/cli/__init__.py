@@ -636,8 +636,14 @@ def kimi(
         # This ensures fatal errors are visible to the user.
         with open_original_stderr() as stream:
             if stream is not None:
-                stream.write((message.rstrip() + "\n").encode("utf-8", errors="replace"))
-                stream.flush()
+                try:
+                    stream.write((message.rstrip() + "\n").encode("utf-8", errors="replace"))
+                    stream.flush()
+                except OSError:
+                    # The underlying fd (e.g. the Wire stdio pipe) may already be
+                    # closed during shutdown; don't let the exit-path error
+                    # reporting itself crash the process.
+                    pass
                 return
         typer.echo(message, err=True)
 
