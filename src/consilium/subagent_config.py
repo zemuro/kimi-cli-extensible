@@ -107,11 +107,21 @@ def resolve_subagent_config(
         config.subagents.timeout_seconds,
     )
 
+    # Model override resolution (no numeric parsing needed): CLI → env → file → None.
+    cli_model = cli_overrides.model if cli_overrides is not None else None
+    file_model = file_overrides.model if file_overrides is not None else None
+    resolved_model: str | None = cli_model
+    if resolved_model is None:
+        resolved_model = os.environ.get(_env_name(agent_type, "model", env_prefix), "").strip() or None
+    if resolved_model is None:
+        resolved_model = file_model
+
     return ResolvedSubagentConfig(
         temperature=_clamp_temperature(resolved_temperature),
         max_tokens_per_task=max(1, resolved_max_tokens),
         max_tool_calls_per_task=max(1, resolved_max_tools),
         timeout_seconds=max(10, resolved_timeout),
+        model=resolved_model,
     )
 
 

@@ -354,6 +354,13 @@ class SubagentOverrideConfig(BaseModel):
         le=3600,
         description="Timeout override in seconds for this subagent type",
     )
+    model: str | None = Field(
+        default=None,
+        description=(
+            "Model alias override for this subagent type. When set, overrides the "
+            "agent YAML ``model:`` field and the global subagents.default_model."
+        ),
+    )
 
 
 class SubagentBudgetConfig(BaseModel):
@@ -381,6 +388,7 @@ class ResolvedSubagentConfig:
     max_tokens_per_task: int
     max_tool_calls_per_task: int
     timeout_seconds: int
+    model: str | None = None
 
 
 class SubagentsConfig(BaseModel):
@@ -389,6 +397,15 @@ class SubagentsConfig(BaseModel):
     enabled: bool = Field(default=True, description="Enable subagent spawning from Think and Do modes")
     timeout_seconds: int = Field(default=900, ge=10, le=3600)
     default_type: str = Field(default="explore", description="Default subagent type for Think mode")
+    default_model: str | None = Field(
+        default=None,
+        description=(
+            "Default model alias used by subagents that do not declare their own "
+            "model and receive no launch-time override. Individual types can "
+            "still override via subagents.overrides.<type>.model or the agent "
+            "YAML model field."
+        ),
+    )
     budget: SubagentBudgetConfig = Field(
         default_factory=SubagentBudgetConfig, description="Subagent budget limits"
     )

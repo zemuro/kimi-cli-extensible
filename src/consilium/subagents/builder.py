@@ -33,17 +33,25 @@ class SubagentBuilder:
         launch_spec: AgentLaunchSpec,
     ) -> Agent:
         agent_type = type_def.name
-        effective_model = self.resolve_effective_model(type_def=type_def, launch_spec=launch_spec)
+        # Model priority: launch spec (explicit tool param) → per-subagent
+        # config override ([subagents.overrides.<type>].model) → global
+        # subagents.default_model → agent YAML model field.
+        base_model = self.resolve_effective_model(type_def=type_def, launch_spec=launch_spec)
 
-        # Resolve per-subagent temperature/budget overrides.
+        # Resolve per-subagent temperature/budget/model overrides.
         cli_override = self._root_runtime.subagent_overrides.get(agent_type)
         resolved = resolve_subagent_config(
             agent_type,
             self._root_runtime.config,
             cli_overrides=cli_override,
             default_temperature=_default_temperature_for_model(
-                self._root_runtime.config, effective_model
+                self._root_runtime.config, base_model
             ),
+        )
+        effective_model = (
+            resolved.model
+            or base_model
+            or self._root_runtime.config.subagents.default_model
         )
         subagent_config = build_subagent_config(
             self._root_runtime.config,
