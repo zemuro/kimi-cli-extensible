@@ -1939,21 +1939,16 @@ class CustomPromptSession:
 
         # 2. Insert images via cache.
         if result.images:
-            if "image_in" not in self._model_capabilities:
-                console.print(
-                    "[yellow]Image input is not supported by the selected LLM model[/yellow]"
+            for image in result.images:
+                token = self._get_placeholder_manager().create_image_placeholder(image)
+                if token is None:
+                    continue
+                logger.debug(
+                    "Pasted image from clipboard placeholder: {token}, {image_size}",
+                    token=token,
+                    image_size=image.size,
                 )
-            else:
-                for image in result.images:
-                    token = self._get_placeholder_manager().create_image_placeholder(image)
-                    if token is None:
-                        continue
-                    logger.debug(
-                        "Pasted image from clipboard placeholder: {token}, {image_size}",
-                        token=token,
-                        image_size=image.size,
-                    )
-                    parts.append(token)
+                parts.append(token)
 
         if parts:
             event.current_buffer.insert_text(" ".join(parts))
